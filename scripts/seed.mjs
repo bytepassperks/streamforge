@@ -75,9 +75,9 @@ const videos = [
     id: id('vid'),
     slug: 'open-media-sample',
     title: 'Own-media sample (MP4)',
-    description: 'A creative-commons MP4 served straight from object storage.',
+    description: 'A creative-commons MP4 played through the Videokr player (CORS + range friendly).',
     source_type: 'mp4',
-    source_ref: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    source_ref: 'https://mdn.github.io/shared-assets/videos/flower.mp4',
     thumbnail: '',
   },
 ];
