@@ -44,6 +44,9 @@ npm test
 2. `npx wrangler r2 bucket create streamforge-media`.
 3. Set `PUBLIC_BASE_URL` in `wrangler.toml` to your deployed origin.
 4. `npm run db:migrate:remote && npm run deploy`.
+5. Optional: `SEED_EMAIL=... SEED_PASSWORD=... npm run seed:remote` for a demo account.
+
+This repo is deployed at <https://streamforge.getlaunchpod.workers.dev>.
 
 ## Note on YouTube sources
 
