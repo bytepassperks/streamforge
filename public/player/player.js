@@ -1236,6 +1236,8 @@
             })
             .then(function (full) {
               root.classList.remove('sf-locked');
+              // Carry page-level options (e.g. document key capture) onto the unlocked payload.
+              full.captureDocumentKeys = payload.captureDocumentKeys;
               return new Player(root, full).mount();
             });
         })
