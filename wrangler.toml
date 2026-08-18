@@ -12,7 +12,7 @@ not_found_handling = "none"
 [[d1_databases]]
 binding = "DB"
 database_name = "streamforge"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "0d0cb759-f16a-4c56-a10c-e5a9843673ab"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
@@ -21,4 +21,4 @@ bucket_name = "streamforge-media"
 
 [vars]
 APP_NAME = "StreamForge"
-PUBLIC_BASE_URL = "http://localhost:8787"
+PUBLIC_BASE_URL = "https://streamforge.getlaunchpod.workers.dev"

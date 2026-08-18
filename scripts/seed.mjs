@@ -1,6 +1,7 @@
 /**
- * Seeds the local D1 database with a demo account and a few videos so the
- * dashboard has something to show. Usage: npm run seed:local
+ * Seeds a D1 database with a demo account and a few videos so the dashboard has
+ * something to show. Usage: npm run seed:local (add --remote for deployed D1;
+ * set SEED_EMAIL / SEED_PASSWORD to choose the credentials).
  */
 import { execFileSync } from 'node:child_process';
 import { pbkdf2Sync, randomBytes } from 'node:crypto';
@@ -111,9 +112,12 @@ statements.push(
              ${q('https://github.com/bytepassperks/streamforge')}, 'email', 1, 'bottom-right');`,
 );
 
+const target = process.argv.includes('--remote') ? '--remote' : '--local';
 const sql = statements.join('\n');
-execFileSync('npx', ['wrangler', 'd1', 'execute', 'streamforge', '--local', '--command', sql], {
-  stdio: 'inherit',
-});
+execFileSync(
+  'npx',
+  ['wrangler', 'd1', 'execute', 'streamforge', target, '--yes', '--command', sql],
+  { stdio: 'inherit' },
+);
 
-console.log(`\nSeeded local database.\n  email:    ${EMAIL}\n  password: ${PASSWORD}\n`);
+console.log(`\nSeeded ${target === '--remote' ? 'remote' : 'local'} database.\n  email:    ${EMAIL}\n`);
