@@ -82,8 +82,15 @@ const videos = [
   },
 ];
 
+const slugList = videos.map((v) => q(v.slug)).join(', ');
+
 const statements = [
-  `DELETE FROM users WHERE email = ${q(EMAIL)};`,
+  // Make re-seeding idempotent: drop any previous demo rows (including legacy
+  // StreamForge-branded ones) before inserting the current demo dataset.
+  `DELETE FROM chapters WHERE video_id IN (SELECT id FROM videos WHERE slug IN (${slugList}));`,
+  `DELETE FROM ctas WHERE video_id IN (SELECT id FROM videos WHERE slug IN (${slugList}));`,
+  `DELETE FROM videos WHERE slug IN (${slugList});`,
+  `DELETE FROM users WHERE email IN (${q(EMAIL)}, 'demo@streamforge.app');`,
   `INSERT INTO users (id, email, name, password_hash, password_salt, plan, created_at)
      VALUES (${q(userId)}, ${q(EMAIL)}, ${q('Demo Studio')}, ${q(hash(PASSWORD, salt))}, ${q(salt)}, 'free', ${nowSeconds});`,
   `INSERT INTO projects (id, user_id, name, created_at)
