@@ -1286,5 +1286,7 @@
     formatTime: fmtTime,
   };
 
+  // `Videokr` is the current name; `StreamForge` stays for embeds already in the wild.
+  window.Videokr = StreamForge;
   window.StreamForge = StreamForge;
 })();
