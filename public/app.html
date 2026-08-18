@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — StreamForge</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/player/player.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="/"><span class="brand-mark"></span> StreamForge</a>
+    <nav class="side-nav" id="side-nav">
+      <button data-view="videos" class="active">Videos</button>
+      <button data-view="playlists">Playlists</button>
+      <button data-view="projects">Projects</button>
+      <button data-view="leads">Leads</button>
+      <button data-view="integrations">Integrations</button>
+    </nav>
+    <div class="side-foot">
+      <div id="who" class="tiny">…</div>
+      <button class="btn btn-ghost btn-sm" id="logout" type="button" style="margin-top:10px">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- Videos ------------------------------------------------------------- -->
+    <section class="view active" id="view-videos">
+      <div class="page-head">
+        <div>
+          <h1>Videos</h1>
+          <p class="muted tiny">Add a YouTube or Vimeo link, an MP4/HLS url, or upload a file you own.</p>
+        </div>
+        <button class="btn" id="new-video" type="button">New video</button>
+      </div>
+      <div class="stat-grid" id="stats"></div>
+      <div id="videos-body"></div>
+    </section>
+
+    <!-- Playlists ---------------------------------------------------------- -->
+    <section class="view" id="view-playlists">
+      <div class="page-head">
+        <div><h1>Playlists</h1><p class="muted tiny">Group videos into a public collection page.</p></div>
+        <button class="btn" id="new-playlist" type="button">New playlist</button>
+      </div>
+      <div id="playlists-body"></div>
+    </section>
+
+    <!-- Projects ----------------------------------------------------------- -->
+    <section class="view" id="view-projects">
+      <div class="page-head">
+        <div><h1>Projects</h1><p class="muted tiny">Organise videos by client, campaign or product.</p></div>
+        <button class="btn" id="new-project" type="button">New project</button>
+      </div>
+      <div id="projects-body"></div>
+    </section>
+
+    <!-- Leads -------------------------------------------------------------- -->
+    <section class="view" id="view-leads">
+      <div class="page-head">
+        <div><h1>Leads</h1><p class="muted tiny">Everyone who submitted a form inside your players.</p></div>
+        <a class="btn btn-ghost" id="export-leads" href="/api/leads.csv">Export CSV</a>
+      </div>
+      <div id="leads-body"></div>
+    </section>
+
+    <!-- Integrations ------------------------------------------------------- -->
+    <section class="view" id="view-integrations">
+      <div class="page-head">
+        <div><h1>Integrations</h1><p class="muted tiny">HMAC-signed webhooks for play, complete, cta_click and lead.</p></div>
+      </div>
+      <div class="card" style="margin-bottom:18px">
+        <h3>Add a webhook</h3>
+        <div class="grid-2">
+          <div class="field"><label for="wh-url">Endpoint URL</label>
+            <input id="wh-url" placeholder="https://hooks.example.com/streamforge"></div>
+          <div class="field"><label for="wh-events">Events (comma separated, or *)</label>
+            <input id="wh-events" value="lead,play,complete,cta_click"></div>
+          <div class="field"><label for="wh-secret">Signing secret (optional)</label>
+            <input id="wh-secret" placeholder="used for the x-streamforge-signature header"></div>
+        </div>
+        <button class="btn" id="wh-save" type="button">Add webhook</button>
+      </div>
+      <div id="webhooks-body"></div>
+    </section>
+  </main>
+</div>
+
+<!-- New video modal ------------------------------------------------------- -->
+<div class="modal-backdrop hidden" id="modal-new-video">
+  <div class="modal" style="width:min(560px,96vw)">
+    <h2>New video</h2>
+    <div class="field"><label for="nv-title">Title</label>
+      <input id="nv-title" placeholder="Product walkthrough"></div>
+    <div class="field"><label for="nv-source">Source</label>
+      <input id="nv-source" placeholder="YouTube / Vimeo link, or https://…/video.mp4 or .m3u8"></div>
+    <div class="field"><label for="nv-upload">…or upload your own file (max 200 MB)</label>
+      <input id="nv-upload" type="file" accept="video/mp4,video/webm"></div>
+    <div class="field"><label for="nv-project">Project</label>
+      <select id="nv-project"><option value="">No project</option></select></div>
+    <div class="form-error" id="nv-error"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-close type="button">Cancel</button>
+      <button class="btn" id="nv-save" type="button">Create video</button>
+    </div>
+  </div>
+</div>
+
+<!-- Video editor modal ---------------------------------------------------- -->
+<div class="modal-backdrop hidden" id="modal-editor">
+  <div class="modal">
+    <div class="row spread" style="align-items:flex-start">
+      <h2 id="ed-title">Edit video</h2>
+      <button class="btn btn-ghost btn-sm" data-close type="button">Close</button>
+    </div>
+    <div class="tabs" id="ed-tabs">
+      <button class="active" data-tab="details">Details</button>
+      <button data-tab="player">Player</button>
+      <button data-tab="chapters">Chapters</button>
+      <button data-tab="ctas">CTAs &amp; leads</button>
+      <button data-tab="access">Access</button>
+      <button data-tab="embed">Embed</button>
+      <button data-tab="stats">Analytics</button>
+    </div>
+
+    <div class="editor-grid">
+      <div>
+        <div class="tab-panel active" data-panel="details">
+          <div class="field"><label for="ed-name">Title</label><input id="ed-name"></div>
+          <div class="field"><label for="ed-desc">Description</label><textarea id="ed-desc"></textarea></div>
+          <div class="grid-2">
+            <div class="field"><label for="ed-source">Source</label><input id="ed-source"></div>
+            <div class="field"><label for="ed-project">Project</label>
+              <select id="ed-project"><option value="">No project</option></select></div>
+            <div class="field"><label for="ed-thumb">Thumbnail A url</label><input id="ed-thumb"></div>
+            <div class="field"><label for="ed-thumb-b">Thumbnail B url (A/B test)</label><input id="ed-thumb-b"></div>
+            <div class="field"><label for="ed-captions">Captions .vtt url</label><input id="ed-captions"></div>
+            <div class="field"><label for="ed-duration">Duration (seconds)</label>
+              <input id="ed-duration" type="number" min="0"></div>
+          </div>
+          <div class="field"><label for="ed-transcript">Transcript (searchable on the public page)</label>
+            <textarea id="ed-transcript"></textarea></div>
+        </div>
+
+        <div class="tab-panel" data-panel="player">
+          <div class="grid-2">
+            <div class="field"><label for="pc-skin">Skin</label>
+              <select id="pc-skin">
+                <option value="forge-dark">Forge dark</option>
+                <option value="forge-light">Forge light</option>
+                <option value="minimal">Minimal</option>
+                <option value="bold">Bold</option>
+                <option value="glass">Glass</option>
+              </select></div>
+            <div class="field"><label for="pc-accent">Accent colour</label><input id="pc-accent" type="color"></div>
+            <div class="field"><label for="pc-bg">Background</label><input id="pc-bg" type="color"></div>
+            <div class="field"><label for="pc-radius">Corner radius (px)</label>
+              <input id="pc-radius" type="number" min="0" max="40"></div>
+            <div class="field"><label for="pc-logo">Logo image url</label><input id="pc-logo"></div>
+            <div class="field"><label for="pc-logo-pos">Logo position</label>
+              <select id="pc-logo-pos">
+                <option value="top-right">Top right</option>
+                <option value="top-left">Top left</option>
+                <option value="bottom-right">Bottom right</option>
+                <option value="bottom-left">Bottom left</option>
+              </select></div>
+            <div class="field"><label for="pc-speeds">Playback speeds</label>
+              <input id="pc-speeds" placeholder="0.5,1,1.5,2"></div>
+            <div class="field"><label for="pc-start">Start at (seconds)</label>
+              <input id="pc-start" type="number" min="0"></div>
+          </div>
+          <h3 style="margin-top:8px">Controls</h3>
+          <div class="grid-2" id="pc-controls"></div>
+          <h3 style="margin-top:8px">Behaviour</h3>
+          <div class="grid-2">
+            <label class="checkbox"><input type="checkbox" id="pc-autoplay"> Autoplay</label>
+            <label class="checkbox"><input type="checkbox" id="pc-muted"> Start muted</label>
+            <label class="checkbox"><input type="checkbox" id="pc-loop"> Loop</label>
+            <label class="checkbox"><input type="checkbox" id="pc-resume"> Resume where the viewer left off</label>
+            <label class="checkbox"><input type="checkbox" id="pc-title"> Show title bar</label>
+            <label class="checkbox"><input type="checkbox" id="pc-bigplay"> Big play button</label>
+            <label class="checkbox"><input type="checkbox" id="pc-sticky"> Sticky miniplayer on scroll</label>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="chapters">
+          <p class="muted tiny">Chapters appear as markers on the timeline and in a jump menu.</p>
+          <div id="chapters-rows"></div>
+          <button class="btn btn-ghost btn-sm" id="add-chapter" type="button">Add chapter</button>
+        </div>
+
+        <div class="tab-panel" data-panel="ctas">
+          <p class="muted tiny">
+            Overlays and banners appear between their start and end second. A gate pauses playback until the
+            viewer submits their email; an end screen shows after the video finishes.
+          </p>
+          <div id="ctas-rows"></div>
+          <button class="btn btn-ghost btn-sm" id="add-cta" type="button">Add CTA</button>
+        </div>
+
+        <div class="tab-panel" data-panel="access">
+          <div class="field"><label for="ed-visibility">Visibility</label>
+            <select id="ed-visibility">
+              <option value="public">Public — listed page + embeds</option>
+              <option value="unlisted">Unlisted — link only</option>
+              <option value="password">Password protected</option>
+            </select></div>
+          <div class="field"><label for="ed-password">Set password (leave blank to keep current)</label>
+            <input id="ed-password" type="password" autocomplete="new-password"></div>
+          <div class="field"><label for="ed-domains">Allowed domains (comma separated, blank = anywhere)</label>
+            <input id="ed-domains" placeholder="example.com, *.example.com"></div>
+          <p class="tiny muted" id="ed-password-state"></p>
+        </div>
+
+        <div class="tab-panel" data-panel="embed">
+          <div class="snippet">
+            <label>Script loader</label>
+            <pre class="code-block" id="snip-script"></pre>
+            <label>Responsive iframe</label>
+            <pre class="code-block" id="snip-iframe"></pre>
+            <label>Public page</label>
+            <pre class="code-block" id="snip-page"></pre>
+            <div class="row">
+              <button class="btn btn-ghost btn-sm" id="copy-script" type="button">Copy script</button>
+              <a class="btn btn-ghost btn-sm" id="open-page" target="_blank" rel="noopener">Open public page</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="stats">
+          <div id="stats-body" class="muted">Loading…</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Live preview</h3>
+          <div id="preview"></div>
+          <button class="btn btn-ghost btn-sm" id="refresh-preview" type="button" style="margin-top:12px">
+            Refresh preview
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="ed-delete" type="button">Delete video</button>
+      <button class="btn btn-ghost" data-close type="button">Close</button>
+      <button class="btn" id="ed-save" type="button">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="/player/player.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

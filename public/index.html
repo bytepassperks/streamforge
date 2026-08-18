@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamForge — free video hosting, player &amp; embeds</title>
+<meta name="description" content="Host, brand and embed unlimited videos for free. Custom player skins, chapters, CTAs, lead capture, retention analytics, password and domain-locked embeds.">
+<meta property="og:title" content="StreamForge — free video hosting, player & embeds">
+<meta property="og:description" content="Unlimited videos and embeds, a fully brandable player, engagement analytics and lead capture — at zero hosting cost.">
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/player/player.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="/"><span class="brand-mark"></span> StreamForge</a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#compare">Compare</a>
+      <a href="#embed">Embed</a>
+      <a href="#pricing">Pricing</a>
+    </div>
+    <div class="row">
+      <a class="btn btn-ghost btn-sm" href="/login.html">Sign in</a>
+      <a class="btn btn-sm" href="/login.html?mode=signup">Start free</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="pill">No hosting bill. No watch-time caps.</span>
+    <h1>Your videos, <span class="grad">your player</span>,<br>your data.</h1>
+    <p class="lede">
+      StreamForge gives you a fully brandable player, unlimited embeds, chapters, CTAs, lead capture and
+      second-by-second retention analytics — running entirely on a free-tier edge stack you own.
+    </p>
+    <div class="hero-actions">
+      <a class="btn" href="/login.html?mode=signup">Create your workspace</a>
+      <a class="btn btn-ghost" href="#embed">See the embed code</a>
+    </div>
+    <div class="hero-demo"><div id="demo-player"></div></div>
+  </div>
+</header>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <h2>Everything a video marketer needs</h2>
+    <p class="section-lede">
+      Bring any source — YouTube, Vimeo, or files you own on R2 as MP4/HLS — and StreamForge wraps it in one
+      consistent, brandable player.
+    </p>
+    <div class="grid-3">
+      <div class="card feature"><div class="feature-ico">◐</div><h3>Skinnable player</h3>
+        <p>Four skins plus accent colour, corner radius, logo watermark, title bar and per-control toggles.</p></div>
+      <div class="card feature"><div class="feature-ico">⌘</div><h3>Hotkeys &amp; speed</h3>
+        <p>Space, J/K/L, arrows, M, F, C, P, digits for seeking, and configurable playback speeds.</p></div>
+      <div class="card feature"><div class="feature-ico">≡</div><h3>Chapters</h3>
+        <p>Timeline markers and a jump menu, so long videos stay watchable.</p></div>
+      <div class="card feature"><div class="feature-ico">◎</div><h3>CTAs &amp; end screens</h3>
+        <p>Timed overlays, banners and end screens with buttons that link anywhere you want.</p></div>
+      <div class="card feature"><div class="feature-ico">✉</div><h3>Lead gates</h3>
+        <p>Pause playback at any second to collect an email, then resume. Export leads as CSV.</p></div>
+      <div class="card feature"><div class="feature-ico">▤</div><h3>Retention curves</h3>
+        <p>100-bucket drop-off graphs, plus device, country and referrer breakdowns per video.</p></div>
+      <div class="card feature"><div class="feature-ico">⚿</div><h3>Locked embeds</h3>
+        <p>Password-protect videos and restrict playback to specific domains with wildcard support.</p></div>
+      <div class="card feature"><div class="feature-ico">⇄</div><h3>A/B thumbnails</h3>
+        <p>Ship two thumbnails, get split traffic and per-variant play rates automatically.</p></div>
+      <div class="card feature"><div class="feature-ico">⚑</div><h3>Webhooks</h3>
+        <p>HMAC-signed webhooks on play, complete, CTA click and new lead — wire up any CRM.</p></div>
+      <div class="card feature"><div class="feature-ico">▶</div><h3>Playlists</h3>
+        <p>Public collection pages with a queue and autoplay-next.</p></div>
+      <div class="card feature"><div class="feature-ico">⌕</div><h3>SEO video pages</h3>
+        <p>Open Graph, Twitter player cards and VideoObject JSON-LD out of the box.</p></div>
+      <div class="card feature"><div class="feature-ico">◱</div><h3>Sticky miniplayer</h3>
+        <p>Playback follows the reader down the page when the player scrolls out of view.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section compare" id="compare">
+  <div class="wrap">
+    <h2>How it compares</h2>
+    <p class="section-lede">The feature set of a paid video marketing platform, on infrastructure you control.</p>
+    <table>
+      <thead><tr><th>Capability</th><th>Typical hosted tool</th><th>StreamForge</th></tr></thead>
+      <tbody>
+        <tr><td>Monthly cost</td><td class="no">$0–$99+ per seat</td><td class="yes">$0 on free tier</td></tr>
+        <tr><td>Sources</td><td class="no">Usually one</td><td class="yes">YouTube, Vimeo, MP4, HLS</td></tr>
+        <tr><td>Retention analytics</td><td class="no">Paid add-on</td><td class="yes">Included</td></tr>
+        <tr><td>Lead capture</td><td class="no">Paid add-on</td><td class="yes">Included + CSV export</td></tr>
+        <tr><td>A/B thumbnails</td><td class="no">Rare</td><td class="yes">Included</td></tr>
+        <tr><td>Webhooks</td><td class="no">Higher tiers</td><td class="yes">Included</td></tr>
+        <tr><td>Self-hosting</td><td class="no">No</td><td class="yes">Deploy to your own account</td></tr>
+        <tr><td>Data ownership</td><td class="no">Vendor database</td><td class="yes">Your D1 + R2</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section" id="embed">
+  <div class="wrap">
+    <h2>Embed in one line</h2>
+    <p class="section-lede">Drop the loader anywhere; it builds a responsive, lazy-loaded iframe.</p>
+    <div class="grid-2">
+      <div>
+        <h3>Script loader</h3>
+        <pre class="code-block">&lt;script src="https://your-host/embed.js"
+        data-video="vid_example"
+        async&gt;&lt;/script&gt;</pre>
+      </div>
+      <div>
+        <h3>Plain iframe</h3>
+        <pre class="code-block">&lt;iframe src="https://your-host/e/vid_example"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowfullscreen&gt;&lt;/iframe&gt;</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pricing">
+  <div class="wrap">
+    <h2>Pricing</h2>
+    <p class="section-lede">
+      StreamForge is open source and runs on Cloudflare's free tier. The only thing you may ever pay for is
+      bandwidth at real scale — and you pay Cloudflare, not us.
+    </p>
+    <div class="grid-3">
+      <div class="card price-card">
+        <h3>Free forever</h3>
+        <div class="price">$0<small>/month</small></div>
+        <ul class="price-list">
+          <li>Unlimited videos and embeds</li>
+          <li>All player features and skins</li>
+          <li>Analytics, CTAs, leads, webhooks</li>
+          <li>YouTube / Vimeo / MP4 / HLS</li>
+        </ul>
+        <a class="btn" href="/login.html?mode=signup">Start now</a>
+      </div>
+      <div class="card price-card">
+        <h3>Self-hosted</h3>
+        <div class="price">$0<small> + your usage</small></div>
+        <ul class="price-list">
+          <li>Deploy to your Cloudflare account</li>
+          <li>Your own D1 database and R2 bucket</li>
+          <li>Custom domain for embeds</li>
+          <li>No vendor lock-in</li>
+        </ul>
+        <a class="btn btn-ghost" href="https://github.com/bytepassperks/streamforge">Read the docs</a>
+      </div>
+      <div class="card price-card">
+        <h3>Fair-use notes</h3>
+        <div class="price">Limits<small> you should know</small></div>
+        <ul class="price-list">
+          <li>Workers: 100k requests/day free</li>
+          <li>D1: 5 GB storage free</li>
+          <li>R2: 10 GB storage free</li>
+          <li>Upload cap: 200 MB per file</li>
+        </ul>
+        <span class="pill pill-warn">Own-media mode recommended</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap row spread row-wrap">
+    <span>StreamForge — free, self-hostable video marketing.</span>
+    <span class="tiny">Using the YouTube source mode? Keep YouTube's terms in mind and prefer own-media mode for branding-critical embeds.</span>
+  </div>
+</footer>
+
+<script src="/player/player.js"></script>
+<script>
+  StreamForge.mount(document.getElementById('demo-player'), {
+    tracking: false,
+    video: {
+      id: 'demo',
+      slug: 'demo',
+      title: 'StreamForge player demo',
+      description: '',
+      source_type: 'youtube',
+      source_ref: 'c65tLZVgkcY',
+      duration: 0,
+      thumbnail_url: '',
+      captions_url: ''
+    },
+    player: {
+      skin: 'forge-dark', accent: '#4f7cff', background: '#0b0d12',
+      controls: { playPause: true, progress: true, volume: true, time: true, speed: true,
+                  quality: false, captions: false, chapters: true, pip: true, fullscreen: true, keyboard: true },
+      autoplay: false, muted: false, loop: false, startAt: 0, resume: false,
+      speeds: [0.5, 0.75, 1, 1.25, 1.5, 2],
+      logoUrl: '', logoLink: '', logoPosition: 'top-right',
+      title: true, bigPlayButton: true, sticky: false, borderRadius: 14
+    },
+    chapters: [
+      { start_seconds: 0, title: 'Intro' },
+      { start_seconds: 30, title: 'Player controls' },
+      { start_seconds: 75, title: 'Analytics' }
+    ],
+    ctas: [],
+    variant: 'a'
+  });
+</script>
+</body>
+</html>
