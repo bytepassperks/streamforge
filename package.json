@@ -1,0 +1,31 @@
+{
+  "name": "streamforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "StreamForge \u2014 video player, embed and analytics platform that runs entirely on Cloudflare's free tier",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "db:migrate:local": "wrangler d1 migrations apply streamforge --local",
+    "db:migrate:remote": "wrangler d1 migrations apply streamforge --remote",
+    "seed:local": "node scripts/seed.mjs",
+    "seed:remote": "node scripts/seed.mjs --remote",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20250726.0",
+    "@eslint/js": "^9.21.0",
+    "@typescript-eslint/eslint-plugin": "8.26.0",
+    "@typescript-eslint/parser": "8.26.0",
+    "eslint": "9.21.0",
+    "typescript": "5.7.3",
+    "vitest": "3.0.7",
+    "wrangler": "3.114.1"
+  },
+  "dependencies": {
+    "hono": "4.7.2"
+  }
+}

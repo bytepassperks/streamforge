@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamForge — variation 3 · Neon Tape</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#06060d; --deep:#0b0a18; --card:#131126;
+  --magenta:#ff2e8b; --cyan:#22e8ff; --lime:#c8ff00;
+  --text:#f0eefc; --muted:#9b97be; --line:rgba(255,255,255,.1);
+  --disp:"Bricolage Grotesque",system-ui,sans-serif;
+  --sans:"Space Grotesk",system-ui,sans-serif;
+  --mono:"Space Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--night);color:var(--text);font-family:var(--sans);line-height:1.55;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(700px 500px at 12% 8%,rgba(255,46,139,.28),transparent 62%),
+             radial-gradient(760px 520px at 88% 18%,rgba(34,232,255,.22),transparent 62%),
+             radial-gradient(600px 500px at 50% 100%,rgba(200,255,0,.10),transparent 65%)}
+body::after{content:"";position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.3;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.5) 0 1px,transparent 1px 4px)}
+.wrap{width:min(1150px,93vw);margin:0 auto;position:relative;z-index:2}
+a{color:inherit;text-decoration:none}
+h1,h2,h3{margin:0;font-family:var(--disp);font-weight:800;line-height:.98;letter-spacing:-.03em}
+p{margin:0}
+.glow{color:#fff;text-shadow:3px 0 var(--magenta),-3px 0 var(--cyan)}
+.hl{background:var(--lime);color:#0a0a12;padding:0 .18em;transform:rotate(-1.4deg);display:inline-block}
+.tape{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;background:var(--magenta);color:#fff;padding:5px 12px;transform:rotate(-1.5deg)}
+.mono{font-family:var(--mono)}
+
+.ticker{background:var(--lime);color:#0a0a12;font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;overflow:hidden;padding:7px 0;position:relative;z-index:5}
+.ticker div{display:flex;gap:26px;white-space:nowrap;animation:sx 18s linear infinite}
+@keyframes sx{to{transform:translateX(-50%)}}
+nav{position:sticky;top:0;z-index:40;background:rgba(6,6,13,.8);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;padding:13px 0}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--disp);font-size:19px;font-weight:800}
+.mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--magenta),var(--cyan));display:grid;place-items:center;color:#0a0a12;font-size:12px}
+.nav-links{display:flex;gap:22px;font-size:14px;color:var(--muted)}
+.nav-links a:hover{color:var(--cyan)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:10px;font-weight:700;font-size:14px;border:1px solid transparent;cursor:pointer;transition:.18s}
+.btn-primary{background:linear-gradient(100deg,var(--magenta),#ff6a3d);color:#fff;box-shadow:0 0 0 0 rgba(255,46,139,.5);animation:pulse 2.6s infinite}
+@keyframes pulse{50%{box-shadow:0 0 34px 2px rgba(255,46,139,.5)}}
+.btn-primary:hover{transform:translateY(-2px)}
+.btn-ghost{border-color:var(--line);background:rgba(255,255,255,.04)}
+.btn-ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn-lg{padding:17px 30px;font-size:16px}
+
+header{padding:64px 0 34px;text-align:center}
+h1{font-size:clamp(44px,8vw,104px);margin:20px auto 18px;max-width:16em}
+.lede{color:var(--muted);font-size:18px;max-width:40em;margin:0 auto}
+.cta-row{display:flex;gap:14px;justify-content:center;margin:30px 0 12px;flex-wrap:wrap}
+.count{display:inline-flex;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);align-items:center}
+.count b{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--cyan);font-size:15px}
+.stage{margin:46px auto 0;width:min(940px,94vw);position:relative}
+.screen{border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.14);background:#05050c;box-shadow:0 0 0 1px rgba(255,46,139,.25),0 40px 120px rgba(255,46,139,.18)}
+.pic{aspect-ratio:16/9;background:radial-gradient(60% 70% at 30% 25%,#2a1140,transparent 70%),radial-gradient(50% 60% at 78% 75%,#08303c,transparent 70%),#08070f;display:grid;place-items:center;position:relative}
+.play{width:80px;height:80px;border-radius:50%;background:#fff;color:#0a0a12;display:grid;place-items:center;font-size:26px;box-shadow:0 0 0 14px rgba(255,255,255,.09)}
+.wm{position:absolute;top:14px;right:16px;font-weight:700;font-size:13px}
+.bar{padding:10px 14px 14px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.85))}
+.track{height:5px;border-radius:99px;background:rgba(255,255,255,.2);position:relative}
+.track i{position:absolute;inset:0 58% 0 0;background:linear-gradient(90deg,var(--magenta),var(--cyan));border-radius:99px}
+.ctrl{display:flex;gap:14px;margin-top:9px;font-family:var(--mono);font-size:11px;color:#c9c5e6}
+.sticker{position:absolute;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:8px 12px;border-radius:6px}
+.s1{top:16px;left:16px;background:var(--cyan);color:#04141a;transform:rotate(-3deg);z-index:4}
+.s2{bottom:-14px;right:14px;background:var(--lime);color:#0a0a12;transform:rotate(3deg);z-index:4}
+.s3{top:16px;right:120px;background:var(--magenta);color:#fff;transform:rotate(3deg);z-index:4}
+
+section{padding:80px 0}
+.sec-head{text-align:center;max-width:38em;margin:0 auto 42px}
+h2{font-size:clamp(30px,5vw,62px);margin:12px 0 14px}
+.sub{color:var(--muted)}
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;transition:.2s}
+.c:hover{transform:translateY(-5px);border-color:var(--magenta)}
+.c .n{font-family:var(--mono);font-size:12px;color:var(--magenta);letter-spacing:.18em}
+.c h3{font-size:23px;margin:8px 0 8px}
+.c p{font-size:14px;color:var(--muted)}
+.feat{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.f{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:16px;transition:.2s}
+.f:hover{background:rgba(34,232,255,.09);border-color:var(--cyan)}
+.f .ico{font-size:19px;color:var(--cyan)}
+.f h3{font-family:var(--sans);font-size:14.5px;font-weight:700;margin:8px 0 4px;letter-spacing:0}
+.f p{font-size:12.5px;color:var(--muted)}
+
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+th,td{padding:14px;border-bottom:1px solid var(--line);text-align:left}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+td:not(:first-child),th:not(:first-child){text-align:center}
+.col-us{background:rgba(255,46,139,.09)}
+.yes{color:var(--lime);font-weight:700}
+.no{color:#8b86ad}
+
+.price{display:grid;grid-template-columns:1fr 1.15fr;gap:20px}
+.plan{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:30px}
+.plan.hot{border-color:var(--magenta);background:linear-gradient(165deg,rgba(255,46,139,.18),rgba(34,232,255,.06));position:relative}
+.plan.hot .tape{position:absolute;top:-13px;left:24px}
+.plan h3{font-size:26px}
+.amt{font-size:70px;line-height:1;font-family:var(--disp);margin:16px 0 2px}
+.amt s{font-size:24px;color:var(--muted)}
+.inr{font-family:var(--mono);font-size:12px;color:var(--muted)}
+ul.ticks{list-style:none;padding:0;margin:20px 0 24px;font-size:14px}
+ul.ticks li{padding:6px 0 6px 24px;position:relative}
+ul.ticks li::before{content:"✓";position:absolute;left:0;color:var(--lime);font-weight:700}
+.seats{height:8px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;margin:16px 0 6px}
+.seats i{display:block;height:100%;width:13%;background:linear-gradient(90deg,var(--magenta),var(--lime))}
+.ladder{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.ladder b{color:var(--lime)}
+details{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;background:rgba(255,255,255,.03)}
+summary{cursor:pointer;font-weight:700;list-style:none}
+summary::-webkit-details-marker{display:none}
+details p{color:var(--muted);font-size:14px;margin-top:9px}
+.final{text-align:center;padding:96px 0}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+@media(max-width:900px){.cards3,.price{grid-template-columns:1fr}.feat{grid-template-columns:repeat(2,1fr)}.sticker{display:none}}
+</style>
+</head>
+<body>
+<div class="ticker"><div>
+  <span>87 lifetime seats left ✦</span><span>price jumps to $99 at 100 ✦</span><span>free tier never expires ✦</span><span>no monthly bill ✦</span><span>own your player ✦</span>
+  <span>87 lifetime seats left ✦</span><span>price jumps to $99 at 100 ✦</span><span>free tier never expires ✦</span><span>no monthly bill ✦</span><span>own your player ✦</span>
+</div></div>
+<nav><div class="wrap nav-in">
+  <a class="logo" href="#"><span class="mark">▶</span> StreamForge</a>
+  <div class="nav-links"><a href="#why">Why</a><a href="#features">Features</a><a href="#receipt">vs Wistia</a><a href="#pricing">Lifetime</a></div>
+  <div style="display:flex;gap:10px"><a class="btn btn-ghost" href="#">Sign in</a><a class="btn btn-primary" href="#pricing">Get lifetime · $69</a></div>
+</div></nav>
+
+<header><div class="wrap">
+  <span class="tape">free forever tier · 87 of 100 seats left</span>
+  <h1>Your video. Your player.<br><span class="glow">Their</span> <span class="hl">$948 bill — gone.</span></h1>
+  <p class="lede">Embed unlimited video anywhere with your own branding, capture emails mid-play, lock it with a password, and watch a second-by-second retention curve tell you exactly where to cut.</p>
+  <div class="cta-row"><a class="btn btn-primary btn-lg" href="#pricing">Grab lifetime · $69 →</a><a class="btn btn-ghost btn-lg" href="#features">See it move</a></div>
+  <div class="count"><span>price rises in</span><b>02</b><span>d</span><b>23</b><span>h</span><b>41</b><span>m</span></div>
+  <div class="stage">
+    <span class="sticker s1">61% finish rate</span>
+    <span class="sticker s3">no youtube logo</span>
+    <div class="screen">
+      <div class="pic"><span class="wm">yourbrand</span><span class="play">▶</span></div>
+      <div class="bar"><div class="track"><i></i></div><div class="ctrl"><span>▶</span><span>0:42 / 1:44</span><span>1×</span><span style="margin-left:auto">CC</span><span>⛶</span></div></div>
+    </div>
+    <span class="sticker s2">214 emails captured</span>
+  </div>
+</div></header>
+
+<section id="why"><div class="wrap">
+  <div class="sec-head"><span class="tape">the ugly truth</span><h2>You're renting attention you already paid for</h2></div>
+  <div class="cards3">
+    <div class="c"><div class="n">01</div><h3>YouTube keeps the viewer</h3><p>Suggested videos, their logo, their retargeting. Your funnel leaks at the exact moment interest peaks.</p></div>
+    <div class="c"><div class="n">02</div><h3>The pros charge $79–$329/mo</h3><p>Removing a logo is a paid feature. Lead capture is a higher tier. Every month. Forever.</p></div>
+    <div class="c"><div class="n">03</div><h3>Views ≠ insight</h3><p>Nobody quits "somewhere". They quit at 0:47. Without the curve, you're editing blindfolded.</p></div>
+  </div>
+</div></section>
+
+<section id="features"><div class="wrap">
+  <div class="sec-head"><span class="tape">everything unlocked</span><h2>All features. Both tiers. No upsell maze.</h2><p class="sub">Free caps volume, not capability.</p></div>
+  <div class="feat">
+    <div class="f"><div class="ico">◐</div><h3>Brandable skins</h3><p>Colour, radius, logo, per-control toggles.</p></div>
+    <div class="f"><div class="ico">✉</div><h3>Lead gates</h3><p>Collect an email mid-video, then resume.</p></div>
+    <div class="f"><div class="ico">◎</div><h3>CTAs &amp; end screens</h3><p>Timed overlays that convert on the spot.</p></div>
+    <div class="f"><div class="ico">▤</div><h3>Retention curve</h3><p>100 buckets, devices, countries, referrers.</p></div>
+    <div class="f"><div class="ico">⚿</div><h3>Password + domain lock</h3><p>Client work stays private.</p></div>
+    <div class="f"><div class="ico">⇄</div><h3>A/B thumbnails</h3><p>Split-test the click, keep the winner.</p></div>
+    <div class="f"><div class="ico">≡</div><h3>Chapters</h3><p>Markers and a jump menu.</p></div>
+    <div class="f"><div class="ico">⚑</div><h3>Signed webhooks</h3><p>Leads and plays straight into your CRM.</p></div>
+  </div>
+</div></section>
+
+<section id="receipt"><div class="wrap">
+  <div class="sec-head"><span class="tape">do the math</span><h2>$69 once. Not $948 a year.</h2></div>
+  <table>
+    <thead><tr><th>What matters</th><th>YouTube</th><th>Wistia / Vidyard</th><th class="col-us">StreamForge</th></tr></thead>
+    <tbody>
+      <tr><td>Price</td><td class="no">Free</td><td class="no">$79–$329/mo</td><td class="col-us yes">$69 once</td></tr>
+      <tr><td>100% your branding</td><td class="no">—</td><td class="yes">✓</td><td class="col-us yes">✓</td></tr>
+      <tr><td>No suggested videos</td><td class="no">—</td><td class="yes">✓</td><td class="col-us yes">✓</td></tr>
+      <tr><td>Email capture in player</td><td class="no">—</td><td class="no">Top tier</td><td class="col-us yes">✓</td></tr>
+      <tr><td>Retention curve</td><td class="no">Channel only</td><td class="yes">✓</td><td class="col-us yes">✓</td></tr>
+      <tr><td>A/B thumbnails</td><td class="no">—</td><td class="no">Rare</td><td class="col-us yes">✓</td></tr>
+      <tr><td>You own the data</td><td class="no">—</td><td class="no">Vendor DB</td><td class="col-us yes">✓</td></tr>
+    </tbody>
+  </table>
+</div></section>
+
+<section id="pricing"><div class="wrap">
+  <div class="sec-head"><span class="tape">two tiers only</span><h2>Free forever, or once forever.</h2><p class="sub">No refunds — because the free tier lets you test everything before you pay.</p></div>
+  <div class="price">
+    <div class="plan"><h3>Free</h3><div class="amt">$0</div><p class="inr">no card · no expiry</p>
+      <ul class="ticks"><li>5 videos · 3 GB storage</li><li>10,000 plays / month</li><li>Full player + analytics</li><li>Small StreamForge badge</li></ul>
+      <a class="btn btn-ghost" href="#">Start free →</a></div>
+    <div class="plan hot"><span class="tape">87 seats left</span><h3>Lifetime</h3><div class="amt">$69 <s>$149</s></div><p class="inr">₹5,999 · one payment · forever</p>
+      <ul class="ticks"><li>Unlimited videos, embeds, plays</li><li>Badge off, your brand only</li><li>Leads, CTAs, webhooks, A/B tests</li><li>Every future feature included</li><li>Self-host option on your Cloudflare</li></ul>
+      <a class="btn btn-primary btn-lg" href="#">Claim my seat →</a>
+      <div class="seats"><i></i></div>
+      <p class="ladder">13/100 gone · next <b>$99</b> · then <b>$149</b></p>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap" style="max-width:780px">
+  <div class="sec-head"><span class="tape">faq</span><h2>No fine print.</h2></div>
+  <details open><summary>Is the free tier a trial?</summary><p>No timer, no card. 5 videos and 10k plays a month, forever.</p></details>
+  <details><summary>Why no refunds?</summary><p>Everything is testable free. Lifetime licences are final once issued.</p></details>
+  <details><summary>What happens at 100 seats?</summary><p>$99, then $149. Your price is locked the day you buy.</p></details>
+  <details><summary>Will bandwidth cost me?</summary><p>No. Storage sits on Cloudflare R2, which bills nothing for egress.</p></details>
+</div></section>
+
+<section class="final"><div class="wrap">
+  <h2 style="max-width:22em;margin:0 auto 16px">87 seats. Then the price goes up and stays up.</h2>
+  <p class="sub" style="margin-bottom:26px">Start free in ten seconds. Upgrade whenever it clicks.</p>
+  <a class="btn btn-primary btn-lg" href="#">Claim lifetime · $69 →</a>
+</div></section>
+<footer class="wrap"><span>© StreamForge</span><span>free tier forever · all sales final</span></footer>
+</body>
+</html>
