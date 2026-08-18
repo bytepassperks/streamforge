@@ -3,13 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in — StreamForge</title>
+<title>Sign in — Videokr</title>
+<link rel="icon" href="/brand/mark-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/brand/mark-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=Caveat:wght@600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <div class="auth-shell">
   <div class="auth-card">
-    <a class="brand" href="/" style="margin-bottom:18px"><span class="brand-mark"></span> StreamForge</a>
+    <a class="brand" href="/" style="margin-bottom:18px"><img src="/brand/logo-lockup.png" alt="Videokr"></a>
     <div class="auth-tabs">
       <button class="auth-tab active" data-mode="login" type="button">Sign in</button>
       <button class="auth-tab" data-mode="signup" type="button">Create account</button>
@@ -53,7 +58,7 @@
     nameField.classList.toggle('hidden', mode !== 'signup');
     title.textContent = mode === 'signup' ? 'Create your workspace' : 'Welcome back';
     sub.textContent = mode === 'signup'
-      ? 'Free forever. No credit card, no watch-time limits.'
+      ? 'Free forever — no card. Upgrade to lifetime whenever you want.'
       : 'Sign in to your workspace to manage videos and embeds.';
     submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
     document.getElementById('password').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';

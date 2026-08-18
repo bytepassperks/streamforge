@@ -1,4 +1,4 @@
-/* StreamForge dashboard. Dependency-free, talks to /api and previews the real player. */
+/* Videokr dashboard. Dependency-free, talks to /api and previews the real player. */
 (function () {
   'use strict';
 
@@ -82,6 +82,7 @@
     projects: loadProjects,
     leads: loadLeads,
     integrations: loadWebhooks,
+    billing: loadBilling,
   };
 
   function showView(name) {
@@ -993,6 +994,102 @@
       .catch(fail);
   });
 
+  /* -------------------------------------------------------------- billing -- */
+
+  function money(cents, currency) {
+    return (currency || 'USD') + ' ' + (Number(cents || 0) / 100).toFixed(2);
+  }
+
+  function planChip(billing) {
+    var chip = $('plan-chip');
+    if (!chip) return;
+    chip.textContent = billing.lifetime ? 'Lifetime · all features' : 'Free tier';
+    chip.className = 'tiny ' + (billing.lifetime ? 'chip chip-hot' : 'chip');
+  }
+
+  function loadBilling() {
+    api('/billing')
+      .then(function (billing) {
+        planChip(billing);
+        var host = $('billing-body');
+        host.textContent = '';
+
+        var card = text('div', 'card');
+        if (billing.lifetime) {
+          card.appendChild(text('h3', null, 'You own Videokr for life'));
+          card.appendChild(
+            text('p', 'muted tiny', 'Unlimited videos and embeds, no badge, every feature we ship from here on.'),
+          );
+        } else {
+          card.appendChild(text('h3', null, 'Lifetime — $' + billing.offer.usd + ' once'));
+          card.appendChild(
+            text(
+              'p',
+              'muted tiny',
+              'You are on the free tier: ' +
+                billing.usage.videos +
+                ' of ' +
+                billing.usage.video_limit +
+                ' videos used. Lifetime removes the badge and every limit. No refunds — the free tier is the trial.',
+            ),
+          );
+          if (billing.offer.seats_total) {
+            card.appendChild(
+              text(
+                'p',
+                'tiny',
+                billing.offer.seats_left +
+                  ' of ' +
+                  billing.offer.seats_total +
+                  ' seats left at this price' +
+                  (billing.offer.next_usd ? ', then $' + billing.offer.next_usd : ''),
+              ),
+            );
+          }
+          var buy = text('button', 'btn btn-lg', 'Buy lifetime — $' + billing.offer.usd);
+          buy.type = 'button';
+          if (!billing.checkout_ready) {
+            buy.disabled = true;
+            card.appendChild(
+              text('p', 'tiny muted', 'Checkout is not connected yet (missing Dodo product id or api key).'),
+            );
+          }
+          buy.addEventListener('click', function () {
+            buy.disabled = true;
+            api('/billing/checkout', { method: 'POST' })
+              .then(function (result) {
+                location.href = result.url;
+              })
+              .catch(function (error) {
+                buy.disabled = false;
+                fail(error);
+              });
+          });
+          card.appendChild(buy);
+        }
+        host.appendChild(card);
+
+        if (billing.purchases.length) {
+          var table = text('table', 'data');
+          var head = document.createElement('tr');
+          ['Purchase', 'Status', 'Amount', 'Date'].forEach(function (label) {
+            head.appendChild(text('th', null, label));
+          });
+          table.appendChild(head);
+          billing.purchases.forEach(function (purchase) {
+            var row = document.createElement('tr');
+            row.appendChild(text('td', 'tiny', purchase.id));
+            row.appendChild(text('td', 'tiny', purchase.status));
+            row.appendChild(text('td', 'tiny', money(purchase.amount_cents, purchase.currency)));
+            row.appendChild(text('td', 'tiny muted', fmtDate(purchase.created_at)));
+            table.appendChild(row);
+          });
+          host.appendChild(table);
+        }
+      })
+      .catch(fail);
+  }
+
   /* ----------------------------------------------------------------- boot -- */
 
   $('logout').addEventListener('click', function () {
@@ -1009,7 +1106,16 @@
       }
       state.user = result.user;
       $('who').textContent = result.user.name || result.user.email;
-      showView('videos');
+      planChip({ lifetime: result.user.plan === 'lifetime' });
+      var params = new URLSearchParams(location.search);
+      if (params.get('purchase')) {
+        // Dodo returns here after checkout; the webhook is what actually grants
+        // the plan, so reflect whatever the server says rather than assuming.
+        showView('billing');
+        toast(result.user.plan === 'lifetime' ? 'Lifetime unlocked' : 'Payment received — unlocking shortly');
+      } else {
+        showView('videos');
+      }
     })
     .catch(function () {
       location.href = '/login.html';

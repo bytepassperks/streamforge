@@ -31,7 +31,7 @@
       if (item.video.duration) {
         var dur = document.createElement('span');
         dur.className = 'sf-pl-item-dur';
-        dur.textContent = window.StreamForge.formatTime(item.video.duration);
+        dur.textContent = window.Videokr.formatTime(item.video.duration);
         meta.appendChild(dur);
       }
       button.appendChild(meta);
@@ -52,7 +52,7 @@
       payload.player.bigPlayButton = false;
     }
     stage.textContent = '';
-    window.StreamForge.mount(stage, payload).then(function (mounted) {
+    window.Videokr.mount(stage, payload).then(function (mounted) {
       player = mounted;
       if (!player) return;
       player.onEnded = function () {

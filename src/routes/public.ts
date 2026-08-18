@@ -12,6 +12,7 @@ import {
 import { verifyPassword } from '../lib/auth';
 import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
+import { offerForSeats, seatsSold, verifyDodoSignature } from '../lib/billing';
 
 export const pub = new Hono<{ Bindings: Env }>();
 
@@ -23,6 +24,88 @@ pub.use('/api/embed/*', async (c, next) => {
   await next();
   c.header('access-control-allow-origin', '*');
   c.header('access-control-allow-headers', 'content-type');
+});
+
+/* ---------------------------------------------------------- lifetime ---- */
+
+/** Seat counter for the landing page — derived from real paid purchases. */
+pub.get('/api/public/offer', async (c) => {
+  const offer = offerForSeats(await seatsSold(c.env));
+  c.header('cache-control', 'public, max-age=60');
+  return c.json({ offer });
+});
+
+/**
+ * Dodo Payments delivers Standard Webhooks; a verified `payment.succeeded`
+ * whose metadata carries our user id flips that account to lifetime.
+ */
+pub.post('/api/billing/dodo/webhook', async (c) => {
+  const body = await c.req.text();
+  const id = c.req.header('webhook-id') ?? '';
+  const verified = await verifyDodoSignature(
+    c.env.DODO_WEBHOOK_SECRET ?? '',
+    { id, timestamp: c.req.header('webhook-timestamp') ?? '', signature: c.req.header('webhook-signature') ?? '' },
+    body,
+  );
+  if (!verified) return c.json({ error: 'invalid signature' }, 401);
+
+  const seen = await c.env.DB.prepare('SELECT id FROM webhook_events WHERE id = ?').bind(id).first();
+  if (seen) return c.json({ ok: true, duplicate: true });
+
+  let event: {
+    type?: string;
+    data?: {
+      payment_id?: string;
+      metadata?: Record<string, string>;
+      total_amount?: number;
+      currency?: string;
+      customer?: { email?: string };
+    };
+  };
+  try {
+    event = JSON.parse(body);
+  } catch {
+    return c.json({ error: 'invalid json' }, 400);
+  }
+  // Recorded only once the payload parses, so a malformed body can be retried.
+  await c.env.DB.prepare('INSERT INTO webhook_events (id, received_at) VALUES (?, ?)').bind(id, now()).run();
+  if (event.type !== 'payment.succeeded') return c.json({ ok: true, ignored: event.type ?? '' });
+
+  const data = event.data ?? {};
+  const userId = data.metadata?.user_id ?? '';
+  const email = (data.customer?.email ?? '').trim().toLowerCase();
+  const user = userId
+    ? await c.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first<{ id: string }>()
+    : email
+      ? await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>()
+      : null;
+  if (!user) return c.json({ ok: true, unmatched: true });
+
+  const ts = now();
+  await c.env.DB.prepare("UPDATE users SET plan = 'lifetime', lifetime_at = ? WHERE id = ?")
+    .bind(ts, user.id)
+    .run();
+  await c.env.DB.prepare(
+    `INSERT INTO purchases (id, user_id, provider, provider_ref, status, amount_cents, currency, created_at, updated_at)
+     VALUES (?, ?, 'dodo', ?, 'paid', ?, ?, ?, ?)
+     ON CONFLICT(provider, provider_ref) DO UPDATE SET status = 'paid', updated_at = excluded.updated_at`,
+  )
+    .bind(
+      newId('pur'),
+      user.id,
+      data.payment_id ?? id,
+      Math.round(data.total_amount ?? 0),
+      (data.currency ?? 'USD').toUpperCase(),
+      ts,
+      ts,
+    )
+    .run();
+  await c.env.DB.prepare(
+    "UPDATE purchases SET status = 'superseded', updated_at = ? WHERE user_id = ? AND status = 'pending'",
+  )
+    .bind(ts, user.id)
+    .run();
+  return c.json({ ok: true });
 });
 
 function embedderHostname(c: { req: { header: (n: string) => string | undefined } }): string | null {
@@ -57,6 +140,7 @@ interface EmbedPayload {
   chapters: Pick<Chapter, 'start_seconds' | 'title'>[];
   ctas: Omit<Cta, 'video_id'>[];
   variant: 'a' | 'b';
+  badge: boolean;
 }
 
 async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Promise<EmbedPayload> {
@@ -73,6 +157,9 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     .bind(video.id)
     .all<Omit<Cta, 'video_id'>>();
   const thumbnail = variant === 'b' && video.thumbnail_url_b ? video.thumbnail_url_b : video.thumbnail_url;
+  const owner = await env.DB.prepare('SELECT plan FROM users WHERE id = ?')
+    .bind(video.user_id)
+    .first<{ plan: string }>();
   return {
     video: {
       id: video.id,
@@ -89,6 +176,7 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     chapters: chapters.results ?? [],
     ctas: ctas.results ?? [],
     variant,
+    badge: owner?.plan !== 'lifetime',
   };
 }
 
@@ -377,7 +465,7 @@ ${video.thumbnail_url ? `<meta name="twitter:image" content="${escapeHtml(video.
 <script type="application/ld+json">${jsonLd}</script>
 </head>
 <body class="sf-page">
-<header class="sf-page-head"><a class="sf-brand" href="/">StreamForge</a></header>
+<header class="sf-page-head"><a class="sf-brand" href="/">Videokr</a></header>
 <main class="sf-page-main">
   <div class="sf-page-player"><div id="sf-player" class="sf-fill"></div></div>
   <h1>${escapeHtml(video.title)}</h1>
@@ -426,7 +514,7 @@ pub.get('/pl/:slug', async (c) => {
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="sf-page">
-<header class="sf-page-head"><a class="sf-brand" href="/">StreamForge</a></header>
+<header class="sf-page-head"><a class="sf-brand" href="/">Videokr</a></header>
 <main class="sf-playlist" data-layout="${escapeHtml(playlist.layout)}">
   <div class="sf-playlist-stage"><div id="sf-player" class="sf-fill"></div></div>
   <aside class="sf-playlist-list" id="sf-playlist-list"></aside>

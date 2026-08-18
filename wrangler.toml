@@ -20,5 +20,5 @@ binding = "MEDIA"
 bucket_name = "streamforge-media"
 
 [vars]
-APP_NAME = "StreamForge"
+APP_NAME = "Videokr"
 PUBLIC_BASE_URL = "https://streamforge.getlaunchpod.workers.dev"

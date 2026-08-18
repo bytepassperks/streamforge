@@ -65,7 +65,7 @@ const videos = [
   {
     id: id('vid'),
     slug: 'streamforge-product-tour',
-    title: 'StreamForge product tour',
+    title: 'Videokr product tour',
     description: 'A walkthrough of the player, embeds and analytics.',
     source_type: 'youtube',
     source_ref: 'c65tLZVgkcY',
@@ -108,7 +108,7 @@ statements.push(
   `INSERT INTO ctas (id, video_id, kind, start_seconds, end_seconds, headline, body, button_text, button_url,
                      fields, skippable, position)
      VALUES (${q(id('cta'))}, ${q(videos[0].id)}, 'overlay', 5, 20, ${q('Like what you see?')},
-             ${q('Spin up your own StreamForge workspace in a minute.')}, ${q('Start free')},
+             ${q('Spin up your own Videokr workspace in a minute.')}, ${q('Start free')},
              ${q('https://github.com/bytepassperks/streamforge')}, 'email', 1, 'bottom-right');`,
 );
 

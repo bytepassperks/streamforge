@@ -38,6 +38,15 @@
 .sf-pos-bottom-right { bottom: 64px; right: 12px; }
 .sf-pos-bottom-left { bottom: 64px; left: 12px; }
 
+.sf-badge {
+  position: absolute; z-index: 4; right: 12px; bottom: 64px;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(11,9,8,.7); border: 1px solid rgba(255,255,255,.16);
+  color: #f2ece4; font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  opacity: 0; transition: opacity .2s ease; pointer-events: none;
+}
+.sf-player.sf-active .sf-badge, .sf-player:not(.sf-playing) .sf-badge { opacity: .85; }
+
 .sf-bigplay {
   position: absolute; inset: 0; margin: auto; width: 84px; height: 84px;
   border-radius: 50%; border: 0; cursor: pointer; z-index: 3;

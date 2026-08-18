@@ -4,6 +4,10 @@ export interface Env {
   ASSETS: Fetcher;
   APP_NAME: string;
   PUBLIC_BASE_URL: string;
+  DODO_ENVIRONMENT?: string;
+  DODO_LIFETIME_PRODUCT_ID?: string;
+  DODO_PAYMENTS_API_KEY?: string;
+  DODO_WEBHOOK_SECRET?: string;
 }
 
 export interface User {

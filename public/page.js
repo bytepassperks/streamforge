@@ -6,7 +6,7 @@
   var root = document.getElementById('sf-player');
   if (payload && root) {
     payload.captureDocumentKeys = true;
-    window.StreamForge.mount(root, payload);
+    window.Videokr.mount(root, payload);
   }
 
   var search = document.getElementById('sf-transcript-search');

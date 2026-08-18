@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env, User } from '../lib/types';
 import { currentUser, createSession, destroySession, hashPassword, randomSalt, verifyPassword } from '../lib/auth';
+import { FREE_LIMITS, createCheckout, isLifetime, offerForSeats, seatsSold } from '../lib/billing';
 import {
   defaultPlayerConfig,
   mergePlayerConfig,
@@ -128,6 +129,21 @@ api.get('/videos', async (c) => {
 });
 
 api.post('/videos', async (c) => {
+  const user = c.get('user');
+  if (!isLifetime(user)) {
+    const row = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM videos WHERE user_id = ?')
+      .bind(user.id)
+      .first<{ n: number }>();
+    if ((row?.n ?? 0) >= FREE_LIMITS.videos) {
+      return c.json(
+        {
+          error: `the free tier holds ${FREE_LIMITS.videos} videos \u2014 unlock lifetime for unlimited`,
+          upgrade: true,
+        },
+        402,
+      );
+    }
+  }
   const body = await c.req.json<{
     title?: string;
     source?: string;
@@ -515,6 +531,46 @@ api.delete('/webhooks/:id', async (c) => {
     .bind(c.req.param('id'), c.get('user').id)
     .run();
   return c.json({ ok: true });
+});
+
+/* ------------------------------------------------------------- billing ---- */
+
+api.get('/billing', async (c) => {
+  const user = c.get('user');
+  const offer = offerForSeats(await seatsSold(c.env));
+  const videos = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM videos WHERE user_id = ?')
+    .bind(user.id)
+    .first<{ n: number }>();
+  const { results } = await c.env.DB.prepare(
+    'SELECT id, status, amount_cents, currency, created_at FROM purchases WHERE user_id = ? ORDER BY created_at DESC',
+  )
+    .bind(user.id)
+    .all();
+  return c.json({
+    plan: user.plan,
+    lifetime: isLifetime(user),
+    checkout_ready: Boolean(c.env.DODO_PAYMENTS_API_KEY && c.env.DODO_LIFETIME_PRODUCT_ID),
+    offer,
+    usage: { videos: videos?.n ?? 0, video_limit: isLifetime(user) ? null : FREE_LIMITS.videos },
+    purchases: results ?? [],
+  });
+});
+
+api.post('/billing/checkout', async (c) => {
+  const user = c.get('user');
+  if (isLifetime(user)) return c.json({ error: 'you already own lifetime' }, 409);
+  const base = c.env.PUBLIC_BASE_URL || new URL(c.req.url).origin;
+  const result = await createCheckout(c.env, user, `${base}/app.html?purchase=complete`);
+  if (!result.ok) return c.json({ error: result.error }, result.status as 502 | 503);
+  const id = newId('pur');
+  const ts = now();
+  await c.env.DB.prepare(
+    `INSERT INTO purchases (id, user_id, provider, provider_ref, status, amount_cents, currency, created_at, updated_at)
+     VALUES (?, ?, 'dodo', ?, 'pending', ?, 'USD', ?, ?)`,
+  )
+    .bind(id, user.id, id, offerForSeats(await seatsSold(c.env)).usd * 100, ts, ts)
+    .run();
+  return c.json({ url: result.url });
 });
 
 /* ------------------------------------------------------------- uploads ---- */

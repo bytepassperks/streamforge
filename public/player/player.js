@@ -475,6 +475,10 @@
       }
       this.overlay.appendChild(logo);
     }
+    if (this.payload.badge) {
+      // Free-tier attribution; lifetime accounts get badge: false from the api.
+      this.overlay.appendChild(el('span', 'sf-badge', 'Videokr'));
+    }
 
     if (cfg.bigPlayButton) {
       this.bigPlay = el('button', 'sf-bigplay', '<span class="sf-ico-play"></span>');
