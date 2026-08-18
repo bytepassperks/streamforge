@@ -1,5 +1,5 @@
 /**
- * StreamForge player — a single custom control surface on top of several video
+ * Videokr player — a single custom control surface on top of several video
  * sources (YouTube, Vimeo, MP4, HLS). No dependencies, no build step.
  */
 (function () {
@@ -204,7 +204,10 @@
     var video = document.createElement('video');
     video.playsInline = true;
     video.preload = 'metadata';
-    video.setAttribute('crossorigin', 'anonymous');
+    // Only request CORS when we actually need cross-origin reads (caption
+    // tracks). Forcing it on plain MP4 sources breaks playback for hosts that
+    // do not send Access-Control-Allow-Origin.
+    if (this._options.captionsUrl) video.setAttribute('crossorigin', 'anonymous');
     if (this._options.poster) video.poster = this._options.poster;
     if (this._options.captionsUrl) {
       var track = document.createElement('track');
@@ -542,6 +545,9 @@
     var self = this;
     var cfg = this.config;
     var bar = el('div', 'sf-controls');
+    var row = el('div', 'sf-controls-row');
+    var leftGroup = el('div', 'sf-group sf-group-left');
+    var rightGroup = el('div', 'sf-group sf-group-right');
 
     if (cfg.controls.playPause) {
       this.playBtn = el('button', 'sf-btn sf-play', '<span class="sf-ico-play"></span>');
@@ -550,7 +556,7 @@
       this.playBtn.addEventListener('click', function () {
         self.togglePlay();
       });
-      bar.appendChild(this.playBtn);
+      leftGroup.appendChild(this.playBtn);
     }
 
     if (cfg.controls.progress) {
@@ -598,7 +604,7 @@
     if (cfg.controls.time) {
       this.timeLabel = el('div', 'sf-time', '0:00 / 0:00');
       this.timeLabel.setAttribute('data-sf', 'time');
-      bar.appendChild(this.timeLabel);
+      leftGroup.appendChild(this.timeLabel);
     }
 
     if (cfg.controls.volume) {
@@ -624,11 +630,11 @@
       });
       volWrap.appendChild(this.muteBtn);
       volWrap.appendChild(this.volInput);
-      bar.appendChild(volWrap);
+      leftGroup.appendChild(volWrap);
     }
 
     if (cfg.controls.chapters && this.chapters.length) {
-      bar.appendChild(
+      rightGroup.appendChild(
         this._menu('sf-chapters', 'Chapters', '<span class="sf-ico-list"></span>', this.chapters.map(function (ch) {
           return {
             label: fmtTime(ch.start_seconds) + '  ' + ch.title,
@@ -658,7 +664,7 @@
           };
         }),
       );
-      bar.appendChild(this.speedBtn);
+      rightGroup.appendChild(this.speedBtn);
     }
 
     if (cfg.controls.captions) {
@@ -671,7 +677,7 @@
           self.ccBtn.classList.toggle('sf-active', !!on);
         }
       });
-      bar.appendChild(this.ccBtn);
+      rightGroup.appendChild(this.ccBtn);
     }
 
     if (cfg.controls.pip) {
@@ -681,7 +687,7 @@
       this.pipBtn.addEventListener('click', function () {
         if (self.adapter.togglePip) self.adapter.togglePip();
       });
-      bar.appendChild(this.pipBtn);
+      rightGroup.appendChild(this.pipBtn);
     }
 
     if (cfg.controls.fullscreen) {
@@ -691,8 +697,12 @@
       this.fsBtn.addEventListener('click', function () {
         self.toggleFullscreen();
       });
-      bar.appendChild(this.fsBtn);
+      rightGroup.appendChild(this.fsBtn);
     }
+
+    row.appendChild(leftGroup);
+    row.appendChild(rightGroup);
+    bar.appendChild(row);
 
     return bar;
   };

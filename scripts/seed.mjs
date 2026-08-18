@@ -6,8 +6,8 @@
 import { execFileSync } from 'node:child_process';
 import { pbkdf2Sync, randomBytes } from 'node:crypto';
 
-const EMAIL = process.env.SEED_EMAIL || 'demo@streamforge.test';
-const PASSWORD = process.env.SEED_PASSWORD || 'streamforge123';
+const EMAIL = process.env.SEED_EMAIL || 'demo@videokr.test';
+const PASSWORD = process.env.SEED_PASSWORD || 'videokr123';
 const ALPHABET = 'abcdefghijkmnopqrstuvwxyz23456789';
 
 function id(prefix) {
@@ -64,7 +64,7 @@ const playerConfig = JSON.stringify({
 const videos = [
   {
     id: id('vid'),
-    slug: 'streamforge-product-tour',
+    slug: 'videokr-product-tour',
     title: 'Videokr product tour',
     description: 'A walkthrough of the player, embeds and analytics.',
     source_type: 'youtube',
@@ -77,7 +77,7 @@ const videos = [
     title: 'Own-media sample (MP4)',
     description: 'A creative-commons MP4 served straight from object storage.',
     source_type: 'mp4',
-    source_ref: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
+    source_ref: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     thumbnail: '',
   },
 ];

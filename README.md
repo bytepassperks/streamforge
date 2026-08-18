@@ -1,4 +1,4 @@
-# StreamForge
+# Videokr
 
 Free-tier video hosting, custom player, embeds, and viewer analytics — a VIDEOO-style
 product built entirely on Cloudflare's free plan (Workers + static assets + D1 + R2).
@@ -26,7 +26,7 @@ support so seeking works.
 ```bash
 npm install
 npm run db:migrate:local     # apply migrations to the local D1 instance
-npm run seed:local           # demo user + sample videos (demo@streamforge.test / streamforge123)
+npm run seed:local           # demo user + sample videos (demo@videokr.test / videokr123)
 npm run dev                  # http://localhost:8787
 ```
 
