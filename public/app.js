@@ -932,6 +932,13 @@
 
   /* ------------------------------------------------------------- webhooks -- */
 
+  /** Human summary of a webhook's last delivery attempt. */
+  function deliveryLabel(hook) {
+    if (!hook.last_attempt_at) return 'no deliveries yet';
+    if (hook.last_error) return hook.last_error + ' — ' + fmtDate(hook.last_attempt_at);
+    return hook.last_status + ' OK — ' + fmtDate(hook.last_attempt_at);
+  }
+
   function loadWebhooks() {
     api('/webhooks')
       .then(function (result) {
@@ -943,7 +950,7 @@
         }
         var table = text('table', 'data');
         var headRow = document.createElement('tr');
-        ['Endpoint', 'Events', 'Added', ''].forEach(function (label) {
+        ['Endpoint', 'Events', 'Last delivery', 'Added', ''].forEach(function (label) {
           headRow.appendChild(text('th', null, label));
         });
         table.appendChild(headRow);
@@ -951,6 +958,7 @@
           var row = document.createElement('tr');
           row.appendChild(text('td', null, hook.url));
           row.appendChild(text('td', null, hook.events));
+          row.appendChild(text('td', 'tiny', deliveryLabel(hook)));
           row.appendChild(text('td', 'tiny muted', fmtDate(hook.created_at)));
           var actions = document.createElement('td');
           var remove = text('button', 'btn btn-danger btn-sm', 'Delete');

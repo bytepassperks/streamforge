@@ -39,16 +39,27 @@ export async function dispatchWebhooks(
   );
   if (hooks.length === 0) return;
   const body = JSON.stringify({ event, sent_at: new Date().toISOString(), data: payload });
+  const attempted = Math.floor(Date.now() / 1000);
   await Promise.all(
     hooks.map(async (hook) => {
       const headers: Record<string, string> = { 'content-type': 'application/json' };
       if (hook.secret) headers['x-streamforge-signature'] = await sign(hook.secret, body);
+      let status = 0;
+      let error = '';
       try {
-        await fetch(hook.url, { method: 'POST', headers, body });
-      } catch {
-        // Delivery failures are intentionally swallowed: viewer-facing requests
-        // must never fail because a customer's endpoint is down.
+        const response = await fetch(hook.url, { method: 'POST', headers, body });
+        status = response.status;
+        if (!response.ok) error = `endpoint returned ${response.status}`;
+      } catch (err) {
+        // Delivery failures never surface to the viewer; they are recorded on the
+        // webhook instead so the dashboard can show a broken endpoint.
+        error = err instanceof Error ? err.message : 'delivery failed';
       }
+      await env.DB.prepare(
+        'UPDATE webhooks SET last_status = ?, last_attempt_at = ?, last_error = ? WHERE id = ?',
+      )
+        .bind(status, attempted, error.slice(0, 200), hook.id)
+        .run();
     }),
   );
 }

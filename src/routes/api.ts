@@ -489,7 +489,8 @@ api.get('/leads.csv', async (c) => {
 
 api.get('/webhooks', async (c) => {
   const { results } = await c.env.DB.prepare(
-    'SELECT id, url, events, active, created_at FROM webhooks WHERE user_id = ? ORDER BY created_at DESC',
+    `SELECT id, url, events, active, created_at, last_status, last_attempt_at, last_error
+       FROM webhooks WHERE user_id = ? ORDER BY created_at DESC`,
   )
     .bind(c.get('user').id)
     .all();
