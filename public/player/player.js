@@ -1008,6 +1008,9 @@
     if (!this.config.controls.keyboard) return;
     this.root.tabIndex = 0;
     var handler = function (event) {
+      // Never hijack typing in form controls (lead gate, password unlock, volume slider).
+      if (event.target && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+      if (event.__sfHandled) return;
       var key = event.key;
       var duration = self.adapter.duration();
       var t = self.adapter.currentTime();
@@ -1062,15 +1065,15 @@
             handled = false;
           }
       }
-      if (handled) event.preventDefault();
+      if (handled) {
+        event.__sfHandled = true;
+        event.preventDefault();
+      }
     };
     this.root.addEventListener('keydown', handler);
     // Inside an embed iframe the document itself owns the key events.
     if (window.self !== window.top || this.payload.captureDocumentKeys) {
-      document.addEventListener('keydown', function (event) {
-        if (event.target && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
-        handler(event);
-      });
+      document.addEventListener('keydown', handler);
     }
   };
 
