@@ -66,7 +66,17 @@ buckets (drop-off), devices, referrers, countries.
 `last_attempt_at`, `last_error`) so failures are visible. Delivery + signature verified
 end-to-end against a live receiver.
 
-**Billing (Free + Lifetime, Dodo Payments)** — `src/lib/billing.ts`:
+**Billing (Free + Lifetime, Dodo Payments) — LIVE and connected.** `src/lib/billing.ts`:
+- Dodo live product `Videokr Lifetime`, `pdt_0NlkABQZHg1IEe8PHKx3j`, one-time $69, business
+  `bus_0NXyVkuVr1dqXmP1O5TeG` (the same Dodo account as your other products).
+- Dodo webhook endpoint `ep_3I8tZZ4roabAgAxgULbFN08MsvK` pointing at
+  `/api/billing/dodo/webhook`, with its own signing secret.
+- Worker secrets set: `DODO_PAYMENTS_API_KEY`, `DODO_WEBHOOK_SECRET`,
+  `DODO_LIFETIME_PRODUCT_ID`. `GET /api/billing` reports `checkout_ready: true` and a real
+  checkout session was created against live Dodo, so the buy button works today.
+- The product is in LIVE mode: the next step is a real card payment, which is why the
+  successful-payment path (plan flip, badge removal, seat increment) is the one thing still
+  unproven — see "What is left".
 - Ladder `offerForSeats()`: `$69 / ₹5,999` for the first 100 seats → `$99 / ₹8,499` for
   the next 400 → `$149 / ₹12,999`. Seats counted from real `purchases WHERE status='paid'`,
   surfaced by `GET /api/public/offer`; the landing page and dashboard read it, so no
@@ -92,44 +102,40 @@ v1 is the one shipped.
 the seat ladder and webhook signature rejection of tampered bodies, wrong secrets, missing
 headers and stale timestamps) all pass.
 
+**Production checks run against the live Worker (2026-08-19):** signup 201; `GET /api/billing`
+→ `checkout_ready: true`; `POST /api/billing/checkout` → a real
+`checkout.dodopayments.com/session/...` URL; a bogus-signature webhook → 401 with no plan
+granted; video create → `/v/<slug>` 200 and the page renders `sf-player` + `sf-controls` +
+the free-tier `sf-badge` in a real browser, which closes the earlier blank-player P0; the
+test project, video and rows were deleted afterwards (`/v/` now 404s).
+
 ## 3. What is left
 
 Ordered by what blocks revenue.
 
-1. **Connect Dodo (blocks all sales).** Create the lifetime product in the Dodo dashboard,
-   then set on the Worker:
-   ```
-   npx wrangler secret put DODO_PAYMENTS_API_KEY
-   npx wrangler secret put DODO_WEBHOOK_SECRET
-   npx wrangler secret put DODO_LIFETIME_PRODUCT_ID
-   # optional: DODO_ENVIRONMENT=test_mode while testing
-   ```
-   Point the Dodo webhook at `https://<your-domain>/api/billing/dodo/webhook`. Until these
-   exist, `GET /api/billing` reports `checkout_ready: false` and the dashboard disables the
-   buy button instead of sending anyone to a broken checkout.
-2. **Run one real payment end-to-end** (test mode first) and confirm the account flips to
-   lifetime, the badge disappears, the video cap lifts and the seat counter increments.
-   The webhook payload field names (`data.payment_id`, `data.total_amount`,
-   `data.metadata.user_id`, `data.customer.email`) were taken from Dodo's docs and have
-   not been checked against a real delivery yet.
-3. **Finish the recorded E2E pass.** The last run found one P0 — `/v/` and `/pl/` pages
-   called `window.Videokr` while the player only registered `window.StreamForge`, so no
-   player mounted. Fixed in commit `56b8170` and redeployed, but re-verification of the
-   `/v/` and `/pl/` paths (public playback, badge on a public page, CTA/lead gate,
-   password unlock + hotkeys, playlist autoplay-next) did not finish. Also still unchecked:
-   mobile layout at ~390px, reduced-motion behaviour, and whether every brand PNG looks
-   clean on the dark background (they were cropped from supplied images and may retain
-   dark edges or halos).
-4. **Attach the custom domain** (your call — deliberately left undone). `videokr.com` was
+1. **Buy it once yourself (the only untested path).** Everything up to Dodo's payment page
+   is verified; the post-payment half is not, because it needs a real live charge. Buy the
+   $69 lifetime from the dashboard with your own card, then confirm your account shows
+   lifetime, the player badge disappears, the 5-video cap lifts and the seat counter moves
+   to 1 of 100. The webhook field names (`data.metadata.user_id`, `data.customer.email`,
+   `data.payment_id`, `data.total_amount`) come from Dodo's docs; if the grant does not
+   happen, the webhook body will be in the Dodo dashboard's delivery log and it is a
+   one-line mapping fix. Refunding yourself in Dodo afterwards costs only Dodo's fee.
+   (If you would rather rehearse for free, set `DODO_ENVIRONMENT=test_mode` plus test-mode
+   key/product/webhook secrets, run a test card, then remove the override.)
+2. **Remaining UI checks I did not spend credits on:** mobile layout at ~390px,
+   reduced-motion behaviour, and whether every brand PNG is clean on the dark background
+   (they came from the supplied images and may retain dark edges or halos).
+3. **Attach the custom domain** (your call — deliberately left undone). `videokr.com` was
    in pending-delete on 2026-08-18, so it needs a backorder/drop-catch, not a normal
    registration. After pointing DNS, update `PUBLIC_BASE_URL` in `wrangler.toml` and the
    Dodo webhook URL.
-5. **Seeded demo account.** `demo@streamforge.app` exists in production with a known
-   password — change or delete it before launch.
-6. **Backend naming.** Worker, D1, R2 bucket, package and repo are still named
+4. **Seeded demo account.** `demo@streamforge.app` still exists in production but its
+   seeded password no longer works (login returns 401) — delete the row when convenient.
+5. **Backend naming.** Worker, D1, R2 bucket, package and repo are still named
    `streamforge`, and the legacy `x-streamforge-signature` webhook header remains. All are
    compatibility-sensitive and invisible to customers; rename only deliberately.
-7. **Nice-to-haves not built.** Storage and monthly-play enforcement (the numbers are
+6. **Nice-to-haves not built.** Storage and monthly-play enforcement (the numbers are
    advertised and stored in `FREE_LIMITS` but only the video cap is enforced), transcript
    search, auto-captions, and localised INR checkout in Dodo.
 
