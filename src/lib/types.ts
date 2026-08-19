@@ -15,6 +15,9 @@ export interface User {
   email: string;
   name: string;
   plan: string;
+  role: string;
+  unlimited: number;
+  suspended: number;
   created_at: number;
 }
 

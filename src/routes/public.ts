@@ -12,7 +12,7 @@ import {
 import { verifyPassword } from '../lib/auth';
 import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
-import { offerForSeats, seatsSold, verifyDodoSignature } from '../lib/billing';
+import { isLifetime, offerForSeats, seatsSold, verifyDodoSignature } from '../lib/billing';
 
 export const pub = new Hono<{ Bindings: Env }>();
 
@@ -157,9 +157,9 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     .bind(video.id)
     .all<Omit<Cta, 'video_id'>>();
   const thumbnail = variant === 'b' && video.thumbnail_url_b ? video.thumbnail_url_b : video.thumbnail_url;
-  const owner = await env.DB.prepare('SELECT plan FROM users WHERE id = ?')
+  const owner = await env.DB.prepare('SELECT plan, role, unlimited FROM users WHERE id = ?')
     .bind(video.user_id)
-    .first<{ plan: string }>();
+    .first<{ plan: string; role: string; unlimited: number }>();
   return {
     video: {
       id: video.id,
@@ -176,7 +176,7 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     chapters: chapters.results ?? [],
     ctas: ctas.results ?? [],
     variant,
-    badge: owner?.plan !== 'lifetime',
+    badge: !(owner && isLifetime(owner)),
   };
 }
 

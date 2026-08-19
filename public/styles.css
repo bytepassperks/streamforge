@@ -288,7 +288,11 @@ select option { background: var(--ink-2); }
   text-align: left; background: transparent; border: 0; color: var(--muted); padding: 10px 12px;
   border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; width: 100%; font-family: inherit;
 }
-.side-nav button:hover { background: rgba(255, 255, 255, .06); color: var(--text); }
+.side-nav a {
+  display: block; text-decoration: none; color: var(--accent-2); padding: 10px 12px;
+  border-radius: 10px; font-size: 14px; font-weight: 600;
+}
+.side-nav button:hover, .side-nav a:hover { background: rgba(255, 255, 255, .06); color: var(--text); }
 .side-nav button.active { background: rgba(255, 90, 31, .16); color: #ffd0b8; font-weight: 600; }
 .side-foot { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 13px; color: var(--muted); }
 .main { padding: 26px 30px 60px; overflow-x: hidden; }

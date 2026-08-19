@@ -1106,7 +1106,8 @@
       }
       state.user = result.user;
       $('who').textContent = result.user.name || result.user.email;
-      planChip({ lifetime: result.user.plan === 'lifetime' });
+      planChip({ lifetime: result.user.plan === 'lifetime' || Number(result.user.unlimited) === 1 });
+      if (result.user.role === 'admin') $('admin-link').classList.remove('hidden');
       var params = new URLSearchParams(location.search);
       if (params.get('purchase')) {
         // Dodo returns here after checkout; the webhook is what actually grants

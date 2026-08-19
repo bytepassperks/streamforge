@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import type { Env, User } from '../lib/types';
 import { currentUser, createSession, destroySession, hashPassword, randomSalt, verifyPassword } from '../lib/auth';
-import { FREE_LIMITS, createCheckout, isLifetime, offerForSeats, seatsSold } from '../lib/billing';
+import { FREE_LIMITS, createCheckout, isAdmin, isLifetime, offerForSeats, seatsSold } from '../lib/billing';
+import { admin } from './admin';
 import {
   defaultPlayerConfig,
   mergePlayerConfig,
@@ -21,9 +22,14 @@ api.use('*', async (c, next) => {
   const path = c.req.path.replace(/^\/api/, '');
   const user = await currentUser(c);
   if (user) c.set('user', user);
+  if (user && Number(user.suspended) === 1 && path !== '/auth/logout') {
+    return c.json({ error: 'this account is suspended' }, 403);
+  }
   if (!user && !OPEN_PATHS.has(path)) return c.json({ error: 'unauthorized' }, 401);
   await next();
 });
+
+api.route('/admin', admin);
 
 /* ---------------------------------------------------------------- auth ---- */
 
@@ -52,15 +58,25 @@ api.post('/auth/login', async (c) => {
   const { email, password } = await c.req.json<{ email?: string; password?: string }>();
   const cleanEmail = (email ?? '').trim().toLowerCase();
   const row = await c.env.DB.prepare(
-    'SELECT id, email, name, plan, password_hash, password_salt FROM users WHERE email = ?',
+    'SELECT id, email, name, plan, role, suspended, password_hash, password_salt FROM users WHERE email = ?',
   )
     .bind(cleanEmail)
-    .first<{ id: string; email: string; name: string; plan: string; password_hash: string; password_salt: string }>();
+    .first<{
+      id: string;
+      email: string;
+      name: string;
+      plan: string;
+      role: string;
+      suspended: number;
+      password_hash: string;
+      password_salt: string;
+    }>();
   if (!row || !(await verifyPassword(password ?? '', row.password_salt, row.password_hash))) {
     return c.json({ error: 'invalid email or password' }, 401);
   }
+  if (Number(row.suspended) === 1) return c.json({ error: 'this account is suspended' }, 403);
   await createSession(c, row.id);
-  return c.json({ user: { id: row.id, email: row.email, name: row.name, plan: row.plan } });
+  return c.json({ user: { id: row.id, email: row.email, name: row.name, plan: row.plan, role: row.role } });
 });
 
 api.post('/auth/logout', async (c) => {
@@ -549,6 +565,7 @@ api.get('/billing', async (c) => {
   return c.json({
     plan: user.plan,
     lifetime: isLifetime(user),
+    admin: isAdmin(user),
     checkout_ready: Boolean(c.env.DODO_PAYMENTS_API_KEY && c.env.DODO_LIFETIME_PRODUCT_ID),
     offer,
     usage: { videos: videos?.n ?? 0, video_limit: isLifetime(user) ? null : FREE_LIMITS.videos },

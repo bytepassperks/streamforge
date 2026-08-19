@@ -46,8 +46,13 @@ export function offerForSeats(sold: number): LifetimeOffer {
   return { seats_sold: sold, seats_total: 0, seats_left: 0, usd: last.usd, inr: last.inr, next_usd: null };
 }
 
-export function isLifetime(user: Pick<User, 'plan'>): boolean {
-  return user.plan === 'lifetime';
+export function isAdmin(user: Pick<User, 'role'>): boolean {
+  return user.role === 'admin';
+}
+
+/** Paid lifetime, a manual admin override, or an admin account: all unlimited. */
+export function isLifetime(user: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>): boolean {
+  return user.plan === 'lifetime' || Number(user.unlimited) === 1 || user.role === 'admin';
 }
 
 function apiBase(env: Env): string {
