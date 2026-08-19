@@ -1114,6 +1114,8 @@
         // the plan, so reflect whatever the server says rather than assuming.
         showView('billing');
         toast(result.user.plan === 'lifetime' ? 'Lifetime unlocked' : 'Payment received — unlocking shortly');
+      } else if (params.get('view') === 'billing') {
+        showView('billing');
       } else {
         showView('videos');
       }
