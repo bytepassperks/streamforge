@@ -114,6 +114,8 @@
         return new Promise(function (resolve) {
           self._yt = new window.YT.Player(mount, {
             videoId: self._source,
+            width: '100%',
+            height: '100%',
             playerVars: {
               controls: 0,
               disablekb: 1,
