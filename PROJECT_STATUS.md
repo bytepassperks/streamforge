@@ -67,14 +67,40 @@ buckets (drop-off), devices, referrers, countries.
 `last_attempt_at`, `last_error`) so failures are visible. Delivery + signature verified
 end-to-end against a live receiver.
 
-**Billing (Free + Lifetime, Dodo Payments) — LIVE and connected.** `src/lib/billing.ts`:
-- Dodo live product `Videokr Lifetime`, `pdt_0NlkABQZHg1IEe8PHKx3j`, one-time $69, business
+**Billing (Free, Starter, Agency, Lifetime — Dodo Payments) — LIVE and connected.**
+`src/lib/billing.ts`. Plans are metered on plays, not on storage:
+
+| Plan | Price | Plays / month | Videos | Fair-use storage | Over allowance |
+| --- | --- | --- | --- | --- | --- |
+| Free | $0 | 500 | 5 | 2 GB | playback stops until the month rolls over |
+| Starter | $5/mo or $29/yr | 10,000 | unlimited | 25 GB | keeps playing, $1 per 10,000 |
+| Agency | $29/mo or $290/yr | 150,000 | unlimited | 250 GB | keeps playing, $1 per 10,000 |
+| Lifetime | $69 → $99 → $149 one-time, on sale permanently | 10,000 forever | unlimited | 25 GB | keeps playing, $1 per 10,000 |
+
+- Dodo live products: Lifetime `pdt_0NlkABQZHg1IEe8PHKx3j`; recurring Starter monthly
+  `pdt_0NlpHnWuphLGAtw5NnKzA`, Starter annual `pdt_0NlpHnaEHSuVDufu3ixr7`, Agency monthly
+  `pdt_0NlpHneTyTAjGlTkQUOF1`, Agency annual `pdt_0NlpHnhoCRnim1RNH55Z2`, business
   `bus_0NXyVkuVr1dqXmP1O5TeG` (the same Dodo account as your other products).
 - Dodo webhook endpoint `ep_3I8tZZ4roabAgAxgULbFN08MsvK` pointing at
   `/api/billing/dodo/webhook`, with its own signing secret.
 - Worker secrets set: `DODO_PAYMENTS_API_KEY`, `DODO_WEBHOOK_SECRET`,
-  `DODO_LIFETIME_PRODUCT_ID`. `GET /api/billing` reports `checkout_ready: true` and a real
-  checkout session was created against live Dodo, so the buy button works today.
+  `DODO_LIFETIME_PRODUCT_ID`, `DODO_STARTER_PRODUCT_ID`, `DODO_STARTER_ANNUAL_PRODUCT_ID`,
+  `DODO_AGENCY_PRODUCT_ID`, `DODO_AGENCY_ANNUAL_PRODUCT_ID`. `GET /api/billing` reports
+  `checkout_ready` and `subscription_ready`, and real checkout sessions were created against
+  live Dodo for Lifetime and for Starter, so both buy paths work today.
+- `POST /api/billing/subscribe` takes `{plan: starter|agency, cycle: monthly|annual}` and
+  returns a hosted Dodo subscription checkout url.
+- Subscription lifecycle is handled from Dodo's documented events —
+  `subscription.active`, `renewed`, `plan_changed`, `unpaused` grant the plan mapped from
+  the product id; `cancelled`, `expired`, `failed`, `paused`, `on_hold` fall back to Free;
+  `subscription.updated` is classified from its `status` field. `users.subscription_id` and
+  `users.plan_renews_at` are stored. A Lifetime account is never downgraded by a
+  subscription event. Verified in production with signed synthetic events: active → Starter,
+  plan change → Agency, `updated/on_hold` → Free, and all three ignored on a Lifetime
+  account.
+- Fixed while verifying: the deployed `DODO_WEBHOOK_SECRET` did not match the signing
+  secret of the live Dodo endpoint, so real webhooks would have been rejected with 401. The
+  secret was re-read from the Dodo API and re-uploaded.
 - The product is in LIVE mode: the next step is a real card payment, which is why the
   successful-payment path (plan flip, badge removal, seat increment) is the one thing still
   unproven — see "What is left".
@@ -88,10 +114,26 @@ end-to-end against a live receiver.
   Webhooks HMAC-SHA256 verification, 5-minute timestamp window, dedupe by `webhook-id`,
   then `payment.succeeded` → `users.plan = 'lifetime'`. The browser return URL only
   re-reads the server's plan, so it cannot be spoofed into an unlock.
-- Free tier: 5 videos (`POST /api/videos` returns `402 {upgrade:true}` past the cap),
-  3 GB, 10k plays/month, and a small "Videokr" badge on the player — the embed payload
-  sets `badge: owner.plan !== 'lifetime'`, so it is removed by buying, not by editing
-  client config.
+- Free tier: 5 videos (`POST /api/videos` returns `402 {upgrade:true}` past the cap) and a
+  small "Videokr" badge on the player — the embed payload sets
+  `badge: owner.plan !== 'lifetime'`, so it is removed by buying, not by editing client
+  config.
+
+**Play metering** — migration `0006_plays.sql` adds `play_usage` (per account, per UTC
+calendar month, `YYYY-MM`) and `play_dedup` keyed `(video_id, view_id, period)`, so a
+viewer who reloads or rewatches the same video inside a month is counted once. Usage is
+attributed to the video's owner. `/api/track` counts the play synchronously and answers
+`{capped:true}` once a hard-stop plan is over its allowance; the player then stops and
+shows the monthly-limit card. Paid plans keep serving and accrue displayed overage.
+`role='admin'` or `unlimited=1` bypasses every allowance. Usage shows in the dashboard
+billing view and on each user in the admin portal. Verified in production: duplicate
+`view_id` did not increment, a new viewer did, Free blocked at 500, Starter kept playing
+past its allowance with overage shown.
+
+The remote migration was applied with `wrangler d1 execute --file` rather than
+`migrations apply`, because the remote `d1_migrations` ledger was missing entries for
+`0004`/`0005` and re-running them failed on an already-present `role` column. The ledger
+was then reconciled by hand — do not blindly re-run the old migration sequence.
 
 **Design + brand** — "Broadcast Coal" dark system across landing, login and dashboard:
 Instrument Serif display, Inter Tight UI, Caveat annotations, JetBrains Mono metadata,
@@ -274,9 +316,23 @@ Ordered by what blocks revenue.
 5. **Backend naming.** Worker, D1, R2 bucket, package and repo are still named
    `streamforge`, and the legacy `x-streamforge-signature` webhook header remains. All are
    compatibility-sensitive and invisible to customers; rename only deliberately.
-6. **Nice-to-haves not built.** Storage and monthly-play enforcement (the numbers are
-   advertised and stored in `FREE_LIMITS` but only the video cap is enforced), transcript
-   search, auto-captions, and localised INR checkout in Dodo.
+6. **Overage is calculated but never collected.** Plays past a paid allowance are counted
+   and displayed to the customer and in the admin portal, but nothing bills them — there is
+   no Dodo usage-charge or invoice call yet. Until that exists, overage is a reporting
+   number, not revenue.
+7. **Storage is metadata only.** Each plan carries a fair-use storage ceiling, but uploaded
+   bytes are not totalled per account and nothing enforces the ceiling. The cold-storage
+   lifecycle (move media with no plays for 60 days to infrequent-access) is also not built.
+8. **View identity is weak.** `view_id` comes from the client, so a determined caller can
+   rotate it to inflate an owner's counted plays, or reuse one to suppress them. Fine for
+   billing at this scale, not fine as an anti-abuse control — a server-derived, salted
+   fingerprint should replace it before overage is actually charged.
+9. **Real subscription payments are unproven.** The lifecycle was verified with signed
+   synthetic events; no live card has been run through a Starter or Agency checkout, so the
+   real payload field names are still assumed from Dodo's docs.
+10. **Nice-to-haves not built.** A public per-user channel page (the only remaining
+    videoo.org parity gap), transcript search, auto-captions, and localised INR checkout in
+    Dodo.
 
 ## 4. Honest caveats to keep in the copy
 
