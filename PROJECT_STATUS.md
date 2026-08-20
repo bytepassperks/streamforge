@@ -95,8 +95,8 @@ end-to-end against a live receiver.
 **Design + brand** — "Broadcast Coal" dark system across landing, login and dashboard:
 Instrument Serif display, Inter Tight UI, Caveat annotations, JetBrains Mono metadata,
 coal/cream/ember/lime palette. Brand assets (logo lockup, favicon set, hero, six feature
-illustrations) in `public/brand/`. Five design explorations remain at `/design/v1`…`/v5`;
-v1 is the one shipped.
+illustrations) in `public/brand/`. The five design explorations have been removed now that
+the chosen direction (v1) ships as the real landing page.
 
 **Quality** — `npm run lint`, `npm run typecheck` and `npm test` (32 unit tests, including
 the seat ladder and webhook signature rejection of tampered bodies, wrong secrets, missing

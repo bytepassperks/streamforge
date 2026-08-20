@@ -38,6 +38,8 @@
 </nav>
 
 <header class="hero">
+  <div class="blob blob-1" aria-hidden="true"><svg viewBox="0 0 300 300"><path d="M158 12c44-6 92 18 108 58 17 41-1 88-24 124-22 35-49 68-89 74-41 6-88-14-113-47-25-34-27-82-9-121C50 61 89 27 128 17c10-3 20-4 30-5Z" fill="#FF5A1F" opacity=".16"/><path d="M150 34c38-4 78 16 92 51 15 36-2 78-22 110-19 31-43 60-78 65-36 6-77-12-99-41" fill="none" stroke="#FF5A1F" stroke-width="2" stroke-linecap="round" stroke-dasharray="9 13" opacity=".5"/></svg></div>
+  <div class="blob blob-2" aria-hidden="true"><svg viewBox="0 0 300 300"><path d="M120 22c46-10 100 10 128 50 27 40 22 96-6 133-27 36-79 52-124 45-46-7-88-38-102-81-14-44 3-96 38-124 19-15 42-19 66-23Z" fill="#C3F53C" opacity=".1"/></svg></div>
   <div class="wrap hero-grid">
     <div>
       <span class="badge" id="hero-badge">Free forever · 100 lifetime seats</span>
@@ -89,11 +91,11 @@
       <h2>Why is putting a video on your site <span class="ital">still this bad?</span></h2>
     </div>
     <div class="grid-3">
-      <div class="paper"><div class="no">#1</div><h3>YouTube embeds work for YouTube.</h3>
+      <div class="paper reveal"><span class="tape" aria-hidden="true"></span><div class="no">#1</div><h3>YouTube embeds work for YouTube.</h3>
         <p>Their logo, their suggested videos, their retargeting. You did the work; they keep the viewer.</p></div>
-      <div class="paper"><div class="no">#2</div><h3>The pros want $79–$329 a month.</h3>
+      <div class="paper reveal reveal-d1"><span class="tape" aria-hidden="true"></span><div class="no">#2</div><h3>The pros want $79–$329 a month.</h3>
         <p>Removing someone else's branding is a paid feature. Lead capture sits in a higher tier. Every month, forever.</p></div>
-      <div class="paper"><div class="no">#3</div><h3>You're guessing at what works.</h3>
+      <div class="paper reveal reveal-d2"><span class="tape" aria-hidden="true"></span><div class="no">#3</div><h3>You're guessing at what works.</h3>
         <p>Nobody quits "somewhere" — they quit at 0:47. Views alone can't tell you that, or which thumbnail won.</p></div>
     </div>
   </div>
@@ -217,7 +219,7 @@
           <li>Badge off — your logo only</li>
           <li>Lead capture, CTAs, webhooks, A/B tests</li>
           <li>Every feature we ship from here on</li>
-          <li>Self-host on your own Cloudflare account</li>
+          <li>Export your videos, leads and analytics any time</li>
         </ul>
         <a class="btn btn-lg" id="lifetime-cta" href="/login.html?mode=signup&amp;intent=lifetime">Claim a lifetime seat →</a>
         <div class="seats"><i id="seat-bar" style="width:0%"></i></div>
@@ -240,9 +242,9 @@
     <details class="faq"><summary>What happens after 100 seats?</summary>
       <p>The price steps to $99, then $149. If you already bought, nothing changes — ever.</p></details>
     <details class="faq"><summary>Where are the videos stored, and will bandwidth bill me?</summary>
-      <p>In Cloudflare R2, which has no egress fees, or you can simply link a YouTube, Vimeo, MP4 or HLS source. Videokr is built to sit inside Cloudflare's free tier; those free quotas are generous but real, so extremely high traffic can eventually need a paid Cloudflare plan — that's a bill from Cloudflare, never from us.</p></details>
-    <details class="faq"><summary>Can I run it on my own infrastructure?</summary>
-      <p>Yes. Lifetime includes deploying to your own Cloudflare account with your own D1 database and R2 bucket, so the data is entirely yours.</p></details>
+      <p>On our own global storage and delivery network, close to your viewers — or you can simply link a YouTube, Vimeo, MP4 or HLS source and keep the file where it already lives. Bandwidth is on us: there is no metered egress charge on any plan, and the free tier's monthly play allowance is the only ceiling.</p></details>
+    <details class="faq"><summary>Am I locked in?</summary>
+      <p>No. We host everything for you — no servers, no setup, nothing to maintain — and you can export your videos, leads and analytics whenever you want, so the data stays yours.</p></details>
   </div>
 </section>
 
@@ -269,10 +271,10 @@
     video: {
       id: 'demo',
       slug: 'demo',
-      title: 'Big Buck Bunny — Blender Foundation (CC BY 3.0)',
+      title: 'Sintel — Blender Foundation (CC BY 3.0)',
       description: '',
-      source_type: 'youtube',
-      source_ref: 'aqz-KE-bpKQ',
+      source_type: 'mp4',
+      source_ref: '/media/demo/videokr-demo-720p.mp4',
       duration: 0,
       thumbnail_url: '',
       captions_url: ''
@@ -287,9 +289,9 @@
       title: true, bigPlayButton: true, sticky: false, borderRadius: 14
     },
     chapters: [
-      { start_seconds: 0, title: 'Opening' },
-      { start_seconds: 60, title: 'The meadow' },
-      { start_seconds: 210, title: 'Payback' }
+      { start_seconds: 0, title: 'Cold open' },
+      { start_seconds: 18, title: 'The hunt' },
+      { start_seconds: 38, title: 'Face to face' }
     ],
     ctas: [],
     variant: 'a'
@@ -371,6 +373,23 @@
       loadOffer();
     })
     .catch(function () { loadOffer(); });
+
+  /* Scroll reveals: hand-timed, and everything stays visible without JS or motion. */
+  (function reveals() {
+    var nodes = document.querySelectorAll('.reveal');
+    if (!('IntersectionObserver' in window)) {
+      for (var i = 0; i < nodes.length; i++) nodes[i].classList.add('in-view');
+      return;
+    }
+    var seen = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('in-view');
+        seen.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.15 });
+    for (var n = 0; n < nodes.length; n++) seen.observe(nodes[n]);
+  })();
 </script>
 </body>
 </html>
