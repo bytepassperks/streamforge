@@ -1,5 +1,5 @@
 /**
- * StreamForge embed loader.
+ * Videokr embed loader.
  *
  *   <script src="https://your-host/embed.js" data-video="vid_xxx" async></script>
  *
@@ -34,7 +34,7 @@
     });
 
     var wrap = document.createElement('div');
-    wrap.className = 'streamforge-embed';
+    wrap.className = 'videokr-embed';
     wrap.style.position = 'relative';
     wrap.style.width = script.getAttribute('data-width') || '100%';
     wrap.style.paddingBottom = aspect + '%';
@@ -42,7 +42,7 @@
 
     var frame = document.createElement('iframe');
     frame.src = base + '/e/' + encodeURIComponent(videoId) + (params.length ? '?' + params.join('&') : '');
-    frame.title = 'StreamForge video player';
+    frame.title = 'Videokr video player';
     frame.loading = 'lazy';
     frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
     frame.allowFullscreen = true;

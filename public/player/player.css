@@ -1,4 +1,4 @@
-/* StreamForge player skin system */
+/* Videokr player skin system */
 .sf-player {
   --sf-accent: #4f7cff;
   --sf-bg: #0b0d12;
@@ -79,7 +79,7 @@
 
 .sf-controls {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
-  display: flex; align-items: center; gap: 10px; padding: 10px 12px 12px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 8px 12px 10px;
   background: linear-gradient(to top, rgba(0,0,0,.82), rgba(0,0,0,.25) 60%, transparent);
   transform: translateY(105%); transition: transform .18s ease;
 }
@@ -92,7 +92,10 @@
 .sf-btn:hover { background: rgba(255,255,255,.14); }
 .sf-btn.sf-active { color: var(--sf-accent); }
 
-.sf-progress-wrap { position: relative; flex: 1; padding: 8px 0; }
+.sf-controls-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sf-group { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.sf-group-right { margin-left: auto; flex: none; }
+.sf-progress-wrap { position: relative; width: 100%; padding: 6px 0 4px; }
 .sf-progress { position: relative; height: 5px; border-radius: 99px; background: rgba(255,255,255,.28); cursor: pointer; }
 .sf-progress:hover { height: 7px; }
 .sf-buffer { position: absolute; inset: 0 auto 0 0; width: 0; background: rgba(255,255,255,.35); border-radius: 99px; }
@@ -110,7 +113,14 @@
 }
 .sf-tooltip.sf-visible { opacity: 1; }
 
-.sf-time { font-size: 12px; font-variant-numeric: tabular-nums; opacity: .92; min-width: 92px; text-align: center; }
+.sf-time { font-size: 12px; font-variant-numeric: tabular-nums; opacity: .92; white-space: nowrap; padding: 0 6px; }
+
+/* Narrow embeds: drop the least essential controls before things collide. */
+@media (max-width: 420px) {
+  .sf-time { font-size: 11px; padding: 0 2px; }
+  .sf-volume:hover input[type="range"] { width: 48px; }
+  .sf-group .sf-pip { display: none; }
+}
 
 .sf-volume { display: flex; align-items: center; gap: 4px; }
 .sf-volume input[type="range"] { width: 0; opacity: 0; transition: width .18s ease, opacity .18s ease; accent-color: var(--sf-accent); }

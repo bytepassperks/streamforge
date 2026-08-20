@@ -10,7 +10,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.route('/', pub);
 app.route('/api', api);
 
-app.get('/healthz', (c) => c.json({ ok: true, service: 'streamforge' }));
+app.get('/healthz', (c) => c.json({ ok: true, service: 'videokr' }));
 
 // Anything not handled above falls through to the static assets bundle.
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));

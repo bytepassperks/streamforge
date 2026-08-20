@@ -383,7 +383,7 @@ function playerShell(payloadJson: string, title: string, extraBody = ''): string
 ${extraBody}
 <script>window.__SF_EMBED__ = ${payloadJson};</script>
 <script src="/player/player.js"></script>
-<script>StreamForge.mount(document.getElementById('sf-player'), window.__SF_EMBED__);</script>
+<script>Videokr.mount(document.getElementById('sf-player'), window.__SF_EMBED__);</script>
 </body>
 </html>`;
 }

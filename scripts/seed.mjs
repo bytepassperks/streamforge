@@ -6,8 +6,8 @@
 import { execFileSync } from 'node:child_process';
 import { pbkdf2Sync, randomBytes } from 'node:crypto';
 
-const EMAIL = process.env.SEED_EMAIL || 'demo@streamforge.test';
-const PASSWORD = process.env.SEED_PASSWORD || 'streamforge123';
+const EMAIL = process.env.SEED_EMAIL || 'demo@videokr.test';
+const PASSWORD = process.env.SEED_PASSWORD || 'videokr123';
 const ALPHABET = 'abcdefghijkmnopqrstuvwxyz23456789';
 
 function id(prefix) {
@@ -64,7 +64,7 @@ const playerConfig = JSON.stringify({
 const videos = [
   {
     id: id('vid'),
-    slug: 'streamforge-product-tour',
+    slug: 'videokr-product-tour',
     title: 'Videokr product tour',
     description: 'A walkthrough of the player, embeds and analytics.',
     source_type: 'youtube',
@@ -75,15 +75,22 @@ const videos = [
     id: id('vid'),
     slug: 'open-media-sample',
     title: 'Own-media sample (MP4)',
-    description: 'A creative-commons MP4 served straight from object storage.',
+    description: 'A creative-commons MP4 played through the Videokr player (CORS + range friendly).',
     source_type: 'mp4',
-    source_ref: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
+    source_ref: 'https://mdn.github.io/shared-assets/videos/flower.mp4',
     thumbnail: '',
   },
 ];
 
+const slugList = videos.map((v) => q(v.slug)).join(', ');
+
 const statements = [
-  `DELETE FROM users WHERE email = ${q(EMAIL)};`,
+  // Make re-seeding idempotent: drop any previous demo rows (including legacy
+  // StreamForge-branded ones) before inserting the current demo dataset.
+  `DELETE FROM chapters WHERE video_id IN (SELECT id FROM videos WHERE slug IN (${slugList}));`,
+  `DELETE FROM ctas WHERE video_id IN (SELECT id FROM videos WHERE slug IN (${slugList}));`,
+  `DELETE FROM videos WHERE slug IN (${slugList});`,
+  `DELETE FROM users WHERE email IN (${q(EMAIL)}, 'demo@streamforge.app');`,
   `INSERT INTO users (id, email, name, password_hash, password_salt, plan, created_at)
      VALUES (${q(userId)}, ${q(EMAIL)}, ${q('Demo Studio')}, ${q(hash(PASSWORD, salt))}, ${q(salt)}, 'free', ${nowSeconds});`,
   `INSERT INTO projects (id, user_id, name, created_at)

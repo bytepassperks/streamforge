@@ -645,7 +645,7 @@
     host.textContent = '';
     var mount = document.createElement('div');
     host.appendChild(mount);
-    window.StreamForge.mount(mount, {
+    window.Videokr.mount(mount, {
       tracking: false,
       video: {
         id: state.video.id,
