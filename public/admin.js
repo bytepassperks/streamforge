@@ -244,6 +244,8 @@
         $('mu-suspended').value = String(Number(data.user.suspended) || 0);
         $('mu-notes').value = data.user.notes || '';
         $('mu-password').value = '';
+        $('mu-usage-period').value = data.plays.period;
+        $('mu-usage-plays').value = String(data.plays.plays);
         $('mu-error').textContent = '';
         $('mu-meta').textContent =
           data.user.id +
@@ -401,6 +403,108 @@
     }).catch(fail);
   }
 
+  /* --------------------------------------------------------------- overage -- */
+
+  function overageStatusPill(status) {
+    if (status === 'paid') return 'pill pill-ok';
+    if (status === 'failed') return 'chip chip-hot';
+    if (status === 'waived') return 'chip';
+    return 'pill';
+  }
+
+  function loadOverage() {
+    return api('/admin/overage').then(function (data) {
+      var summary = $('overage-summary');
+      summary.textContent = '';
+      [
+        ['owed', money(data.owed_cents, 'USD')],
+        ['collected', money(data.collected_cents, 'USD')],
+        ['open period', data.current_period],
+        ['last closed', data.last_closed_period],
+      ].forEach(function (pair) {
+        var box = text('div', 'stat');
+        box.appendChild(text('div', 'k', pair[0]));
+        box.appendChild(text('div', 'v', String(pair[1])));
+        summary.appendChild(box);
+      });
+      if (!$('overage-period').value) $('overage-period').value = data.last_closed_period;
+
+      var body = $('overage-body');
+      body.textContent = '';
+      if (!data.charges.length) {
+        body.appendChild(empty('Nothing owed yet — no paid account has gone past its allowance.'));
+        return;
+      }
+      var rows = data.charges.map(function (charge) {
+        var tr = document.createElement('tr');
+        var who = document.createElement('td');
+        who.appendChild(text('div', null, charge.user_email));
+        who.appendChild(
+          text(
+            'div',
+            'tiny muted',
+            charge.plan +
+              ' · renews ' +
+              fmtDate(charge.plan_renews_at) +
+              (charge.subscription_id ? ' · ' + charge.subscription_id : ' · no subscription'),
+          ),
+        );
+        tr.appendChild(who);
+        cell(tr, charge.period, 'tiny');
+        cell(tr, String(charge.plays) + ' / ' + String(charge.allowance), 'tiny');
+        cell(tr, String(charge.over), 'tiny');
+        cell(tr, money(charge.amount_cents, charge.currency));
+
+        var statusCell = document.createElement('td');
+        statusCell.appendChild(text('span', overageStatusPill(charge.status), charge.status));
+        if (charge.attempts) statusCell.appendChild(text('div', 'tiny muted', charge.attempts + ' attempts'));
+        if (charge.error) statusCell.appendChild(text('div', 'tiny muted', charge.error));
+        tr.appendChild(statusCell);
+        cell(tr, charge.payment_id || '—', 'tiny muted');
+
+        var actions = document.createElement('td');
+        if (charge.status !== 'paid' && charge.status !== 'waived') {
+          var collect = text('button', 'btn btn-sm', charge.status === 'failed' ? 'Retry charge' : 'Charge now');
+          collect.type = 'button';
+          collect.addEventListener('click', function () {
+            api('/admin/overage/' + charge.id + '/charge', { method: 'POST' })
+              .then(function (result) {
+                toast(
+                  result.status === 'paid'
+                    ? 'Collected ' + money(charge.amount_cents, charge.currency)
+                    : 'Not collected: ' + (result.error || result.status),
+                  result.status !== 'paid',
+                );
+                return loadOverage();
+              })
+              .catch(fail);
+          });
+          actions.appendChild(collect);
+
+          var waive = text('button', 'btn btn-ghost btn-sm', 'Waive');
+          waive.type = 'button';
+          waive.style.marginLeft = '6px';
+          waive.addEventListener('click', function () {
+            var note = prompt('Why is ' + charge.user_email + "'s " + charge.period + ' overage waived?', '');
+            if (note === null) return;
+            api('/admin/overage/' + charge.id + '/waive', { method: 'POST', body: { note: note } })
+              .then(function () {
+                toast('Waived');
+                return loadOverage();
+              })
+              .catch(fail);
+          });
+          actions.appendChild(waive);
+        }
+        tr.appendChild(actions);
+        return tr;
+      });
+      body.appendChild(
+        table(['Account', 'Period', 'Plays / allowance', 'Over', 'Amount', 'Status', 'Payment', ''], rows),
+      );
+    });
+  }
+
   /* ----------------------------------------------------------------- audit -- */
 
   function loadAudit() {
@@ -431,6 +535,7 @@
     users: loadUsers,
     videos: loadVideos,
     purchases: loadPurchases,
+    overage: loadOverage,
     audit: loadAudit,
   };
 
@@ -468,6 +573,56 @@
   $('videos-q').addEventListener('input', debounce(loadVideos));
 
   $('mu-save').addEventListener('click', saveUser);
+
+  $('overage-close').addEventListener('click', function () {
+    var period = $('overage-period').value.trim();
+    if (!confirm('Close ' + period + '? Every paid account past its allowance is billed for that month.')) return;
+    api('/admin/overage/close', { method: 'POST', body: { period: period } })
+      .then(function (data) {
+        toast(
+          data.summary.recorded +
+            ' owed, ' +
+            data.summary.charged +
+            ' collected, ' +
+            data.summary.failed +
+            ' failed, ' +
+            data.summary.manual +
+            ' to collect by hand',
+        );
+        return loadOverage();
+      })
+      .catch(fail);
+  });
+
+  $('mu-usage-save').addEventListener('click', function () {
+    var user = state.selected;
+    if (!user) return;
+    api('/admin/usage/' + user.id, {
+      method: 'POST',
+      body: { period: $('mu-usage-period').value.trim(), plays: Number($('mu-usage-plays').value || 0) },
+    })
+      .then(function (data) {
+        toast('Play count for ' + data.period + ' set to ' + data.plays);
+      })
+      .catch(function (error) {
+        $('mu-error').textContent = error.message;
+      });
+  });
+
+  $('mu-overage-record').addEventListener('click', function () {
+    var user = state.selected;
+    if (!user) return;
+    api('/admin/overage/users/' + user.id, {
+      method: 'POST',
+      body: { period: $('mu-usage-period').value.trim() },
+    })
+      .then(function (data) {
+        toast('Recorded ' + money(data.charge.amount_cents, data.charge.currency) + ' owed for ' + data.charge.period);
+      })
+      .catch(function (error) {
+        $('mu-error').textContent = error.message;
+      });
+  });
 
   $('mu-delete').addEventListener('click', function () {
     var user = state.selected;

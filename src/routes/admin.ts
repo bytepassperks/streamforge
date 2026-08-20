@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
 import type { Env, User } from '../lib/types';
 import { createSession, hashPassword, randomSalt } from '../lib/auth';
-import { FREE_LIMITS, PLANS, isAdmin, offerForSeats, playUsage, seatsSold } from '../lib/billing';
+import { FREE_LIMITS, PLANS, isAdmin, offerForSeats, periodKey, playUsage, seatsSold } from '../lib/billing';
+import type { OverageRow } from '../lib/overage';
+import { closePeriod, collectOverage, previousPeriod, recordOverage } from '../lib/overage';
 import { newId, now } from '../lib/util';
 
 type Vars = { user: User };
@@ -346,6 +348,112 @@ admin.post('/purchases', async (c) => {
     note: body.note ?? '',
   });
   return c.json({ purchase: { id } }, 201);
+});
+
+/* -------------------------------------------------------------- overage ---- */
+
+/** Everything owed or collected for extra plays, newest period first. */
+admin.get('/overage', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT o.*, u.email AS user_email, u.plan AS user_plan, u.plan_renews_at
+       FROM overage_charges o JOIN users u ON u.id = o.user_id
+      ORDER BY o.period DESC, o.created_at DESC
+      LIMIT 300`,
+  ).all();
+  const owed = await c.env.DB.prepare(
+    "SELECT COALESCE(SUM(amount_cents), 0) AS n FROM overage_charges WHERE status IN ('pending', 'failed', 'manual')",
+  ).first<{ n: number }>();
+  const collected = await c.env.DB.prepare(
+    "SELECT COALESCE(SUM(amount_cents), 0) AS n FROM overage_charges WHERE status = 'paid'",
+  ).first<{ n: number }>();
+  return c.json({
+    charges: results ?? [],
+    owed_cents: owed?.n ?? 0,
+    collected_cents: collected?.n ?? 0,
+    current_period: periodKey(),
+    last_closed_period: previousPeriod(),
+  });
+});
+
+/** Run the month close by hand, for a period of the admin's choosing. */
+admin.post('/overage/close', async (c) => {
+  const { period } = await c.req.json<{ period?: string }>().catch(() => ({ period: undefined }));
+  const target = /^\d{4}-\d{2}$/.test(period ?? '') ? (period as string) : previousPeriod();
+  if (target >= periodKey()) return c.json({ error: 'that period has not closed yet' }, 400);
+  const summary = await closePeriod(c.env, target);
+  await audit(c.env, c.get('user'), 'overage.close', target, { ...summary });
+  return c.json({ ok: true, summary });
+});
+
+/** Record what a single account owes for a period without waiting for the cron. */
+admin.post('/overage/users/:id', async (c) => {
+  const id = c.req.param('id');
+  const { period } = await c.req.json<{ period?: string }>().catch(() => ({ period: undefined }));
+  const target = /^\d{4}-\d{2}$/.test(period ?? '') ? (period as string) : previousPeriod();
+  const account = await c.env.DB.prepare(
+    'SELECT id, plan, role, unlimited, subscription_id FROM users WHERE id = ?',
+  )
+    .bind(id)
+    .first<{ id: string; plan: string; role: string; unlimited: number; subscription_id: string }>();
+  if (!account) return c.json({ error: 'no such user' }, 404);
+  const row = await recordOverage(c.env, account, target);
+  if (!row) return c.json({ error: 'that account owes nothing for that period' }, 400);
+  await audit(c.env, c.get('user'), 'overage.record', id, { period: target, amount_cents: row.amount_cents });
+  return c.json({ charge: row });
+});
+
+/** Charge or retry a recorded overage against the account's subscription. */
+admin.post('/overage/:id/charge', async (c) => {
+  const row = await c.env.DB.prepare('SELECT * FROM overage_charges WHERE id = ?')
+    .bind(c.req.param('id'))
+    .first<OverageRow>();
+  if (!row) return c.json({ error: 'no such charge' }, 404);
+  if (row.status === 'paid') return c.json({ error: 'that period is already collected' }, 409);
+  if (row.status === 'waived') return c.json({ error: 'that period was waived' }, 409);
+  const outcome = await collectOverage(c.env, row);
+  await audit(c.env, c.get('user'), 'overage.charge', row.id, {
+    period: row.period,
+    amount_cents: row.amount_cents,
+    ...outcome,
+  });
+  return c.json({ ok: outcome.status === 'paid', ...outcome });
+});
+
+/** Write a period off. A waived row is never charged again. */
+admin.post('/overage/:id/waive', async (c) => {
+  const id = c.req.param('id');
+  const { note } = await c.req.json<{ note?: string }>().catch(() => ({ note: '' }));
+  const row = await c.env.DB.prepare('SELECT id, status, period, user_id FROM overage_charges WHERE id = ?')
+    .bind(id)
+    .first<{ id: string; status: string; period: string; user_id: string }>();
+  if (!row) return c.json({ error: 'no such charge' }, 404);
+  if (row.status === 'paid') return c.json({ error: 'that period is already collected' }, 409);
+  await c.env.DB.prepare("UPDATE overage_charges SET status = 'waived', error = ?, updated_at = ? WHERE id = ?")
+    .bind((note ?? '').slice(0, 300), now(), id)
+    .run();
+  await audit(c.env, c.get('user'), 'overage.waive', id, { period: row.period, user_id: row.user_id, note: note ?? '' });
+  return c.json({ ok: true });
+});
+
+/** Correct a metered play count, e.g. after removing bot traffic. */
+admin.post('/usage/:id', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json<{ period?: string; plays?: number }>();
+  const period = /^\d{4}-\d{2}$/.test(body.period ?? '') ? (body.period as string) : periodKey();
+  const plays = Math.max(0, Math.floor(Number(body.plays)));
+  if (!Number.isFinite(plays)) return c.json({ error: 'plays must be a number' }, 400);
+  const target = await c.env.DB.prepare('SELECT id, email FROM users WHERE id = ?')
+    .bind(id)
+    .first<{ id: string; email: string }>();
+  if (!target) return c.json({ error: 'no such user' }, 404);
+  await c.env.DB.prepare(
+    `INSERT INTO play_usage (user_id, period, plays, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, period) DO UPDATE SET plays = excluded.plays, updated_at = excluded.updated_at`,
+  )
+    .bind(id, period, plays, now())
+    .run();
+  await audit(c.env, c.get('user'), 'usage.adjust', id, { email: target.email, period, plays });
+  return c.json({ ok: true, period, plays });
 });
 
 /* ---------------------------------------------------------------- audit ---- */

@@ -130,6 +130,21 @@ billing view and on each user in the admin portal. Verified in production: dupli
 `view_id` did not increment, a new viewer did, Free blocked at 500, Starter kept playing
 past its allowance with overage shown.
 
+**Overage collection** — migration `0007_overage.sql` adds `overage_charges`, one row per
+account per period with `UNIQUE (user_id, period)`, which is what makes collection
+idempotent: a period can be recorded and charged at most once. A nightly cron closes the
+previous month (`scheduled` in `src/index.ts` → `closePeriod`), records what each paid
+account owes at $1 per 10,000 extra plays, and charges it against the account's Dodo
+subscription (`POST /subscriptions/{id}/charge` with the amount in cents), storing the
+returned `payment_id`. Statuses are `pending`, `paid`, `failed` (retryable — the nightly
+run retries it), `waived` and `manual` (owed, but no subscription to charge, e.g. a
+lifetime account). Free accounts stop at their allowance instead of being billed, and
+`role='admin'`/`unlimited=1` are never metered, so neither ever gets a row. The admin
+portal has an Overage view (owed, collected, per-account plays/allowance/amount/status/
+payment id/subscription/renewal) with close-period, charge, retry and waive, plus per-user
+play-count correction and manual recording in the user modal; every one of those writes an
+audit entry.
+
 The remote migration was applied with `wrangler d1 execute --file` rather than
 `migrations apply`, because the remote `d1_migrations` ledger was missing entries for
 `0004`/`0005` and re-running them failed on an already-present `role` column. The ledger
@@ -316,10 +331,10 @@ Ordered by what blocks revenue.
 5. **Backend naming.** Worker, D1, R2 bucket, package and repo are still named
    `streamforge`, and the legacy `x-streamforge-signature` webhook header remains. All are
    compatibility-sensitive and invisible to customers; rename only deliberately.
-6. **Overage is calculated but never collected.** Plays past a paid allowance are counted
-   and displayed to the customer and in the admin portal, but nothing bills them — there is
-   no Dodo usage-charge or invoice call yet. Until that exists, overage is a reporting
-   number, not revenue.
+6. **Overage collection is unproven against live Dodo.** The month-close, charge, retry and
+   waive paths are covered by unit tests against a faked provider, but no real subscription
+   charge has been run, so the request/response field names are still as documented rather
+   than as observed.
 7. **Storage is metadata only.** Each plan carries a fair-use storage ceiling, but uploaded
    bytes are not totalled per account and nothing enforces the ceiling. The cold-storage
    lifecycle (move media with no plays for 60 days to infrequent-access) is also not built.
