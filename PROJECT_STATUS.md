@@ -4,8 +4,8 @@ Repo: `bytepassperks/streamforge` · branch `devin/1787054418-streamforge-app` �
 https://github.com/bytepassperks/streamforge/pull/1
 
 Live: https://streamforge.getlaunchpod.workers.dev (Cloudflare Worker, free tier)
-Last deployed Worker version: `86808266-2edf-4350-9a52-e6860ed2ef26`
-Last updated: 2026-08-18 (player interaction audit)
+Last deployed Worker version: `442f7a01-8843-4065-9c33-0173af69d056`
+Last updated: 2026-08-20 (videoo.org parity pass)
 
 Product: a self-owned alternative to videoo.org / Wistia / Vidyard. Host or link video,
 brand the player, embed it anywhere, gate it, and see who watched what — two tiers, Free
@@ -175,6 +175,42 @@ Landing demo: direct MP4 at `/media/demo/videokr-demo-16x9.mp4` with a real 16:9
 Still unproven in the player: a real multi-rendition HLS quality switch, the Vimeo adapter's
 controls and captions (no Vimeo test video exists in the account), and mobile (~390px) plus
 reduced-motion passes.
+
+## 2c. videoo.org parity audit (2026-08-20)
+
+Their public feature list was taken from videoo.org's own marketing pages and player, then
+each item was checked against Videokr in production. "Verified" means a real request or a
+real browser interaction against the live Worker, not the presence of a route.
+
+| videoo.org feature | Videokr | Evidence |
+| --- | --- | --- |
+| Video management, projects | yes | verified (CRUD + projects API) |
+| Stream from anywhere (YouTube, Vimeo, S3/any URL) | yes — YouTube, Vimeo, MP4, HLS, own upload | YouTube + uploaded media verified; **Vimeo and multi-rendition HLS still untested** |
+| Embed on site / email / social | yes | script embed, `/e/<key>` iframe, share sheet with X, LinkedIn, Facebook, WhatsApp, email |
+| Full player customisation, custom colours, skins | yes | per-control toggles, accent, background, radius, skins |
+| Custom branding / own logo | yes | lifetime accounts set logo, link, corner; free shows the Videokr mark |
+| Custom thumbnails, editable | yes | verified |
+| Custom end screens | yes | end-screen CTA |
+| Interactive CTAs / action ads | yes | overlay, lower-third, end screen — **browser interaction not re-verified this pass** |
+| Lead capture | yes | email gate pauses playback, CSV export |
+| Password protection | yes | verified in production (`password_required` → unlock token) |
+| Private / unlisted link sharing | yes | verified |
+| Domain embed restrictions | yes | verified (allowlist + wildcards) |
+| Visitor analytics and tracking | yes | plays, completions, retention buckets, devices, referrers, countries |
+| SEO-friendly video pages | yes | `/v/<slug>` with OG, Twitter player card, VideoObject JSON-LD |
+| Playback speed, hotkeys, PiP | yes | verified in the interaction audit |
+| Related video suggestions | **added this pass** | `player.related` opt-in; end screen lists up to 6 of the *owner's own* public videos, verified in the embed payload |
+| Video sharing options | **added this pass** | share button + copy link / copy iframe, verified in the payload (`share.url`, `share.embed`) |
+| Playlists, up to 50 per page | yes | `/pl/<slug>`, sidebar / grid / filmstrip, autoplay-next |
+| Embeddable playlists | **added this pass** | `/ep/<slug>` bare iframe target + `embed.js data-playlist`, verified 200 with no site chrome |
+| Page-level privacy for playlists | **added this pass** | migration `0005`; verified live: public 200, unlisted `noindex`, password → 401 lock form, wrong password 401, correct password redirects with a signed token, bad token 401 |
+| No hosting costs for the customer | yes | free tier is permanent |
+| User profile / channel page | **missing** | a public per-user channel listing is not built |
+| Unlimited videos | **intentionally different** | free tier caps at 5 videos (402); lifetime is uncapped |
+
+Not claimed as parity yet: Vimeo playback, real HLS quality switching, a public channel
+page, and browser-level verification of the new share sheet, related end screen and
+playlist lock (their APIs and HTML are verified; the clicking is not).
 
 ## 3. What is left
 

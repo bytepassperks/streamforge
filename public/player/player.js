@@ -880,6 +880,16 @@
       rightGroup.appendChild(this.pipBtn);
     }
 
+    if (cfg.controls.share && this.payload.share && this.payload.share.url) {
+      this.shareBtn = el('button', 'sf-btn sf-share', '<span class="sf-ico-share"></span>');
+      this.shareBtn.setAttribute('aria-label', 'Share');
+      this.shareBtn.setAttribute('data-sf', 'share');
+      this.shareBtn.addEventListener('click', function () {
+        self.toggleShare();
+      });
+      rightGroup.appendChild(this.shareBtn);
+    }
+
     if (cfg.controls.fullscreen) {
       this.fsBtn = el('button', 'sf-btn sf-fs', '<span class="sf-ico-fs"></span>');
       this.fsBtn.setAttribute('aria-label', 'Fullscreen');
@@ -1177,12 +1187,144 @@
     return node;
   };
 
+  /* ------------------------------------------------------------- sharing -- */
+
+  var SHARE_TARGETS = [
+    { label: 'X', url: 'https://twitter.com/intent/tweet?url={u}&text={t}' },
+    { label: 'LinkedIn', url: 'https://www.linkedin.com/sharing/share-offsite/?url={u}' },
+    { label: 'Facebook', url: 'https://www.facebook.com/sharer/sharer.php?u={u}' },
+    { label: 'WhatsApp', url: 'https://api.whatsapp.com/send?text={t}%20{u}' },
+    { label: 'Email', url: 'mailto:?subject={t}&body={u}' },
+  ];
+
+  function copyText(value, button, done) {
+    var reset = function () {
+      button.textContent = done;
+      setTimeout(function () {
+        button.textContent = button.getAttribute('data-label') || done;
+      }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(reset, reset);
+      return;
+    }
+    var field = document.createElement('textarea');
+    field.value = value;
+    document.body.appendChild(field);
+    field.select();
+    try {
+      document.execCommand('copy');
+    } catch (e) {
+      /* clipboard unavailable; the field selection is the fallback */
+    }
+    document.body.removeChild(field);
+    reset();
+  }
+
+  Player.prototype.toggleShare = function () {
+    if (this.shareSheet) {
+      this.shareSheet.remove();
+      this.shareSheet = null;
+      return;
+    }
+    var share = this.payload.share || {};
+    var title = (this.payload.video && this.payload.video.title) || '';
+    var sheet = el('div', 'sf-share-sheet');
+    sheet.setAttribute('data-sf', 'share-sheet');
+    var card = el('div', 'sf-share-card');
+    card.appendChild(el('h4', null, null)).textContent = 'Share';
+
+    var row = el('div', 'sf-share-row');
+    SHARE_TARGETS.forEach(function (target) {
+      var link = document.createElement('a');
+      link.className = 'sf-share-target';
+      link.href = target.url
+        .replace(/\{u\}/g, encodeURIComponent(share.url || ''))
+        .replace(/\{t\}/g, encodeURIComponent(title));
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = target.label;
+      row.appendChild(link);
+    });
+    card.appendChild(row);
+
+    [
+      { label: 'Copy link', value: share.url || '' },
+      { label: 'Copy embed code', value: share.embed || '' },
+    ].forEach(function (item) {
+      if (!item.value) return;
+      var button = el('button', 'sf-share-copy', null);
+      button.textContent = item.label;
+      button.setAttribute('data-label', item.label);
+      button.addEventListener('click', function () {
+        copyText(item.value, button, 'Copied');
+      });
+      card.appendChild(button);
+    });
+
+    var close = el('button', 'sf-share-close', '\u00d7');
+    close.setAttribute('aria-label', 'Close share');
+    var self = this;
+    close.addEventListener('click', function () {
+      self.toggleShare();
+    });
+    card.appendChild(close);
+    sheet.appendChild(card);
+    this.overlay.appendChild(sheet);
+    this.shareSheet = sheet;
+  };
+
+  /* --------------------------------------------------------- suggestions -- */
+
+  Player.prototype._showRelated = function () {
+    var items = this.payload.related || [];
+    if (!this.config.related || !items.length || this.relatedNode) return;
+    var self = this;
+    var node = el('div', 'sf-related');
+    node.setAttribute('data-sf', 'related');
+    var head = el('div', 'sf-related-head', null);
+    head.textContent = 'Watch next';
+    node.appendChild(head);
+    var grid = el('div', 'sf-related-grid');
+    items.slice(0, 6).forEach(function (item) {
+      var link = document.createElement('a');
+      link.className = 'sf-related-item';
+      link.href = '/v/' + item.slug;
+      link.target = '_top';
+      if (item.thumbnail_url) {
+        var img = document.createElement('img');
+        img.src = item.thumbnail_url;
+        img.alt = '';
+        img.loading = 'lazy';
+        link.appendChild(img);
+      }
+      var caption = el('span', 'sf-related-title', null);
+      caption.textContent = item.title;
+      link.appendChild(caption);
+      grid.appendChild(link);
+    });
+    node.appendChild(grid);
+    var again = el('button', 'sf-related-replay', 'Watch again');
+    again.addEventListener('click', function () {
+      node.remove();
+      self.relatedNode = null;
+      self.adapter.seek(0);
+      self.adapter.play();
+    });
+    node.appendChild(again);
+    this.ctaLayer.appendChild(node);
+    this.relatedNode = node;
+  };
+
   Player.prototype._showEndscreen = function () {
     var self = this;
     var end = this.ctas.filter(function (cta) {
       return cta.kind === 'endscreen';
     })[0];
-    if (!end) return;
+    if (!end) {
+      this._showRelated();
+      return;
+    }
     var node = el('div', 'sf-endscreen');
     node.setAttribute('data-sf', 'endscreen');
     var card = el('div', 'sf-endscreen-card');

@@ -134,6 +134,7 @@ export function defaultPlayerConfig(): PlayerConfig {
       pip: true,
       fullscreen: true,
       keyboard: true,
+      share: true,
     },
     autoplay: false,
     muted: false,
@@ -149,6 +150,7 @@ export function defaultPlayerConfig(): PlayerConfig {
     sourceCaptions: false,
     sticky: false,
     borderRadius: 12,
+    related: false,
   };
 }
 

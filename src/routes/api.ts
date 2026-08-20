@@ -352,7 +352,9 @@ api.put('/videos/:id/ctas', async (c) => {
 
 api.get('/playlists', async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT p.*, (SELECT COUNT(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS item_count
+    `SELECT p.id, p.slug, p.title, p.description, p.layout, p.autoplay_next, p.visibility, p.created_at,
+            p.password_hash != '' AS has_password,
+            (SELECT COUNT(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS item_count
        FROM playlists p WHERE p.user_id = ? ORDER BY p.created_at DESC`,
   )
     .bind(c.get('user').id)
@@ -375,6 +377,60 @@ api.post('/playlists', async (c) => {
     .bind(id, c.get('user').id, slug, title, (body.description ?? '').trim(), body.layout ?? 'sidebar', now())
     .run();
   return c.json({ playlist: { id, slug, title } }, 201);
+});
+
+api.patch('/playlists/:id', async (c) => {
+  const id = c.req.param('id');
+  const owned = await c.env.DB.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?')
+    .bind(id, c.get('user').id)
+    .first();
+  if (!owned) return c.json({ error: 'not found' }, 404);
+  const body = await c.req.json<{
+    title?: string;
+    description?: string;
+    layout?: string;
+    autoplay_next?: boolean | number;
+    visibility?: string;
+    password?: string;
+  }>();
+  const sets: string[] = [];
+  const values: (string | number)[] = [];
+  if (typeof body.title === 'string' && body.title.trim()) {
+    sets.push('title = ?');
+    values.push(body.title.trim());
+  }
+  if (typeof body.description === 'string') {
+    sets.push('description = ?');
+    values.push(body.description.trim());
+  }
+  if (body.layout === 'sidebar' || body.layout === 'grid' || body.layout === 'filmstrip') {
+    sets.push('layout = ?');
+    values.push(body.layout);
+  }
+  if (body.autoplay_next != null) {
+    sets.push('autoplay_next = ?');
+    values.push(body.autoplay_next ? 1 : 0);
+  }
+  if (body.visibility === 'public' || body.visibility === 'unlisted' || body.visibility === 'password') {
+    sets.push('visibility = ?');
+    values.push(body.visibility);
+    if (body.visibility !== 'password') {
+      sets.push('password_hash = ?', 'password_salt = ?');
+      values.push('', '');
+    }
+  }
+  const password = (body.password ?? '').trim();
+  if (password) {
+    const salt = randomSalt();
+    sets.push('password_hash = ?', 'password_salt = ?');
+    values.push(await hashPassword(password, salt), salt);
+  }
+  if (!sets.length) return c.json({ ok: true });
+  values.push(id);
+  await c.env.DB.prepare(`UPDATE playlists SET ${sets.join(', ')} WHERE id = ?`)
+    .bind(...values)
+    .run();
+  return c.json({ ok: true });
 });
 
 api.put('/playlists/:id/items', async (c) => {

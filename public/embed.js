@@ -2,9 +2,10 @@
  * Videokr embed loader.
  *
  *   <script src="https://your-host/embed.js" data-video="vid_xxx" async></script>
+ *   <script src="https://your-host/embed.js" data-playlist="my-playlist" async></script>
  *
  * Optional attributes: data-target (CSS selector), data-width, data-ratio,
- * data-autoplay, data-muted, data-start.
+ * data-autoplay, data-muted, data-start, data-token (password protected pages).
  */
 (function () {
   'use strict';
@@ -19,18 +20,21 @@
 
   function build(script) {
     var videoId = script.getAttribute('data-video');
-    if (!videoId || script.dataset.mounted === '1') return;
+    var playlistId = script.getAttribute('data-playlist');
+    var key = videoId || playlistId;
+    if (!key || script.dataset.mounted === '1') return;
     script.dataset.mounted = '1';
 
     var base = origin(script);
-    var ratio = script.getAttribute('data-ratio') || '16/9';
+    /* A playlist page carries its own queue beside the stage, so it needs a taller box. */
+    var ratio = script.getAttribute('data-ratio') || (videoId ? '16/9' : '16/11');
     var parts = ratio.split('/');
     var aspect = (parseFloat(parts[1]) / parseFloat(parts[0])) * 100 || 56.25;
 
     var params = [];
-    ['autoplay', 'muted', 'start'].forEach(function (key) {
-      var value = script.getAttribute('data-' + key);
-      if (value != null) params.push(key + '=' + encodeURIComponent(value));
+    ['autoplay', 'muted', 'start', 'token'].forEach(function (name) {
+      var value = script.getAttribute('data-' + name);
+      if (value != null) params.push(name + '=' + encodeURIComponent(value));
     });
 
     var wrap = document.createElement('div');
@@ -41,8 +45,12 @@
     wrap.style.height = '0';
 
     var frame = document.createElement('iframe');
-    frame.src = base + '/e/' + encodeURIComponent(videoId) + (params.length ? '?' + params.join('&') : '');
-    frame.title = 'Videokr video player';
+    frame.src =
+      base +
+      (videoId ? '/e/' : '/ep/') +
+      encodeURIComponent(key) +
+      (params.length ? '?' + params.join('&') : '');
+    frame.title = videoId ? 'Videokr video player' : 'Videokr playlist';
     frame.loading = 'lazy';
     frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
     frame.allowFullscreen = true;
@@ -60,7 +68,7 @@
   }
 
   function boot() {
-    var scripts = document.querySelectorAll('script[data-video]');
+    var scripts = document.querySelectorAll('script[data-video], script[data-playlist]');
     Array.prototype.forEach.call(scripts, build);
   }
 
