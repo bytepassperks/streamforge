@@ -106,15 +106,22 @@ purchases, videos, stats and an audit log. Non-admins get 403 on every admin rou
 Verified in production; video deletion was never fired against real customer videos.
 
 **Player isolation (source chrome)** — the third-party frame is never visible to the
-viewer: it is over-scaled inside `.sf-yt-crop` so the title/branding strip falls outside
-the visible box, `.sf-yt-shield` swallows every pointer event, and `.sf-yt-cover` masks the
-frame with a still whenever playback is not genuinely running. The mask is no longer driven
-by the source's state events — those lie: a seek reports PLAYING while the frame is still
-painting its paused chrome, and a pause issued mid-seek is followed by a late PLAYING event,
-which is what let the title, channel and "More videos" strips through. A 150 ms poll of the
-real state plus a moving playback clock now owns the mask, and the frame stays covered for
-4.4 s after a start (the source keeps its own title/suggestion strips up that long before
-they fade) and 1.8 s after a seek. On end the frame is masked and rewound.
+viewer, and the reason is geometry rather than timing. A linked source letterboxes its
+16:9 picture inside whatever box it is handed and anchors its title, channel, watermark,
+suggestion grid and control bar to the top and bottom edges of that box. So `.sf-yt-frame`
+is 240% of its width tall and pulled up by 38.28125% of its own height inside a 16:9
+`.sf-yt-crop` with `overflow: hidden`: the picture lands exactly in the visible stage at
+full size, and every one of those strips sits far outside the crop. Nothing is scaled, so
+no part of the picture is lost. This is the same construction Plyr uses for embeds, which
+is how videoo.org keeps its frames clean.
+
+Masking is now only a second line of defence for the source's centred play/pause ripple:
+`.sf-yt-cover` shows our still whenever playback is not genuinely running (a 150 ms poll of
+the real state plus a moving playback clock, because the source's own state events lie —
+a seek reports PLAYING while the frame is still painted paused), holding 1.2 s after a
+start and 0.9 s after a seek. `.sf-yt-shield` swallows every pointer event so the frame is
+never interactive. On end the frame is masked and rewound. Verified with the still forcibly
+disabled: paused and hovered, the frame shows no title, channel, logo or "More videos".
 
 The `/v/demo` record was also switched from a linked source to the hosted MP4, because the
 clip's *content* was a screen recording of a video site and read as leakage even when the
