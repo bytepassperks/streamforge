@@ -108,9 +108,17 @@ Verified in production; video deletion was never fired against real customer vid
 **Player isolation (source chrome)** — the third-party frame is never visible to the
 viewer: it is over-scaled inside `.sf-yt-crop` so the title/branding strip falls outside
 the visible box, `.sf-yt-shield` swallows every pointer event, and `.sf-yt-cover` masks the
-frame with a still whenever playback is not running (stopped, paused, ended), applied
-*before* the pause call so the source's own paused overlay cannot flash. On end the frame
-is masked and rewound. Source captions are unloaded by default and only loaded when the
+frame with a still whenever playback is not genuinely running. The mask is no longer driven
+by the source's state events — those lie: a seek reports PLAYING while the frame is still
+painting its paused chrome, and a pause issued mid-seek is followed by a late PLAYING event,
+which is what let the title, channel and "More videos" strips through. A 150 ms poll of the
+real state plus a moving playback clock now owns the mask, and the frame stays covered for
+4.4 s after a start (the source keeps its own title/suggestion strips up that long before
+they fade) and 1.8 s after a seek. On end the frame is masked and rewound.
+
+The `/v/demo` record was also switched from a linked source to the hosted MP4, because the
+clip's *content* was a screen recording of a video site and read as leakage even when the
+frame was fully masked. Source captions are unloaded by default and only loaded when the
 video's `sourceCaptions` setting is on (dashboard: "Show the source's own subtitles").
 Subtitles burned into the video's pixels cannot be removed by any player — that is the
 file, not a track.
@@ -151,7 +159,7 @@ demo (`/#demo`, direct MP4). Console errors on both pages: none.
 | Keyboard seek (`J`/`L`/arrows) | works |
 | Sticky miniplayer | **fixed this pass** — the IntersectionObserver watched the player itself, so turning `position: fixed` made it intersect again and instantly cancelled the state it had just entered; it now measures an in-flow sentinel and reserves the vacated height |
 | End of video | pauses, clears the playing state, masks and rewinds the source frame |
-| Source chrome | no source title, channel, logo, "More videos" or native control bar in any state |
+| Source chrome | **fixed again this pass** — verified frame-by-frame on a linked source across start, first 4 s of playback, hover during playback, mid-drag, after-drag, keyboard pause, hover while paused, seek-while-paused and resume: masked in every non-playing state, no source title, channel, logo, "More videos" or native control bar |
 
 Landing demo: direct MP4 at `/media/demo/videokr-demo-16x9.mp4` with a real 16:9 poster
 (`videokr-demo-16x9.jpg`) — the original clip was letterboxed, so it was cropped

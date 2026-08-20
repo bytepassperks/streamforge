@@ -7,6 +7,11 @@
 
   var SPEED_FALLBACK = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+  /* How long a linked source keeps its own title and suggestion strips on screen
+     after a start or a seek, measured on the real frames. */
+  var TITLE_FADE = 4400;
+  var SEEK_FADE = 1800;
+
   /* ------------------------------------------------------------- helpers -- */
 
   /** Origin this player was served from, so embeds on other domains still resolve assets. */
@@ -176,14 +181,21 @@
                 var YTS = window.YT.PlayerState;
                 if (e.data === YTS.PLAYING) {
                   self._dropCaptions();
+                  /* A fresh start paints the source's title, channel and "More videos"
+                     strips over the picture for a few seconds before they fade, so the
+                     still stays up until they are gone. */
+                  if (!self._running) self._mask(TITLE_FADE);
+                  self._running = true;
                   self.emit('play');
                 }
                 if (e.data === YTS.PAUSED) {
+                  self._running = false;
                   self._mask();
                   self.emit('pause');
                 }
                 if (e.data === YTS.ENDED) {
                   /* Rewind so a suggestion grid can never render behind the mask. */
+                  self._running = false;
                   self._mask();
                   self._yt.seekTo(0, true);
                   self._yt.pauseVideo();
@@ -197,8 +209,8 @@
       });
   };
 
-  YouTubeAdapter.prototype._mask = function () {
-    this._maskedUntil = Date.now() + 400;
+  YouTubeAdapter.prototype._mask = function (hold) {
+    this._maskedUntil = Date.now() + (hold || 700);
     if (this._host) this._host.classList.add('sf-yt-blank');
   };
 
@@ -258,6 +270,7 @@
   };
   YouTubeAdapter.prototype.pause = function () {
     if (!this._yt) return;
+    this._running = false;
     this._mask();
     this._yt.pauseVideo();
   };
@@ -272,7 +285,7 @@
     if (!this._yt) return;
     /* A seek repaints the frame's own chrome, so it hides behind the mask until
        playback has demonstrably resumed. */
-    this._mask();
+    this._mask(SEEK_FADE);
     this._lastT = 0;
     this._yt.seekTo(Math.max(0, t), true);
   };
