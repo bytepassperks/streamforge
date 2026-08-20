@@ -32,7 +32,7 @@
     </div>
     <div class="row">
       <a class="btn btn-ghost btn-sm" id="nav-auth" href="/login.html">Sign in</a>
-      <a class="btn btn-sm" href="#pricing">Get lifetime · $69</a>
+      <a class="btn btn-sm" id="nav-buy" href="#pricing">Get lifetime · $69</a>
     </div>
   </div>
 </nav>
@@ -48,7 +48,7 @@
         exact second people quit.
       </p>
       <div class="hero-actions">
-        <a class="btn btn-lg" href="/login.html?mode=signup">Start free — no card →</a>
+        <a class="btn btn-lg" id="hero-cta" href="/login.html?mode=signup">Start free — no card →</a>
         <a class="btn btn-ghost btn-lg" href="#demo">Play the real player</a>
       </div>
       <div class="trust">
@@ -206,7 +206,7 @@
           <li>Full player, analytics and lead capture</li>
           <li>Small Videokr badge on the player</li>
         </ul>
-        <a class="btn btn-ghost" href="/login.html?mode=signup">Start free →</a>
+        <a class="btn btn-ghost" id="free-cta" href="/login.html?mode=signup">Start free →</a>
       </div>
       <div class="card price-card hot">
         <h3>Lifetime</h3>
@@ -219,7 +219,7 @@
           <li>Every feature we ship from here on</li>
           <li>Self-host on your own Cloudflare account</li>
         </ul>
-        <a class="btn btn-lg" href="/login.html?mode=signup&amp;intent=lifetime">Claim a lifetime seat →</a>
+        <a class="btn btn-lg" id="lifetime-cta" href="/login.html?mode=signup&amp;intent=lifetime">Claim a lifetime seat →</a>
         <div class="seats"><i id="seat-bar" style="width:0%"></i></div>
         <p class="ladder" id="seat-line"><span>100 seats at this price</span><span>·</span><span>then <b>$99</b></span><span>·</span><span>then <b>$149</b></span></p>
       </div>
@@ -251,7 +251,7 @@
     <span class="hand">last thing →</span>
     <h2 style="max-width:22em;margin:10px auto 16px">Your video is doing marketing for someone else right now.</h2>
     <p class="section-lede" style="margin:0 auto 26px">Take it back in ten minutes. Free tier, no card. Lifetime if you like it.</p>
-    <a class="btn btn-lg" href="/login.html?mode=signup">Start free — no card →</a>
+    <a class="btn btn-lg" id="final-cta" href="/login.html?mode=signup">Start free — no card →</a>
   </div>
 </section>
 
@@ -296,7 +296,8 @@
   });
 
   /* Seat urgency is read from real paid purchases, so the page never invents it. */
-  fetch('/api/public/offer')
+  function loadOffer() {
+    return fetch('/api/public/offer')
     .then(function (res) { return res.json(); })
     .then(function (result) {
       var offer = result.offer;
@@ -322,23 +323,54 @@
       }
     })
     .catch(function () { /* static copy stays as the fallback */ });
+  }
 
-  /* Signed-in visitors get "Dashboard" instead of being asked to sign in again. */
+  /* The page never asks a signed-in visitor to sign in, nor an owner to buy again. */
+  function el(id) { return document.getElementById(id); }
+
+  function toDashboard(node, label) {
+    node.href = '/app.html';
+    node.textContent = label;
+  }
+
+  function markOwned() {
+    var buy = el('nav-buy');
+    buy.href = '/app.html';
+    buy.textContent = 'Lifetime · owned';
+    buy.classList.add('btn-ghost');
+    var cta = el('lifetime-cta');
+    cta.href = '/app.html';
+    cta.textContent = 'You own this — open your dashboard →';
+    el('seat-line').textContent = 'Your licence is active. Nothing more to pay, ever.';
+    el('seat-bar').style.width = '100%';
+    el('hero-badge').textContent = 'Lifetime licence active · every feature unlocked';
+    el('price-usd').textContent = 'Owned';
+    el('price-inr').textContent = 'paid once · yours forever';
+  }
+
   fetch('/api/auth/me', { credentials: 'same-origin' })
     .then(function (res) { return res.json(); })
     .then(function (result) {
-      if (!result.user) return;
-      var nav = document.getElementById('nav-auth');
-      nav.textContent = 'Dashboard';
-      nav.href = '/app.html';
-      var signupLinks = document.querySelectorAll('a[href^="/login.html?mode=signup"]');
-      for (var i = 0; i < signupLinks.length; i++) {
-        var link = signupLinks[i];
-        link.href = link.href.indexOf('intent=lifetime') === -1 ? '/app.html' : '/app.html?view=billing';
-        link.textContent = link.href.indexOf('billing') === -1 ? 'Open your dashboard →' : 'Claim a lifetime seat →';
+      var user = result.user;
+      if (!user) {
+        loadOffer();
+        return;
       }
+
+      toDashboard(el('nav-auth'), 'Dashboard');
+      toDashboard(el('hero-cta'), 'Open your dashboard →');
+      toDashboard(el('final-cta'), 'Open your dashboard →');
+      toDashboard(el('free-cta'), 'Open your dashboard →');
+
+      if (user.plan === 'lifetime' || Number(user.unlimited) === 1 || user.role === 'admin') {
+        markOwned();
+        return;
+      }
+      el('lifetime-cta').href = '/app.html?view=billing';
+      el('lifetime-cta').textContent = 'Claim your lifetime seat →';
+      loadOffer();
     })
-    .catch(function () { /* anonymous view stays as-is */ });
+    .catch(function () { loadOffer(); });
 </script>
 </body>
 </html>
