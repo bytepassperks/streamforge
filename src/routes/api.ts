@@ -558,21 +558,24 @@ api.get('/analytics/videos/:id', async (c) => {
 });
 
 api.get('/leads', async (c) => {
+  const video = c.req.query('video') ?? '';
   const { results } = await c.env.DB.prepare(
     `SELECT l.*, v.title AS video_title FROM leads l JOIN videos v ON v.id = l.video_id
-      WHERE l.user_id = ? ORDER BY l.created_at DESC LIMIT 500`,
+      WHERE l.user_id = ? AND (? = '' OR l.video_id = ?) ORDER BY l.created_at DESC LIMIT 500`,
   )
-    .bind(c.get('user').id)
+    .bind(c.get('user').id, video, video)
     .all();
   return c.json({ leads: results ?? [] });
 });
 
 api.get('/leads.csv', async (c) => {
+  const video = c.req.query('video') ?? '';
   const { results } = await c.env.DB.prepare(
     `SELECT l.email, l.name, l.phone, l.position, l.referrer, l.created_at, v.title
-       FROM leads l JOIN videos v ON v.id = l.video_id WHERE l.user_id = ? ORDER BY l.created_at DESC`,
+       FROM leads l JOIN videos v ON v.id = l.video_id
+      WHERE l.user_id = ? AND (? = '' OR l.video_id = ?) ORDER BY l.created_at DESC`,
   )
-    .bind(c.get('user').id)
+    .bind(c.get('user').id, video, video)
     .all<Record<string, string | number>>();
   const header = 'email,name,phone,position_seconds,referrer,created_at,video\n';
   const body = (results ?? [])

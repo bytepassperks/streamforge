@@ -59,6 +59,33 @@
     });
   }
 
+  function fmtClock(seconds) {
+    var whole = Math.max(0, Math.floor(Number(seconds) || 0));
+    var mins = Math.floor(whole / 60);
+    var secs = whole % 60;
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }
+
+  /* "3 days ago" reads better than a date on a library card. */
+  function fmtAgo(seconds) {
+    var diff = Math.max(0, Math.floor(Date.now() / 1000 - Number(seconds || 0)));
+    var steps = [
+      [60, 'second'],
+      [3600, 'minute'],
+      [86400, 'hour'],
+      [2592000, 'day'],
+      [31536000, 'month'],
+    ];
+    for (var i = 0; i < steps.length; i += 1) {
+      if (diff < steps[i][0]) {
+        var size = i === 0 ? 1 : steps[i - 1][0];
+        var count = Math.max(1, Math.floor(diff / size));
+        return count + ' ' + steps[i][1] + (count === 1 ? '' : 's') + ' ago';
+      }
+    }
+    return fmtDate(seconds);
+  }
+
   function openModal(id) {
     $(id).classList.remove('hidden');
   }
@@ -156,6 +183,18 @@
       .catch(fail);
   }
 
+  var libLayout = 'grid';
+
+  document.querySelectorAll('#lib-layout button').forEach(function (button) {
+    button.addEventListener('click', function () {
+      libLayout = button.dataset.layout;
+      document.querySelectorAll('#lib-layout button').forEach(function (other) {
+        other.classList.toggle('active', other === button);
+      });
+      renderVideoTable();
+    });
+  });
+
   function renderVideoTable() {
     var host = $('videos-body');
     host.textContent = '';
@@ -163,6 +202,10 @@
       host.appendChild(
         text('div', 'empty', 'No videos yet — paste a link or choose a file above to add your first one.'),
       );
+      return;
+    }
+    if (libLayout === 'grid') {
+      host.appendChild(videoGrid());
       return;
     }
     var table = text('table', 'data');
@@ -223,6 +266,75 @@
     });
     table.appendChild(body);
     host.appendChild(table);
+  }
+
+  /* Card layout for the library: poster, then the meta a customer scans for
+     (when it went up, how it is doing, how long it runs, where it came from). */
+  function videoGrid() {
+    var grid = text('div', 'vid-grid');
+    state.videos.forEach(function (video) {
+      var card = text('article', 'vid-card');
+
+      var shot = text('button', 'vid-shot');
+      shot.type = 'button';
+      shot.setAttribute('aria-label', 'Edit ' + video.title);
+      if (video.thumbnail_url) {
+        var img = document.createElement('img');
+        img.src = video.thumbnail_url;
+        img.alt = '';
+        shot.appendChild(img);
+      } else {
+        shot.appendChild(text('div', 'thumb-ph'));
+      }
+      if (video.duration) shot.appendChild(text('span', 'vid-dur', fmtClock(video.duration)));
+      shot.addEventListener('click', function () {
+        openEditor(video.id);
+      });
+      card.appendChild(shot);
+
+      var body = text('div', 'vid-body');
+      var title = text('button', 'vid-title', video.title);
+      title.type = 'button';
+      title.addEventListener('click', function () {
+        openEditor(video.id);
+      });
+      body.appendChild(title);
+      body.appendChild(text('div', 'vid-meta', fmtAgo(video.created_at) + ' · ' + (video.plays || 0) + ' plays'));
+
+      var tags = text('div', 'vid-tags');
+      tags.appendChild(text('span', 'pill', video.source_type));
+      tags.appendChild(
+        text('span', video.visibility === 'public' ? 'pill pill-ok' : 'pill pill-warn', video.visibility),
+      );
+      if (video.leads) tags.appendChild(text('span', 'pill', video.leads + ' leads'));
+      body.appendChild(tags);
+
+      var actions = text('div', 'vid-actions');
+      var edit = text('button', 'btn btn-ghost btn-sm', 'Edit');
+      edit.type = 'button';
+      edit.addEventListener('click', function () {
+        openEditor(video.id);
+      });
+      var open = text('a', 'btn btn-ghost btn-sm', 'Open');
+      open.href = '/v/' + video.slug;
+      open.target = '_blank';
+      open.rel = 'noopener';
+      var copy = text('button', 'btn btn-ghost btn-sm', 'Copy link');
+      copy.type = 'button';
+      copy.addEventListener('click', function () {
+        navigator.clipboard.writeText(location.origin + '/v/' + video.slug).then(function () {
+          toast('Link copied');
+        });
+      });
+      actions.appendChild(edit);
+      actions.appendChild(open);
+      actions.appendChild(copy);
+      body.appendChild(actions);
+
+      card.appendChild(body);
+      grid.appendChild(card);
+    });
+    return grid;
   }
 
   function fillProjectSelects() {
@@ -380,6 +492,7 @@
         panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab);
       });
       if (button.dataset.tab === 'stats') loadVideoStats();
+      if (button.dataset.tab === 'form') loadFormSubmissions();
     });
   });
 
@@ -448,7 +561,64 @@
 
     renderChapterRows(result.chapters || []);
     renderCtaRows(result.ctas || []);
+    renderThumbPreviews();
+    $('ed-form-export').href = '/api/leads.csv?video=' + video.id;
+    $('ed-form-leads').textContent = 'Loading…';
     renderSnippets(video);
+  }
+
+  function renderThumbPreviews() {
+    var host = $('ed-thumb-previews');
+    host.textContent = '';
+    [
+      ['A', $('ed-thumb').value.trim()],
+      ['B', $('ed-thumb-b').value.trim()],
+    ].forEach(function (pair) {
+      if (!pair[1]) return;
+      var card = text('div', 'thumb-preview');
+      var img = document.createElement('img');
+      img.src = pair[1];
+      img.alt = 'Thumbnail ' + pair[0];
+      card.appendChild(img);
+      card.appendChild(text('span', 'tiny muted', 'Thumbnail ' + pair[0]));
+      host.appendChild(card);
+    });
+  }
+
+  ['ed-thumb', 'ed-thumb-b'].forEach(function (id) {
+    $(id).addEventListener('change', renderThumbPreviews);
+  });
+
+  function loadFormSubmissions() {
+    if (!state.video) return;
+    var host = $('ed-form-leads');
+    host.textContent = 'Loading…';
+    api('/leads?video=' + state.video.id)
+      .then(function (data) {
+        var leads = data.leads || [];
+        host.textContent = '';
+        if (!leads.length) {
+          host.appendChild(text('div', 'empty', 'No submissions yet.'));
+          return;
+        }
+        var table = text('table', 'data');
+        var head = document.createElement('tr');
+        ['Email', 'Name', 'Phone', 'At', 'Received'].forEach(function (label) {
+          head.appendChild(text('th', null, label));
+        });
+        table.appendChild(head);
+        leads.forEach(function (lead) {
+          var row = document.createElement('tr');
+          row.appendChild(text('td', null, lead.email || '—'));
+          row.appendChild(text('td', null, lead.name || '—'));
+          row.appendChild(text('td', null, lead.phone || '—'));
+          row.appendChild(text('td', 'tiny muted', fmtClock(Number(lead.position) || 0)));
+          row.appendChild(text('td', 'tiny muted', fmtDate(lead.created_at)));
+          table.appendChild(row);
+        });
+        host.appendChild(table);
+      })
+      .catch(fail);
   }
 
   function renderSnippets(video) {
@@ -512,7 +682,9 @@
     $('chapters-rows').appendChild(chapterRow(null));
   });
 
-  function ctaRow(cta) {
+  /* One row shape serves both sections: an email gate is a CTA whose kind is "gate",
+     so the Form section only ever renders and adds gate rows. */
+  function ctaRow(cta, gate) {
     var card = text('div', 'card');
     card.style.marginBottom = '12px';
     var grid = text('div', 'grid-2');
@@ -525,15 +697,17 @@
     }
 
     var kind = document.createElement('select');
-    [
-      ['overlay', 'Overlay card'],
-      ['banner', 'Bottom banner'],
-      ['gate', 'Email gate (pauses playback)'],
-      ['endscreen', 'End screen'],
-    ].forEach(function (pair) {
+    (gate
+      ? [['gate', 'Email gate (pauses playback)']]
+      : [
+          ['overlay', 'Overlay card'],
+          ['banner', 'Bottom banner'],
+          ['endscreen', 'End screen'],
+        ]
+    ).forEach(function (pair) {
       kind.appendChild(new Option(pair[1], pair[0]));
     });
-    kind.value = cta ? cta.kind : 'overlay';
+    kind.value = cta ? cta.kind : gate ? 'gate' : 'overlay';
     kind.dataset.field = 'kind';
 
     function input(fieldName, placeholder, value, type) {
@@ -556,11 +730,18 @@
     grid.appendChild(field('Position', position));
     grid.appendChild(field('Start (s)', input('start_seconds', '0', cta ? cta.start_seconds : 0, 'number')));
     grid.appendChild(field('End (s)', input('end_seconds', '0 = until the end', cta ? cta.end_seconds : 0, 'number')));
-    grid.appendChild(field('Headline', input('headline', 'Book a demo', cta ? cta.headline : '')));
-    grid.appendChild(field('Body', input('body', 'Short supporting line', cta ? cta.body : '')));
-    grid.appendChild(field('Button text', input('button_text', 'Get started', cta ? cta.button_text : '')));
-    grid.appendChild(field('Button url', input('button_url', 'https://example.com', cta ? cta.button_url : '')));
-    grid.appendChild(field('Gate fields', input('fields', 'email,name,phone', cta ? cta.fields : 'email')));
+    grid.appendChild(
+      field(gate ? 'Title' : 'Headline', input('headline', gate ? 'Watch the rest' : 'Book a demo', cta ? cta.headline : '')),
+    );
+    grid.appendChild(field('Description', input('body', 'Short supporting line', cta ? cta.body : '')));
+    grid.appendChild(
+      field('Button text', input('button_text', gate ? 'Continue watching' : 'Get started', cta ? cta.button_text : '')),
+    );
+    if (gate) {
+      grid.appendChild(field('Fields to collect', input('fields', 'email,name,phone', cta ? cta.fields : 'email')));
+    } else {
+      grid.appendChild(field('Button url', input('button_url', 'https://example.com', cta ? cta.button_url : '')));
+    }
     card.appendChild(grid);
 
     var skippable = text('label', 'checkbox');
@@ -569,10 +750,10 @@
     skipInput.dataset.field = 'skippable';
     skipInput.checked = cta ? cta.skippable !== 0 : true;
     skippable.appendChild(skipInput);
-    skippable.appendChild(document.createTextNode(' Viewer can skip / dismiss'));
+    skippable.appendChild(document.createTextNode(gate ? ' Viewer can skip the form' : ' Viewer can skip / dismiss'));
     card.appendChild(skippable);
 
-    var remove = text('button', 'btn btn-ghost btn-sm', 'Remove CTA');
+    var remove = text('button', 'btn btn-ghost btn-sm', gate ? 'Remove form' : 'Remove CTA');
     remove.type = 'button';
     remove.addEventListener('click', function () {
       card.remove();
@@ -582,15 +763,22 @@
   }
 
   function renderCtaRows(ctas) {
-    var host = $('ctas-rows');
-    host.textContent = '';
+    var overlays = $('ctas-rows');
+    var forms = $('forms-rows');
+    overlays.textContent = '';
+    forms.textContent = '';
     ctas.forEach(function (cta) {
-      host.appendChild(ctaRow(cta));
+      var gate = cta.kind === 'gate';
+      (gate ? forms : overlays).appendChild(ctaRow(cta, gate));
     });
   }
 
   $('add-cta').addEventListener('click', function () {
-    $('ctas-rows').appendChild(ctaRow(null));
+    $('ctas-rows').appendChild(ctaRow(null, false));
+  });
+
+  $('add-form').addEventListener('click', function () {
+    $('forms-rows').appendChild(ctaRow(null, true));
   });
 
   function collectConfig() {
@@ -646,18 +834,20 @@
 
   function collectCtas() {
     var rows = [];
-    $('ctas-rows')
-      .querySelectorAll('.card')
-      .forEach(function (card) {
-        var cta = {};
-        card.querySelectorAll('[data-field]').forEach(function (node) {
-          var key = node.dataset.field;
-          if (node.type === 'checkbox') cta[key] = node.checked;
-          else if (node.type === 'number') cta[key] = Number(node.value) || 0;
-          else cta[key] = node.value.trim();
+    ['ctas-rows', 'forms-rows'].forEach(function (id) {
+      $(id)
+        .querySelectorAll('.card')
+        .forEach(function (card) {
+          var cta = {};
+          card.querySelectorAll('[data-field]').forEach(function (node) {
+            var key = node.dataset.field;
+            if (node.type === 'checkbox') cta[key] = node.checked;
+            else if (node.type === 'number') cta[key] = Number(node.value) || 0;
+            else cta[key] = node.value.trim();
+          });
+          rows.push(cta);
         });
-        rows.push(cta);
-      });
+    });
     return rows;
   }
 

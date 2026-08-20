@@ -169,7 +169,14 @@
           </div>
         </div>
 
-        <div id="videos-body" style="margin-top:34px"></div>
+        <div class="lib-head">
+          <p class="hand-head" style="margin:0">Your <b>library</b></p>
+          <div class="seg-tabs" id="lib-layout">
+            <button class="active" data-layout="grid" type="button">Grid</button>
+            <button data-layout="list" type="button">List</button>
+          </div>
+        </div>
+        <div id="videos-body"></div>
       </div>
 
       <div id="pane-analytics" class="hidden">
@@ -244,36 +251,49 @@
       <h2 id="ed-title">Edit video</h2>
       <button class="btn btn-ghost btn-sm" data-close type="button">Close</button>
     </div>
-    <div class="tabs" id="ed-tabs">
-      <button class="active" data-tab="details">Details</button>
-      <button data-tab="player">Player</button>
-      <button data-tab="chapters">Chapters</button>
-      <button data-tab="ctas">CTAs &amp; leads</button>
-      <button data-tab="access">Access</button>
-      <button data-tab="embed">Embed</button>
-      <button data-tab="stats">Analytics</button>
-    </div>
-
     <div class="editor-grid">
-      <div>
-        <div class="tab-panel active" data-panel="details">
+      <nav class="sec-nav" id="ed-tabs" aria-label="Video sections">
+        <button class="active" data-tab="stats" type="button">Analytics</button>
+        <button data-tab="details" type="button">Metadata</button>
+        <button data-tab="thumbnail" type="button">Thumbnail</button>
+        <button data-tab="player" type="button">Player</button>
+        <button data-tab="controls" type="button">Controls</button>
+        <button data-tab="colors" type="button">Colours</button>
+        <button data-tab="playbtn" type="button">Play button</button>
+        <button data-tab="quality" type="button">Quality &amp; speed</button>
+        <button data-tab="chapters" type="button">Chapters</button>
+        <button data-tab="subtitles" type="button">Subtitles</button>
+        <button data-tab="ctas" type="button">Call to action</button>
+        <button data-tab="form" type="button">Form</button>
+        <button data-tab="access" type="button">Password</button>
+        <button data-tab="embed" type="button">Embed</button>
+      </nav>
+
+      <div class="sec-panels">
+        <div class="tab-panel" data-panel="details">
           <div class="field"><label for="ed-name">Title</label><input id="ed-name"></div>
           <div class="field"><label for="ed-desc">Description</label><textarea id="ed-desc"></textarea></div>
           <div class="grid-2">
             <div class="field"><label for="ed-source">Source</label><input id="ed-source"></div>
             <div class="field"><label for="ed-project">Project</label>
               <select id="ed-project"><option value="">No project</option></select></div>
-            <div class="field"><label for="ed-thumb">Thumbnail A url</label><input id="ed-thumb"></div>
-            <div class="field"><label for="ed-thumb-b">Thumbnail B url (A/B test)</label><input id="ed-thumb-b"></div>
-            <div class="field"><label for="ed-captions">Captions .vtt url</label><input id="ed-captions">
-              <div class="row"><input id="ed-captions-file" type="file" accept=".vtt,text/vtt">
-                <button type="button" class="btn btn-sm btn-ghost" id="ed-captions-upload">Upload .vtt</button></div>
-              <span class="tiny" id="ed-captions-state"></span></div>
             <div class="field"><label for="ed-duration">Duration (seconds)</label>
               <input id="ed-duration" type="number" min="0"></div>
           </div>
           <div class="field"><label for="ed-transcript">Transcript (searchable on the public page)</label>
             <textarea id="ed-transcript"></textarea></div>
+        </div>
+
+        <div class="tab-panel" data-panel="thumbnail">
+          <p class="muted tiny">
+            Thumbnail A is the poster viewers see. Add a second one and Videokr splits impressions between
+            them and reports which gets more plays.
+          </p>
+          <div class="grid-2">
+            <div class="field"><label for="ed-thumb">Thumbnail A url</label><input id="ed-thumb"></div>
+            <div class="field"><label for="ed-thumb-b">Thumbnail B url (A/B test)</label><input id="ed-thumb-b"></div>
+          </div>
+          <div class="thumb-previews" id="ed-thumb-previews"></div>
         </div>
 
         <div class="tab-panel" data-panel="player">
@@ -285,11 +305,7 @@
                 <option value="pop">Pop</option>
                 <option value="studio">Studio</option>
               </select>
-              <span class="tiny">Picking a skin loads its colours; every setting below stays yours to change.</span></div>
-            <div class="field"><label for="pc-accent">Accent colour</label><input id="pc-accent" type="color"></div>
-            <div class="field"><label for="pc-bg">Background</label><input id="pc-bg" type="color"></div>
-            <div class="field"><label for="pc-radius">Corner radius (px)</label>
-              <input id="pc-radius" type="number" min="0" max="40"></div>
+              <span class="tiny">Picking a skin loads its colours; every setting stays yours to change.</span></div>
             <div class="field"><label for="pc-logo">Logo image url</label><input id="pc-logo"></div>
             <div class="field"><label for="pc-logo-pos">Logo position</label>
               <select id="pc-logo-pos">
@@ -298,13 +314,9 @@
                 <option value="bottom-right">Bottom right</option>
                 <option value="bottom-left">Bottom left</option>
               </select></div>
-            <div class="field"><label for="pc-speeds">Playback speeds</label>
-              <input id="pc-speeds" placeholder="0.5,1,1.5,2"></div>
             <div class="field"><label for="pc-start">Start at (seconds)</label>
               <input id="pc-start" type="number" min="0"></div>
           </div>
-          <h3 style="margin-top:8px">Controls</h3>
-          <div class="grid-2" id="pc-controls"></div>
           <h3 style="margin-top:8px">Behaviour</h3>
           <div class="grid-2">
             <label class="checkbox"><input type="checkbox" id="pc-autoplay"> Autoplay</label>
@@ -312,11 +324,37 @@
             <label class="checkbox"><input type="checkbox" id="pc-loop"> Loop</label>
             <label class="checkbox"><input type="checkbox" id="pc-resume"> Resume where the viewer left off</label>
             <label class="checkbox"><input type="checkbox" id="pc-title"> Show title bar</label>
-            <label class="checkbox"><input type="checkbox" id="pc-bigplay"> Big play button</label>
             <label class="checkbox"><input type="checkbox" id="pc-sticky"> Sticky miniplayer on scroll</label>
-            <label class="checkbox"><input type="checkbox" id="pc-srccaptions"> Show the source's own subtitles (linked videos)</label>
             <label class="checkbox"><input type="checkbox" id="pc-related"> Suggest more of your videos when this one ends</label>
           </div>
+        </div>
+
+        <div class="tab-panel" data-panel="controls">
+          <p class="muted tiny">Turn off anything you don't want viewers to reach.</p>
+          <div class="grid-2" id="pc-controls"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="colors">
+          <div class="grid-2">
+            <div class="field"><label for="pc-accent">Accent colour</label><input id="pc-accent" type="color"></div>
+            <div class="field"><label for="pc-bg">Background</label><input id="pc-bg" type="color"></div>
+            <div class="field"><label for="pc-radius">Corner radius (px)</label>
+              <input id="pc-radius" type="number" min="0" max="40"></div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="playbtn">
+          <p class="muted tiny">The centre play button viewers see before playback starts.</p>
+          <label class="checkbox"><input type="checkbox" id="pc-bigplay"> Show a big play button over the poster</label>
+        </div>
+
+        <div class="tab-panel" data-panel="quality">
+          <div class="field"><label for="pc-speeds">Playback speeds</label>
+            <input id="pc-speeds" placeholder="0.5,1,1.5,2"></div>
+          <p class="muted tiny">
+            Quality options come from the video itself — an HLS source offers every rendition it carries, and the
+            quality picker lives in the settings menu. Switch the quality control off under Controls to hide it.
+          </p>
         </div>
 
         <div class="tab-panel" data-panel="chapters">
@@ -325,13 +363,35 @@
           <button class="btn btn-ghost btn-sm" id="add-chapter" type="button">Add chapter</button>
         </div>
 
+        <div class="tab-panel" data-panel="subtitles">
+          <div class="field"><label for="ed-captions">Captions .vtt url</label><input id="ed-captions">
+            <div class="row"><input id="ed-captions-file" type="file" accept=".vtt,text/vtt">
+              <button type="button" class="btn btn-sm btn-ghost" id="ed-captions-upload">Upload .vtt</button></div>
+            <span class="tiny" id="ed-captions-state"></span></div>
+          <label class="checkbox"><input type="checkbox" id="pc-srccaptions"> Show the source's own subtitles (linked videos)</label>
+        </div>
+
         <div class="tab-panel" data-panel="ctas">
           <p class="muted tiny">
-            Overlays and banners appear between their start and end second. A gate pauses playback until the
-            viewer submits their email; an end screen shows after the video finishes.
+            Overlays and banners appear between their start and end second; an end screen shows once the video
+            finishes. Email gates live under Form.
           </p>
           <div id="ctas-rows"></div>
           <button class="btn btn-ghost btn-sm" id="add-cta" type="button">Add CTA</button>
+        </div>
+
+        <div class="tab-panel" data-panel="form">
+          <p class="muted tiny">
+            A form pauses playback at its start second until the viewer submits, and everything collected lands
+            here and in Leads.
+          </p>
+          <div id="forms-rows"></div>
+          <button class="btn btn-ghost btn-sm" id="add-form" type="button">Add form</button>
+          <div class="row spread" style="margin-top:22px">
+            <h3>Submissions</h3>
+            <a class="btn btn-ghost btn-sm" id="ed-form-export" href="/api/leads.csv">Export CSV</a>
+          </div>
+          <div id="ed-form-leads" class="muted tiny">No submissions yet.</div>
         </div>
 
         <div class="tab-panel" data-panel="access">
@@ -363,12 +423,12 @@
           </div>
         </div>
 
-        <div class="tab-panel" data-panel="stats">
+        <div class="tab-panel active" data-panel="stats">
           <div id="stats-body" class="muted">Loading…</div>
         </div>
       </div>
 
-      <div>
+      <div class="sec-preview">
         <div class="card">
           <h3>Live preview</h3>
           <div id="preview"></div>
