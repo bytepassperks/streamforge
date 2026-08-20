@@ -74,7 +74,8 @@ export async function currentUser<E extends AuthEnv>(c: Context<E>): Promise<Use
   const id = getCookie(c, SESSION_COOKIE);
   if (!id) return null;
   const row = await c.env.DB.prepare(
-    `SELECT u.id, u.email, u.name, u.plan, u.role, u.unlimited, u.suspended, u.created_at, s.expires_at
+    `SELECT u.id, u.email, u.name, u.plan, u.role, u.unlimited, u.suspended, u.subscription_id,
+            u.plan_renews_at, u.created_at, s.expires_at
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.id = ?`,
   )
@@ -93,6 +94,8 @@ export async function currentUser<E extends AuthEnv>(c: Context<E>): Promise<Use
     role: row.role,
     unlimited: row.unlimited,
     suspended: row.suspended,
+    subscription_id: row.subscription_id,
+    plan_renews_at: row.plan_renews_at,
     created_at: row.created_at,
   };
 }

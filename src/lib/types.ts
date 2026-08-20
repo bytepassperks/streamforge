@@ -6,6 +6,10 @@ export interface Env {
   PUBLIC_BASE_URL: string;
   DODO_ENVIRONMENT?: string;
   DODO_LIFETIME_PRODUCT_ID?: string;
+  DODO_STARTER_PRODUCT_ID?: string;
+  DODO_STARTER_ANNUAL_PRODUCT_ID?: string;
+  DODO_AGENCY_PRODUCT_ID?: string;
+  DODO_AGENCY_ANNUAL_PRODUCT_ID?: string;
   DODO_PAYMENTS_API_KEY?: string;
   DODO_WEBHOOK_SECRET?: string;
 }
@@ -18,6 +22,8 @@ export interface User {
   role: string;
   unlimited: number;
   suspended: number;
+  subscription_id: string;
+  plan_renews_at: number;
   created_at: number;
 }
 

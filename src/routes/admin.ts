@@ -1,14 +1,14 @@
 import { Hono } from 'hono';
 import type { Env, User } from '../lib/types';
 import { createSession, hashPassword, randomSalt } from '../lib/auth';
-import { FREE_LIMITS, isAdmin, offerForSeats, seatsSold } from '../lib/billing';
+import { FREE_LIMITS, PLANS, isAdmin, offerForSeats, playUsage, seatsSold } from '../lib/billing';
 import { newId, now } from '../lib/util';
 
 type Vars = { user: User };
 
 export const admin = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-const PLANS = new Set(['free', 'lifetime']);
+const ASSIGNABLE_PLANS = new Set(Object.keys(PLANS));
 const ROLES = new Set(['user', 'admin']);
 const PURCHASE_STATUSES = new Set(['pending', 'paid', 'refunded', 'failed']);
 
@@ -94,12 +94,14 @@ admin.get('/users', async (c) => {
 admin.get('/users/:id', async (c) => {
   const id = c.req.param('id');
   const user = await c.env.DB.prepare(
-    `SELECT id, email, name, plan, role, unlimited, suspended, notes, created_at, lifetime_at
+    `SELECT id, email, name, plan, role, unlimited, suspended, notes, created_at, lifetime_at,
+            subscription_id, plan_renews_at
        FROM users WHERE id = ?`,
   )
     .bind(id)
-    .first();
+    .first<{ id: string; plan: string; role: string; unlimited: number }>();
   if (!user) return c.json({ error: 'no such user' }, 404);
+  const plays = await playUsage(c.env, user);
   const videos = await c.env.DB.prepare(
     'SELECT id, slug, title, source_type, visibility, created_at FROM videos WHERE user_id = ? ORDER BY created_at DESC',
   )
@@ -110,7 +112,7 @@ admin.get('/users/:id', async (c) => {
   )
     .bind(id)
     .all();
-  return c.json({ user, videos: videos.results ?? [], purchases: purchases.results ?? [] });
+  return c.json({ user, plays, videos: videos.results ?? [], purchases: purchases.results ?? [] });
 });
 
 admin.post('/users', async (c) => {
@@ -118,7 +120,7 @@ admin.post('/users', async (c) => {
   const email = (body.email ?? '').trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return c.json({ error: 'invalid email' }, 400);
   if (!body.password || body.password.length < 8) return c.json({ error: 'password must be at least 8 characters' }, 400);
-  const plan = PLANS.has(body.plan ?? '') ? (body.plan as string) : 'free';
+  const plan = ASSIGNABLE_PLANS.has(body.plan ?? '') ? (body.plan as string) : 'free';
   const role = ROLES.has(body.role ?? '') ? (body.role as string) : 'user';
   const exists = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
   if (exists) return c.json({ error: 'an account with that email already exists' }, 409);
@@ -157,7 +159,9 @@ admin.patch('/users/:id', async (c) => {
   const changed: Record<string, unknown> = {};
 
   if (body.plan !== undefined) {
-    if (!PLANS.has(body.plan)) return c.json({ error: 'plan must be free or lifetime' }, 400);
+    if (!ASSIGNABLE_PLANS.has(body.plan)) {
+      return c.json({ error: `plan must be one of ${[...ASSIGNABLE_PLANS].join(', ')}` }, 400);
+    }
     sets.push('plan = ?');
     binds.push(body.plan);
     sets.push('lifetime_at = ?');

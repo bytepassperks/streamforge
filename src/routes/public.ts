@@ -12,7 +12,15 @@ import {
 import { verifyPassword } from '../lib/auth';
 import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
-import { isLifetime, offerForSeats, seatsSold, verifyDodoSignature } from '../lib/billing';
+import {
+  countPlay,
+  isLifetime,
+  offerForSeats,
+  planForProduct,
+  playUsage,
+  seatsSold,
+  verifyDodoSignature,
+} from '../lib/billing';
 
 export const pub = new Hono<{ Bindings: Env }>();
 
@@ -35,9 +43,21 @@ pub.get('/api/public/offer', async (c) => {
   return c.json({ offer });
 });
 
+const SUBSCRIPTION_ACTIVE = new Set(['subscription.active', 'subscription.renewed', 'subscription.plan_changed']);
+const SUBSCRIPTION_ENDED = new Set([
+  'subscription.cancelled',
+  'subscription.canceled',
+  'subscription.expired',
+  'subscription.failed',
+  'subscription.on_hold',
+  'subscription.paused',
+]);
+
 /**
- * Dodo Payments delivers Standard Webhooks; a verified `payment.succeeded`
- * whose metadata carries our user id flips that account to lifetime.
+ * Dodo Payments delivers Standard Webhooks. A verified one-time
+ * `payment.succeeded` for the lifetime product grants lifetime; subscription
+ * events move the account between the metered plans and back to free when a
+ * subscription lapses. A lifetime licence is never revoked by a lapse.
  */
 pub.post('/api/billing/dodo/webhook', async (c) => {
   const body = await c.req.text();
@@ -56,6 +76,10 @@ pub.post('/api/billing/dodo/webhook', async (c) => {
     type?: string;
     data?: {
       payment_id?: string;
+      subscription_id?: string;
+      product_id?: string;
+      next_billing_date?: string;
+      product_cart?: { product_id?: string }[];
       metadata?: Record<string, string>;
       total_amount?: number;
       currency?: string;
@@ -69,19 +93,51 @@ pub.post('/api/billing/dodo/webhook', async (c) => {
   }
   // Recorded only once the payload parses, so a malformed body can be retried.
   await c.env.DB.prepare('INSERT INTO webhook_events (id, received_at) VALUES (?, ?)').bind(id, now()).run();
-  if (event.type !== 'payment.succeeded') return c.json({ ok: true, ignored: event.type ?? '' });
+  const kind = event.type ?? '';
+  const subscriptionEvent = SUBSCRIPTION_ACTIVE.has(kind) || SUBSCRIPTION_ENDED.has(kind);
+  if (kind !== 'payment.succeeded' && !subscriptionEvent) return c.json({ ok: true, ignored: kind });
 
   const data = event.data ?? {};
   const userId = data.metadata?.user_id ?? '';
   const email = (data.customer?.email ?? '').trim().toLowerCase();
   const user = userId
-    ? await c.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first<{ id: string }>()
+    ? await c.env.DB.prepare('SELECT id, plan FROM users WHERE id = ?')
+        .bind(userId)
+        .first<{ id: string; plan: string }>()
     : email
-      ? await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>()
+      ? await c.env.DB.prepare('SELECT id, plan FROM users WHERE email = ?')
+          .bind(email)
+          .first<{ id: string; plan: string }>()
       : null;
   if (!user) return c.json({ ok: true, unmatched: true });
 
   const ts = now();
+
+  if (subscriptionEvent) {
+    /* Lifetime outranks a subscription, so a lapse can never take it away. */
+    if (user.plan === 'lifetime') return c.json({ ok: true, ignored: 'lifetime account' });
+    if (SUBSCRIPTION_ENDED.has(kind)) {
+      await c.env.DB.prepare(
+        "UPDATE users SET plan = 'free', subscription_id = '', plan_renews_at = 0 WHERE id = ?",
+      )
+        .bind(user.id)
+        .run();
+      return c.json({ ok: true, plan: 'free' });
+    }
+    const productId = data.product_id ?? data.product_cart?.[0]?.product_id ?? '';
+    const plan = data.metadata?.plan ?? planForProduct(c.env, productId) ?? '';
+    if (plan !== 'starter' && plan !== 'agency') return c.json({ ok: true, unmatched: 'product' });
+    const renews = Date.parse(data.next_billing_date ?? '');
+    await c.env.DB.prepare('UPDATE users SET plan = ?, subscription_id = ?, plan_renews_at = ? WHERE id = ?')
+      .bind(plan, data.subscription_id ?? '', Number.isNaN(renews) ? 0 : Math.floor(renews / 1000), user.id)
+      .run();
+    return c.json({ ok: true, plan });
+  }
+
+  /* One-time payment: only the lifetime product grants the lifetime licence. */
+  const paidProduct = data.product_cart?.[0]?.product_id ?? data.product_id ?? '';
+  const paidPlan = data.metadata?.plan ?? planForProduct(c.env, paidProduct) ?? 'lifetime';
+  if (paidPlan !== 'lifetime') return c.json({ ok: true, ignored: `payment for ${paidPlan}` });
   await c.env.DB.prepare("UPDATE users SET plan = 'lifetime', lifetime_at = ? WHERE id = ?")
     .bind(ts, user.id)
     .run();
@@ -143,6 +199,8 @@ interface EmbedPayload {
   badge: boolean;
   share: { url: string; embed: string };
   related: { slug: string; title: string; thumbnail_url: string; duration: number }[];
+  /** The owner is a free account past its monthly play allowance. */
+  capped: boolean;
 }
 
 function shareLinks(env: Env, slug: string, kind: 'video' | 'playlist' = 'video'): { url: string; embed: string } {
@@ -170,9 +228,12 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     .bind(video.id)
     .all<Omit<Cta, 'video_id'>>();
   const thumbnail = variant === 'b' && video.thumbnail_url_b ? video.thumbnail_url_b : video.thumbnail_url;
-  const owner = await env.DB.prepare('SELECT plan, role, unlimited FROM users WHERE id = ?')
+  const owner = await env.DB.prepare('SELECT id, plan, role, unlimited FROM users WHERE id = ?')
     .bind(video.user_id)
-    .first<{ plan: string; role: string; unlimited: number }>();
+    .first<{ id: string; plan: string; role: string; unlimited: number }>();
+  /* Free accounts stop at their monthly play allowance; paid plans keep serving and
+     accrue overage instead, so a customer's audience is never cut off mid-campaign. */
+  const usage = owner ? await playUsage(env, owner) : null;
   const player = mergePlayerConfig(video.player_config);
   /* Suggestions are drawn only from the owner's own public library, so a viewer is
      never handed somebody else's video at the end of playback. */
@@ -204,6 +265,7 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     badge: !(owner && isLifetime(owner)),
     share: shareLinks(env, video.slug),
     related: related?.results ?? [],
+    capped: Boolean(usage?.blocked),
   };
 }
 
@@ -303,12 +365,24 @@ pub.post('/api/track', async (c) => {
   }
   await c.env.DB.batch(statements);
 
+  /* The play that crosses a hard-stop allowance has to be refused while it can still
+     be stopped, so the counter is claimed inline and the verdict travels back. */
+  let capped = false;
+  if (kind === 'play') {
+    await countPlay(c.env, video.user_id, video.id, String(body.view_id ?? 'anon').slice(0, 40));
+    const owner = await c.env.DB.prepare(
+      'SELECT id, plan, role, unlimited FROM users WHERE id = ?',
+    )
+      .bind(video.user_id)
+      .first<{ id: string; plan: string; role: string; unlimited: number }>();
+    capped = owner ? (await playUsage(c.env, owner)).blocked : false;
+  }
   if (kind === 'play' || kind === 'complete' || kind === 'cta_click') {
     c.executionCtx.waitUntil(
       dispatchWebhooks(c.env, video.user_id, kind, { video_id: video.id, position, referrer }),
     );
   }
-  return c.json({ ok: true });
+  return c.json({ ok: true, capped });
 });
 
 pub.post('/api/leads/:videoId', async (c) => {

@@ -193,9 +193,9 @@
 <section class="section" id="pricing">
   <div class="wrap">
     <div class="section-head">
-      <span class="eyebrow">two tiers. that's it. →</span>
-      <h2>Try it free. Buy it once.</h2>
-      <p class="section-lede">No refunds — because you can run the free tier as long as you like, on every feature, before paying a cent.</p>
+      <span class="eyebrow">pay for plays, not for storage →</span>
+      <h2>Unlimited videos. You only pay for plays.</h2>
+      <p class="section-lede">Every plan carries unlimited videos and unlimited bandwidth — no metered egress, ever. Extra plays are $1 per 10,000.</p>
     </div>
     <div class="price-grid">
       <div class="card price-card">
@@ -203,21 +203,45 @@
         <div class="price">$0</div>
         <p class="price-inr">forever · no card · no expiry</p>
         <ul class="price-list">
-          <li>5 videos, 3 GB storage</li>
-          <li>10,000 plays / month</li>
+          <li>500 plays / month</li>
+          <li>5 videos, 2 GB storage</li>
           <li>Full player, analytics and lead capture</li>
           <li>Small Videokr badge on the player</li>
         </ul>
         <a class="btn btn-ghost" id="free-cta" href="/login.html?mode=signup">Start free →</a>
+      </div>
+      <div class="card price-card">
+        <h3>Starter</h3>
+        <div class="price">$29<span style="font-size:.42em"> /year</span></div>
+        <p class="price-inr">or $5 month-to-month</p>
+        <ul class="price-list">
+          <li>10,000 plays / month</li>
+          <li>Unlimited videos, 25 GB storage</li>
+          <li>Badge off — your logo only</li>
+          <li>Lead capture, CTAs, webhooks, A/B tests</li>
+        </ul>
+        <a class="btn btn-ghost" id="starter-cta" href="/login.html?mode=signup&amp;intent=starter">Get Starter →</a>
+      </div>
+      <div class="card price-card">
+        <h3>Agency</h3>
+        <div class="price">$29<span style="font-size:.42em"> /month</span></div>
+        <p class="price-inr">or $290 a year</p>
+        <ul class="price-list">
+          <li>150,000 plays / month</li>
+          <li>Unlimited videos, 250 GB storage</li>
+          <li>Everything in Starter, for client work</li>
+          <li>Projects, playlists and SEO video pages</li>
+        </ul>
+        <a class="btn btn-ghost" id="agency-cta" href="/login.html?mode=signup&amp;intent=agency">Get Agency →</a>
       </div>
       <div class="card price-card hot">
         <h3>Lifetime</h3>
         <div class="price" id="price-usd">$69 <s>$149</s></div>
         <p class="price-inr" id="price-inr">₹5,999 · one payment · yours forever</p>
         <ul class="price-list">
-          <li>Unlimited videos, embeds and plays</li>
+          <li>10,000 plays / month, forever</li>
+          <li>Unlimited videos, 25 GB storage</li>
           <li>Badge off — your logo only</li>
-          <li>Lead capture, CTAs, webhooks, A/B tests</li>
           <li>Every feature we ship from here on</li>
           <li>Export your videos, leads and analytics any time</li>
         </ul>
@@ -236,7 +260,9 @@
       <h2>Straight answers.</h2>
     </div>
     <details class="faq" open><summary>Is the free tier a trial?</summary>
-      <p>No timer and no card. 5 videos and 10,000 plays a month, for as long as you want. Upgrade when you outgrow it, or never.</p></details>
+      <p>No timer and no card. 5 videos and 500 plays a month, for as long as you want. Upgrade when you outgrow it, or never.</p></details>
+    <details class="faq"><summary>What counts as a play?</summary>
+      <p>One viewer starting one video, counted once per video per month — a viewer who reloads or rewatches the same video that month is not counted again. Free stops at 500 plays until the month rolls over; paid plans keep playing and any extra plays are billed at $1 per 10,000.</p></details>
     <details class="faq"><summary>Why no refunds?</summary>
       <p>Because the free tier lets you test every feature first, at no cost. Once the lifetime licence is issued it's yours and all sales are final.</p></details>
     <details class="faq"><summary>What happens after 100 seats?</summary>
@@ -353,6 +379,11 @@
     el('hero-badge').textContent = 'Lifetime licence active · every feature unlocked';
     el('price-usd').textContent = 'Owned';
     el('price-inr').textContent = 'paid once · yours forever';
+    ['starter', 'agency'].forEach(function (plan) {
+      var cta = el(plan + '-cta');
+      cta.href = '/app.html';
+      cta.textContent = 'Covered by your lifetime licence';
+    });
   }
 
   fetch('/api/auth/me', { credentials: 'same-origin' })
@@ -375,6 +406,11 @@
       }
       el('lifetime-cta').href = '/app.html?view=billing';
       el('lifetime-cta').textContent = 'Claim your lifetime seat →';
+      ['starter', 'agency'].forEach(function (plan) {
+        var cta = el(plan + '-cta');
+        cta.href = '/app.html?view=billing';
+        if (user.plan === plan) cta.textContent = 'Your current plan';
+      });
       loadOffer();
     })
     .catch(function () { loadOffer(); });

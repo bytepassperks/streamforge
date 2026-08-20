@@ -1,7 +1,20 @@
 import { Hono } from 'hono';
 import type { Env, User } from '../lib/types';
 import { currentUser, createSession, destroySession, hashPassword, randomSalt, verifyPassword } from '../lib/auth';
-import { FREE_LIMITS, createCheckout, isAdmin, isLifetime, offerForSeats, seatsSold } from '../lib/billing';
+import {
+  OVERAGE_PER_10K_USD,
+  PLANS,
+  createCheckout,
+  isAdmin,
+  isLifetime,
+  isPaid,
+  offerForSeats,
+  planFor,
+  playUsage,
+  productIdFor,
+  seatsSold,
+} from '../lib/billing';
+import type { Cycle } from '../lib/billing';
 import { admin } from './admin';
 import {
   defaultPlayerConfig,
@@ -146,14 +159,15 @@ api.get('/videos', async (c) => {
 
 api.post('/videos', async (c) => {
   const user = c.get('user');
-  if (!isLifetime(user)) {
+  const videoLimit = planFor(user).videos;
+  if (videoLimit !== null) {
     const row = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM videos WHERE user_id = ?')
       .bind(user.id)
       .first<{ n: number }>();
-    if ((row?.n ?? 0) >= FREE_LIMITS.videos) {
+    if ((row?.n ?? 0) >= videoLimit) {
       return c.json(
         {
-          error: `the free tier holds ${FREE_LIMITS.videos} videos \u2014 unlock lifetime for unlimited`,
+          error: `the free plan holds ${videoLimit} videos \u2014 upgrade for unlimited`,
           upgrade: true,
         },
         402,
@@ -618,15 +632,49 @@ api.get('/billing', async (c) => {
   )
     .bind(user.id)
     .all();
+  const plan = planFor(user);
+  const plays = await playUsage(c.env, user);
   return c.json({
     plan: user.plan,
+    plan_name: plan.name,
     lifetime: isLifetime(user),
+    paid: isPaid(user),
     admin: isAdmin(user),
     checkout_ready: Boolean(c.env.DODO_PAYMENTS_API_KEY && c.env.DODO_LIFETIME_PRODUCT_ID),
+    subscription_ready: Boolean(c.env.DODO_PAYMENTS_API_KEY && c.env.DODO_STARTER_PRODUCT_ID),
+    subscription_id: user.subscription_id ?? '',
+    plan_renews_at: user.plan_renews_at ?? 0,
     offer,
-    usage: { videos: videos?.n ?? 0, video_limit: isLifetime(user) ? null : FREE_LIMITS.videos },
+    plans: PLANS,
+    overage_per_10k_usd: OVERAGE_PER_10K_USD,
+    plays,
+    usage: {
+      videos: videos?.n ?? 0,
+      video_limit: plan.videos,
+      storage_limit_bytes: plan.storageBytes,
+    },
     purchases: results ?? [],
   });
+});
+
+/**
+ * Subscription checkout. Lifetime accounts have nothing to gain from a
+ * subscription, and an account already on the requested plan is rejected so a
+ * customer cannot end up paying twice.
+ */
+api.post('/billing/subscribe', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{ plan?: string; cycle?: string }>().catch(() => ({}) as Record<string, string>);
+  const plan = body.plan ?? '';
+  const cycle: Cycle = body.cycle === 'annual' ? 'annual' : 'monthly';
+  if (plan !== 'starter' && plan !== 'agency') return c.json({ error: 'plan must be starter or agency' }, 400);
+  if (isLifetime(user)) return c.json({ error: 'your lifetime licence already covers this' }, 409);
+  if (user.plan === plan) return c.json({ error: `you are already on ${PLANS[plan].name}` }, 409);
+  if (!productIdFor(c.env, plan, cycle)) return c.json({ error: 'this plan is not on sale yet' }, 503);
+  const base = c.env.PUBLIC_BASE_URL || new URL(c.req.url).origin;
+  const result = await createCheckout(c.env, user, `${base}/app.html?purchase=complete`, plan, cycle);
+  if (!result.ok) return c.json({ error: result.error }, result.status as 502 | 503);
+  return c.json({ url: result.url });
 });
 
 api.post('/billing/checkout', async (c) => {

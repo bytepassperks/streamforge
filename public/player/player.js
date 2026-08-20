@@ -1758,6 +1758,18 @@
       value: value || '',
       variant: this.variant,
     });
+    /* A play has to hear the answer back, because the server refuses the play that
+       crosses a hard-stop allowance; beacons are fire-and-forget, so they can't. */
+    if (kind === 'play') {
+      var self = this;
+      fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+          if (result && result.capped) self.stopForCap();
+        })
+        .catch(function () {});
+      return;
+    }
     try {
       if (navigator.sendBeacon && kind !== 'load') {
         navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
@@ -1771,6 +1783,21 @@
     );
   };
 
+  /* The owning account ran out of plays mid-view: stop the picture and say so. */
+  Player.prototype.stopForCap = function () {
+    if (this._capped) return;
+    this._capped = true;
+    this._trackingEnabled = false;
+    try {
+      if (this.adapter) this.adapter.pause();
+    } catch (e) {
+      /* the adapter may already be gone */
+    }
+    var payload = { video: this.video };
+    this.destroy();
+    mountCapped(this.root, payload);
+  };
+
   Player.prototype.destroy = function () {
     clearInterval(this._tick);
     if (this.adapter && this.adapter.destroy) this.adapter.destroy();
@@ -1778,6 +1805,19 @@
   };
 
   /* ------------------------------------------------------------ password -- */
+
+  /* Shown when the owning account is out of monthly plays on a plan that stops
+     at its allowance; paid plans never reach this. */
+  function mountCapped(root, payload) {
+    root.classList.add('sf-player', 'sf-locked');
+    root.innerHTML = '';
+    var card = el('div', 'sf-lock-card');
+    card.appendChild(el('h3', null, null)).textContent = 'This video is unavailable right now';
+    card.appendChild(el('p', null, null)).textContent =
+      (payload.video && payload.video.title ? payload.video.title + ' has ' : 'This video has ') +
+      'reached the monthly play limit on its plan. Please check back next month.';
+    root.appendChild(card);
+  }
 
   function mountLocked(root, payload) {
     root.classList.add('sf-player', 'sf-locked');
@@ -1849,6 +1889,10 @@
       if (!root || !payload) return Promise.resolve(null);
       if (payload.locked) {
         mountLocked(root, payload);
+        return Promise.resolve(null);
+      }
+      if (payload.capped) {
+        mountCapped(root, payload);
         return Promise.resolve(null);
       }
       var player = new Player(root, payload);
