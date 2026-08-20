@@ -118,8 +118,16 @@
        the source's unstarted screen — its title, avatar and watch-elsewhere link —
        is never on screen. */
     var cover = el('div', 'sf-yt-cover');
-    var still = this._options.poster || 'https://i.ytimg.com/vi/' + this._source + '/maxresdefault.jpg';
-    cover.style.backgroundImage = 'url("' + still + '")';
+    var still = this._options.poster || '';
+    /* A 4:3 default still would letterbox inside our 16:9 stage, so the widescreen
+       variant is tried first and only falls back if the source never made one. */
+    var wide = 'https://i.ytimg.com/vi/' + this._source + '/maxresdefault.jpg';
+    cover.style.backgroundImage = 'url("' + (still || wide) + '")';
+    var probe = document.createElement('img');
+    probe.onload = function () {
+      if (probe.naturalWidth > 600) cover.style.backgroundImage = 'url("' + wide + '")';
+    };
+    probe.src = wide;
     host.appendChild(cover);
     host.classList.add('sf-yt-blank');
     this._container.appendChild(host);
@@ -174,7 +182,13 @@
                   }, 900);
                   self.emit('play');
                 }
-                if (e.data === YTS.PAUSED) self.emit('pause');
+                if (e.data === YTS.PAUSED) {
+                  /* The source paints its own title, logo and suggestion strip while
+                     paused, so the frame goes behind our still for as long as it lasts. */
+                  clearTimeout(self._unmask);
+                  self._host.classList.add('sf-yt-blank');
+                  self.emit('pause');
+                }
                 if (e.data === YTS.ENDED) {
                   /* Blank and rewind the frame so a suggestion grid can never render. */
                   clearTimeout(self._unmask);
@@ -194,6 +208,14 @@
   YouTubeAdapter.prototype._dropCaptions = function () {
     if (!this._yt) return;
     var self = this;
+    if (this._options.sourceCaptions) {
+      try {
+        this._yt.loadModule('captions');
+      } catch (err) {
+        /* the frame decides whether a track exists */
+      }
+      return;
+    }
     ['captions', 'cc'].forEach(function (mod) {
       try {
         self._yt.unloadModule(mod);
@@ -212,7 +234,10 @@
     if (this._yt) this._yt.playVideo();
   };
   YouTubeAdapter.prototype.pause = function () {
-    if (this._yt) this._yt.pauseVideo();
+    if (!this._yt) return;
+    clearTimeout(this._unmask);
+    if (this._host) this._host.classList.add('sf-yt-blank');
+    this._yt.pauseVideo();
   };
   YouTubeAdapter.prototype.currentTime = function () {
     return this._yt && this._ready ? this._yt.getCurrentTime() || 0 : 0;
@@ -247,6 +272,15 @@
   };
   YouTubeAdapter.prototype.supportsPip = function () {
     return false;
+  };
+  YouTubeAdapter.prototype.hasCaptions = function () {
+    return true;
+  };
+  YouTubeAdapter.prototype.toggleCaptions = function () {
+    if (!this._yt) return false;
+    this._options.sourceCaptions = !this._options.sourceCaptions;
+    this._dropCaptions();
+    return this._options.sourceCaptions;
   };
   YouTubeAdapter.prototype.element = function () {
     return this._yt ? this._yt.getIframe() : null;
@@ -368,6 +402,18 @@
     tracks[0].mode = on ? 'hidden' : 'showing';
     return !on;
   };
+  /** Renditions offered by an adaptive stream; a plain file has none to choose from. */
+  HtmlAdapter.prototype.qualities = function () {
+    if (!this._hls || !this._hls.levels || this._hls.levels.length < 2) return [];
+    var list = [{ label: 'Auto', value: -1 }];
+    this._hls.levels.forEach(function (level, index) {
+      list.push({ label: (level.height ? level.height + 'p' : Math.round(level.bitrate / 1000) + 'k'), value: index });
+    });
+    return list;
+  };
+  HtmlAdapter.prototype.setQuality = function (value) {
+    if (this._hls) this._hls.currentLevel = value;
+  };
   HtmlAdapter.prototype.hasCaptions = function () {
     return !!(this._video.textTracks && this._video.textTracks.length);
   };
@@ -384,6 +430,7 @@
     this._time = 0;
     this._duration = 0;
     this._paused = true;
+    this._captionsOn = false;
   }
   VimeoAdapter.prototype = Object.create(Emitter.prototype);
 
@@ -466,6 +513,14 @@
   VimeoAdapter.prototype.supportsPip = function () {
     return false;
   };
+  VimeoAdapter.prototype.hasCaptions = function () {
+    return true;
+  };
+  VimeoAdapter.prototype.toggleCaptions = function () {
+    this._captionsOn = !this._captionsOn;
+    this._post(this._captionsOn ? 'enableTextTrack' : 'disableTextTrack', this._captionsOn ? 'en' : undefined);
+    return this._captionsOn;
+  };
   VimeoAdapter.prototype.element = function () {
     return this._frame;
   };
@@ -474,7 +529,10 @@
     var v = payload.video;
     var cfg = payload.player;
     if (v.source_type === 'youtube')
-      return new YouTubeAdapter(container, v.source_ref, { poster: v.thumbnail_url });
+      return new YouTubeAdapter(container, v.source_ref, {
+        poster: v.thumbnail_url,
+        sourceCaptions: !!cfg.sourceCaptions,
+      });
     if (v.source_type === 'vimeo') return new VimeoAdapter(container, v.source_ref);
     return new HtmlAdapter(container, v.source_ref, {
       hls: v.source_type === 'hls',
@@ -653,6 +711,23 @@
         }
       };
       this.progress.addEventListener('click', seekFromEvent);
+      /* Scrubbing has to follow the pointer even once it leaves the 5px rail. */
+      this.progress.addEventListener('mousedown', function (event) {
+        event.preventDefault();
+        self._scrubbing = true;
+        seekFromEvent(event);
+        var move = function (ev) {
+          seekFromEvent(ev);
+        };
+        var up = function (ev) {
+          seekFromEvent(ev);
+          self._scrubbing = false;
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+        };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+      });
       this.progress.addEventListener('mousemove', function (event) {
         var rect = self.progress.getBoundingClientRect();
         var ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
@@ -739,10 +814,7 @@
       this.ccBtn.setAttribute('aria-label', 'Captions');
       this.ccBtn.setAttribute('data-sf', 'captions');
       this.ccBtn.addEventListener('click', function () {
-        if (self.adapter.toggleCaptions) {
-          var on = self.adapter.toggleCaptions();
-          self.ccBtn.classList.toggle('sf-active', !!on);
-        }
+        self.toggleCaptions();
       });
       bar.appendChild(this.ccBtn);
     }
@@ -767,6 +839,7 @@
       bar.appendChild(this.fsBtn);
     }
 
+    this.bar = bar;
     return bar;
   };
 
@@ -820,6 +893,42 @@
       this.ccBtn.style.display = 'none';
     }
     if (this.pipBtn && !this.adapter.supportsPip()) this.pipBtn.style.display = 'none';
+    this._buildQualityMenu();
+  };
+
+  /** Only an adaptive source exposes renditions, so the menu is built after load. */
+  Player.prototype._buildQualityMenu = function () {
+    if (!this.config.controls.quality || this.qualityBtn || !this.bar) return;
+    if (!this.adapter.qualities) return;
+    var self = this;
+    var levels = this.adapter.qualities();
+    if (levels.length < 2) return;
+    this.qualityBtn = this._menu(
+      'sf-quality',
+      'Quality',
+      '<span class="sf-quality-label">Auto</span>',
+      levels.map(function (level) {
+        return {
+          label: level.label,
+          onSelect: function () {
+            self.adapter.setQuality(level.value);
+            var label = self.qualityBtn.querySelector('.sf-quality-label');
+            if (label) label.textContent = level.label;
+          },
+        };
+      }),
+    );
+    var anchor = this.ccBtn || this.pipBtn || null;
+    if (anchor && anchor.parentNode === this.bar) this.bar.insertBefore(this.qualityBtn, anchor);
+    else this.bar.appendChild(this.qualityBtn);
+  };
+
+  /** Both the CC button and the keyboard shortcut land here so the state stays in sync. */
+  Player.prototype.toggleCaptions = function () {
+    if (!this.adapter.toggleCaptions) return false;
+    var on = this.adapter.toggleCaptions();
+    if (this.ccBtn) this.ccBtn.classList.toggle('sf-active', !!on);
+    return on;
   };
 
   Player.prototype._renderMarkers = function (duration) {
@@ -1118,7 +1227,7 @@
           self.toggleFullscreen();
           break;
         case 'c':
-          if (self.adapter.toggleCaptions) self.adapter.toggleCaptions();
+          self.toggleCaptions();
           break;
         case 'p':
           if (self.adapter.togglePip) self.adapter.togglePip();
@@ -1198,17 +1307,29 @@
 
   Player.prototype._bindSticky = function () {
     var self = this;
-    if (!('IntersectionObserver' in window)) return;
-    var observer = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          var offscreen = !entry.isIntersecting && !self.adapter.paused();
-          self.root.classList.toggle('sf-sticky', offscreen);
-        });
-      },
-      { threshold: 0.15 },
-    );
-    observer.observe(this.root);
+    /* The trigger has to be a sentinel that stays in the flow: measuring the
+       player itself puts it back on screen the moment it turns fixed, which
+       cancels the state it just entered. */
+    var anchor = el('div', 'sf-sticky-anchor');
+    if (!this.root.parentNode) return;
+    this.root.parentNode.insertBefore(anchor, this.root);
+    var height = 0;
+    var update = function () {
+      var stuck = self.root.classList.contains('sf-sticky');
+      if (!stuck) height = self.root.offsetHeight;
+      var top = anchor.getBoundingClientRect().top;
+      var gone = top + height < 40 || top > window.innerHeight - 40;
+      var next = gone && !self.adapter.paused();
+      if (next === stuck) return;
+      /* The reserved height keeps the page from jumping when the player leaves the flow. */
+      anchor.style.height = next ? height + 'px' : '';
+      self.root.classList.toggle('sf-sticky', next);
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    this.adapter.on('pause', update);
+    this.adapter.on('play', update);
   };
 
   /* ------------------------------------------------------------ tracking -- */

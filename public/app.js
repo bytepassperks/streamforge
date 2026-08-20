@@ -345,6 +345,7 @@
     $('pc-resume').checked = config.resume;
     $('pc-title').checked = config.title;
     $('pc-bigplay').checked = config.bigPlayButton;
+    $('pc-srccaptions').checked = config.sourceCaptions;
     $('pc-sticky').checked = config.sticky;
 
     var controlsHost = $('pc-controls');
@@ -536,6 +537,7 @@
       logoPosition: $('pc-logo-pos').value,
       title: $('pc-title').checked,
       bigPlayButton: $('pc-bigplay').checked,
+      sourceCaptions: $('pc-srccaptions').checked,
       sticky: $('pc-sticky').checked,
       borderRadius: Number($('pc-radius').value) || 0,
     };

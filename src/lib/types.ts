@@ -51,6 +51,7 @@ export interface PlayerConfig {
   logoPosition: string;
   title: boolean;
   bigPlayButton: boolean;
+  sourceCaptions: boolean;
   sticky: boolean;
   borderRadius: number;
 }

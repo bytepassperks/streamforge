@@ -4,7 +4,8 @@ Repo: `bytepassperks/streamforge` · branch `devin/1787054418-streamforge-app` �
 https://github.com/bytepassperks/streamforge/pull/1
 
 Live: https://streamforge.getlaunchpod.workers.dev (Cloudflare Worker, free tier)
-Last deployed Worker version: `f2ab6702-aa71-4725-826d-8bde2e980dda`
+Last deployed Worker version: `86808266-2edf-4350-9a52-e6860ed2ef26`
+Last updated: 2026-08-18 (player interaction audit)
 
 Product: a self-owned alternative to videoo.org / Wistia / Vidyard. Host or link video,
 brand the player, embed it anywhere, gate it, and see who watched what — two tiers, Free
@@ -98,7 +99,26 @@ coal/cream/ember/lime palette. Brand assets (logo lockup, favicon set, hero, six
 illustrations) in `public/brand/`. The five design explorations have been removed now that
 the chosen direction (v1) ships as the real landing page.
 
-**Quality** — `npm run lint`, `npm run typecheck` and `npm test` (32 unit tests, including
+**Admin** — `harryroger798@gmail.com` is `role='admin'` with `unlimited=1`. Portal at
+`/admin.html`: user list, upgrade/downgrade to lifetime, unlimited override, suspend
+(blocks login), create/delete user, password reset, manual sale grant, refund sync,
+purchases, videos, stats and an audit log. Non-admins get 403 on every admin route.
+Verified in production; video deletion was never fired against real customer videos.
+
+**Player isolation (source chrome)** — the third-party frame is never visible to the
+viewer: it is over-scaled inside `.sf-yt-crop` so the title/branding strip falls outside
+the visible box, `.sf-yt-shield` swallows every pointer event, and `.sf-yt-cover` masks the
+frame with a still whenever playback is not running (stopped, paused, ended), applied
+*before* the pause call so the source's own paused overlay cannot flash. On end the frame
+is masked and rewound. Source captions are unloaded by default and only loaded when the
+video's `sourceCaptions` setting is on (dashboard: "Show the source's own subtitles").
+Subtitles burned into the video's pixels cannot be removed by any player — that is the
+file, not a track.
+
+**Player badge / logo** — free accounts show the real Videokr mark linking to the site;
+lifetime accounts replace it with their own `logoUrl`, `logoLink` and `logoPosition`.
+
+**Quality** — `npm run lint`, `npm run typecheck` and `npm test` (34 unit tests, including
 the seat ladder and webhook signature rejection of tampered bodies, wrong secrets, missing
 headers and stale timestamps) all pass.
 
@@ -108,6 +128,38 @@ headers and stale timestamps) all pass.
 granted; video create → `/v/<slug>` 200 and the page renders `sf-player` + `sf-controls` +
 the free-tier `sf-badge` in a real browser, which closes the earlier blank-player P0; the
 test project, video and rows were deleted afterwards (`/v/` now 404s).
+
+## 2b. Player interaction audit (2026-08-18, run against production)
+
+Every control was driven in a real browser on `/v/demo` (YouTube-backed) and on the landing
+demo (`/#demo`, direct MP4). Console errors on both pages: none.
+
+| Control | Result |
+| --- | --- |
+| Big play / play-pause | works on both sources |
+| Progress click-to-seek | works (16:17 clip: click 75% → 12:13, click 20% → 3:15) |
+| Progress drag-scrub | **fixed this pass** — only a click handler existed, so dragging did nothing; a document-level drag now follows the pointer after it leaves the 5px rail |
+| Time readout | tracks playback and seeks |
+| Volume slider | works (0.35 applied, icon state correct) |
+| Mute button and `M` | works, icon flips both ways |
+| Speed menu | works (1x → 1.5x applied to real playback) |
+| Chapters menu | works (jumps and resumes) |
+| Captions button | toggles; **fixed this pass** — the `C` key now goes through the same `Player.toggleCaptions()`, so the button's active state stays in sync instead of changing the track silently |
+| Quality menu | built after load, only when the source exposes 2+ renditions (earlier fix: it was appended before the control bar existed). Not exercised against a real multi-rendition HLS manifest |
+| Picture-in-picture | works on MP4 (enter and exit verified); hidden on YouTube/Vimeo, which do not expose it |
+| Fullscreen and `F` | enters and exits |
+| Keyboard seek (`J`/`L`/arrows) | works |
+| Sticky miniplayer | **fixed this pass** — the IntersectionObserver watched the player itself, so turning `position: fixed` made it intersect again and instantly cancelled the state it had just entered; it now measures an in-flow sentinel and reserves the vacated height |
+| End of video | pauses, clears the playing state, masks and rewinds the source frame |
+| Source chrome | no source title, channel, logo, "More videos" or native control bar in any state |
+
+Landing demo: direct MP4 at `/media/demo/videokr-demo-16x9.mp4` with a real 16:9 poster
+(`videokr-demo-16x9.jpg`) — the original clip was letterboxed, so it was cropped
+(`crop=1280:544:0:88`) and rescaled to true 16:9 rather than stretched.
+
+Still unproven in the player: a real multi-rendition HLS quality switch, the Vimeo adapter's
+controls and captions (no Vimeo test video exists in the account), and mobile (~390px) plus
+reduced-motion passes.
 
 ## 3. What is left
 

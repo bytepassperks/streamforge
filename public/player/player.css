@@ -128,7 +128,7 @@
   padding: 7px 10px; border-radius: 7px; font-size: 13px; cursor: pointer;
 }
 .sf-menu-item:hover { background: rgba(255,255,255,.12); }
-.sf-speed-label { font-size: 12px; font-weight: 600; }
+.sf-speed-label, .sf-quality-label { font-size: 12px; font-weight: 600; }
 
 /* icons (pure CSS so the player stays dependency free) */
 .sf-ico-play { width: 0; height: 0; border-left: 15px solid #fff; border-top: 9px solid transparent; border-bottom: 9px solid transparent; }
