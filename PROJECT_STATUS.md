@@ -4,8 +4,8 @@ Repo: `bytepassperks/streamforge` · branch `devin/1787054418-streamforge-app` �
 https://github.com/bytepassperks/streamforge/pull/1
 
 Live: https://streamforge.getlaunchpod.workers.dev (Cloudflare Worker, free tier)
-Last deployed Worker version: `eda3ec59-b216-40e3-87de-e4459f9a164c`
-Last updated: 2026-08-20 (control-bar rebuild + Vimeo/playlist-embed verification)
+Last deployed Worker version: `2f2d0ea1-d78b-4359-a20c-8dcedaa09552`
+Last updated: 2026-08-20 (play metering + Starter/Agency plans)
 
 Product: a self-owned alternative to videoo.org / Wistia / Vidyard. Host or link video,
 brand the player, embed it anywhere, gate it, and see who watched what — two tiers, Free
