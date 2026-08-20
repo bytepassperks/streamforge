@@ -189,7 +189,7 @@
   .sf-time { font-size: 11px; padding: 0 2px; }
   .sf-volume { min-width: 0; width: auto; max-width: none; }
   .sf-volume input[type="range"] { display: none; }
-  .sf-pip, .sf-rewind, .sf-forward { display: none; }
+  .sf-pip, .sf-rewind, .sf-controls > .sf-forward { display: none; }
   .sf-badge span { display: none; }
 }
 
@@ -203,8 +203,9 @@
   box-shadow: 0 1px 2px rgba(0,0,0,.15); padding: 7px; text-align: left;
   white-space: nowrap; z-index: 3; animation: sf-popup .2s ease;
 }
-.sf-menu-list::after {
-  content: ""; position: absolute; top: 100%; right: 14px; width: 0; height: 0;
+/* the pointer hangs off .sf-menu, not the scrollable list, so it adds no scroll height */
+.sf-menu.sf-open::after {
+  content: ""; position: absolute; bottom: calc(100% + 2px); right: 11px; width: 0; height: 0;
   border: 4px solid transparent; border-top-color: rgba(255,255,255,.9);
 }
 .sf-menu.sf-open .sf-menu-list { display: block; }
@@ -364,7 +365,10 @@
   background: rgba(18,20,22,.74); backdrop-filter: blur(6px); border-radius: 12px;
 }
 .sf-skin-videokr .sf-controls > * { margin-left: 0; }
-.sf-skin-videokr .sf-rewind, .sf-skin-videokr .sf-forward, .sf-skin-videokr .sf-time { display: none; }
+/* Scoped to the bar's own children: the settings menu reuses .sf-forward for its rows. */
+.sf-skin-videokr .sf-rewind,
+.sf-skin-videokr .sf-controls > .sf-forward,
+.sf-skin-videokr .sf-time { display: none; }
 .sf-skin-videokr .sf-play {
   width: 60px; height: 46px; padding: 0; display: grid; place-items: center; flex: none;
   background: rgba(255,255,255,.08); border-radius: 10px; color: var(--sf-accent);
@@ -443,7 +447,7 @@
   margin: 10px; padding: 8px 12px; padding-top: 8px;
   background: var(--sf-accent); border-radius: 12px;
 }
-.sf-skin-pop .sf-rewind, .sf-skin-pop .sf-forward, .sf-skin-pop .sf-pip { display: none; }
+.sf-skin-pop .sf-rewind, .sf-skin-pop .sf-controls > .sf-forward, .sf-skin-pop .sf-pip { display: none; }
 .sf-skin-pop .sf-btn svg { width: 22px; height: 22px; }
 .sf-skin-pop .sf-btn:hover, .sf-skin-pop .sf-btn:focus-visible { background: rgba(255,255,255,.2); }
 .sf-skin-pop .sf-progress-rail { height: 6px; border-radius: 3px; background: rgba(255,255,255,.35); }

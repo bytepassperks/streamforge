@@ -626,6 +626,9 @@ table.data tr:hover td { background: var(--panel-2); }
   .sec-preview { grid-column: 1 / -1; }
 }
 @media (max-width: 900px) {
+  /* the list view keeps its columns and scrolls sideways instead of clipping them */
+  #videos-body { overflow-x: auto; }
+  #videos-body table.data { min-width: 620px; }
   .editor-grid { grid-template-columns: 1fr; }
   .sec-nav { position: static; grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; }
   .app { grid-template-columns: 1fr; }
