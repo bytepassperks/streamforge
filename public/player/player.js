@@ -9,6 +9,17 @@
 
   /* ------------------------------------------------------------- helpers -- */
 
+  /** Origin this player was served from, so embeds on other domains still resolve assets. */
+  function assetBase() {
+    var src = '';
+    var scripts = document.getElementsByTagName('script');
+    for (var i = 0; i < scripts.length; i++) {
+      if (/player\/player\.js/.test(scripts[i].src)) src = scripts[i].src;
+    }
+    if (!src) return '';
+    return src.replace(/\/player\/player\.js.*$/, '');
+  }
+
   function el(tag, cls, html) {
     var node = document.createElement(tag);
     if (cls) node.className = cls;
@@ -95,10 +106,24 @@
 
   YouTubeAdapter.prototype.load = function () {
     var self = this;
-    var host = el('div', 'sf-media');
+    var host = el('div', 'sf-media sf-media-yt');
+    var crop = el('div', 'sf-yt-crop');
     var mount = el('div');
-    host.appendChild(mount);
+    crop.appendChild(mount);
+    host.appendChild(crop);
+    /* The shield keeps every pointer event off the frame, so the source's own
+       title bar, watermark and suggestion overlays never get a chance to appear. */
+    host.appendChild(el('div', 'sf-yt-shield'));
+    /* Until playback is genuinely running, the frame is masked by our own still, so
+       the source's unstarted screen — its title, avatar and watch-elsewhere link —
+       is never on screen. */
+    var cover = el('div', 'sf-yt-cover');
+    var still = this._options.poster || 'https://i.ytimg.com/vi/' + this._source + '/maxresdefault.jpg';
+    cover.style.backgroundImage = 'url("' + still + '")';
+    host.appendChild(cover);
+    host.classList.add('sf-yt-blank');
     this._container.appendChild(host);
+    this._host = host;
 
     return loadScript('https://www.youtube.com/iframe_api')
       .then(function () {
@@ -123,6 +148,9 @@
               rel: 0,
               playsinline: 1,
               iv_load_policy: 3,
+              cc_load_policy: 0,
+              annotations: 3,
+              showinfo: 0,
               fs: 0,
               enablejsapi: 1,
               origin: location.origin,
@@ -130,20 +158,54 @@
             events: {
               onReady: function () {
                 self._ready = true;
+                self._dropCaptions();
                 self._duration = self._yt.getDuration() || 0;
                 self.emit('ready');
                 resolve();
               },
               onStateChange: function (e) {
                 var YTS = window.YT.PlayerState;
-                if (e.data === YTS.PLAYING) self.emit('play');
+                if (e.data === YTS.PLAYING) {
+                  self._dropCaptions();
+                  /* A short mask keeps the source's start-up chrome off screen. */
+                  clearTimeout(self._unmask);
+                  self._unmask = setTimeout(function () {
+                    self._host.classList.remove('sf-yt-blank');
+                  }, 900);
+                  self.emit('play');
+                }
                 if (e.data === YTS.PAUSED) self.emit('pause');
-                if (e.data === YTS.ENDED) self.emit('ended');
+                if (e.data === YTS.ENDED) {
+                  /* Blank and rewind the frame so a suggestion grid can never render. */
+                  clearTimeout(self._unmask);
+                  self._host.classList.add('sf-yt-blank');
+                  self._yt.seekTo(0, true);
+                  self._yt.pauseVideo();
+                  self.emit('ended');
+                }
               },
             },
           });
         });
       });
+  };
+
+  /** A viewer's own caption preference must not burn text over our player. */
+  YouTubeAdapter.prototype._dropCaptions = function () {
+    if (!this._yt) return;
+    var self = this;
+    ['captions', 'cc'].forEach(function (mod) {
+      try {
+        self._yt.unloadModule(mod);
+      } catch (err) {
+        /* module names vary by frame build; failing is harmless */
+      }
+    });
+    try {
+      this._yt.setOption('captions', 'track', {});
+    } catch (err) {
+      /* no captions module loaded yet */
+    }
   };
 
   YouTubeAdapter.prototype.play = function () {
@@ -411,7 +473,8 @@
   function createAdapter(container, payload) {
     var v = payload.video;
     var cfg = payload.player;
-    if (v.source_type === 'youtube') return new YouTubeAdapter(container, v.source_ref, {});
+    if (v.source_type === 'youtube')
+      return new YouTubeAdapter(container, v.source_ref, { poster: v.thumbnail_url });
     if (v.source_type === 'vimeo') return new VimeoAdapter(container, v.source_ref);
     return new HtmlAdapter(container, v.source_ref, {
       hls: v.source_type === 'hls',
@@ -479,7 +542,15 @@
     }
     if (this.payload.badge) {
       // Free-tier attribution; lifetime accounts get badge: false from the api.
-      this.overlay.appendChild(el('span', 'sf-badge', 'Videokr'));
+      var badge = document.createElement('a');
+      badge.className = 'sf-badge';
+      badge.href = assetBase() + '/?ref=player';
+      badge.target = '_blank';
+      badge.rel = 'noopener';
+      badge.title = 'Powered by Videokr';
+      badge.innerHTML =
+        '<img src="' + assetBase() + '/brand/mark-64.png" alt="" /><span>Videokr</span>';
+      this.overlay.appendChild(badge);
     }
 
     if (cfg.bigPlayButton) {
