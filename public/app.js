@@ -578,6 +578,33 @@
     return rows;
   }
 
+  /* Captions live in R2 like any other asset, so the editor uploads the file and fills
+     in the url it gets back instead of asking for a url the customer has to host. */
+  $('ed-captions-upload').addEventListener('click', function () {
+    var file = $('ed-captions-file').files[0];
+    var status = $('ed-captions-state');
+    if (!file) {
+      status.textContent = 'Choose a .vtt file first.';
+      return;
+    }
+    var button = $('ed-captions-upload');
+    button.disabled = true;
+    status.textContent = 'Uploading…';
+    var form = new FormData();
+    form.append('file', file);
+    api('/uploads', { method: 'POST', form: form })
+      .then(function (result) {
+        $('ed-captions').value = result.url;
+        status.textContent = 'Uploaded — save to apply.';
+      })
+      .catch(function (err) {
+        status.textContent = err.message || 'Upload failed.';
+      })
+      .then(function () {
+        button.disabled = false;
+      });
+  });
+
   $('ed-save').addEventListener('click', function () {
     if (!state.video) return;
     var id = state.video.id;

@@ -169,10 +169,47 @@ Picking test sources:
 - Cross-origin script embed works from a `file://` page:
   `<script src="<base>/embed.js" data-playlist="<slug>" async></script>`. It mounts
   `/ep/<slug>` in an iframe with no site chrome (`sf-page-bare`) and plays. Known cosmetic
-  issue: `embed.js` uses a fixed 16/11 ratio for playlists, so there is a large empty black
-  band under the stage — check sizing, not just mounting.
+  issue (fixed in later builds): `embed.js` used a fixed 16/11 ratio for playlists, so there
+  was a large empty black band under the stage. The current mechanism is the bare `/ep/` page
+  posting `{videokr:'height', height}` to the parent every 500ms and `embed.js` setting
+  `wrap.style.height` from it — only when the script tag has **no** `data-ratio`. Check sizing,
+  not just mounting: put the embed in a `file://` host page with a brightly-outlined container
+  and a footer right below it, so dead space is obvious in a screenshot.
 - Free-tier accounts render a small "Videokr" `.sf-badge` pill bottom-right above the
   controls on public pages and embeds; verify it does not overlap the controls/watermark.
+
+## Player control bar (Plyr-style rebuild) and responsive checks
+
+The control bar is a single flex row inside `.sf-controls` (`.sf-controls-row`/`.sf-group` are
+gone), order: `.sf-rewind`, `.sf-play`, `.sf-forward`, `.sf-progress-wrap`, current time,
+duration, `.sf-volume`, `.sf-cc`, `.sf-pip`, `.sf-settings` gear, `.sf-share`, `.sf-fs`,
+`a.sf-badge` (badge lives **inside** the bar). Icons are inline 18px SVGs; tooltips are pure
+CSS `.sf-btn[data-tip]:hover::after` and are suppressed while `aria-expanded="true"`.
+Rewind/forward are ±10s (not ±5s). Speed/quality/chapters all live in the one gear panel
+stack (home row with a `.sf-menu-value`, sub panel with a `.sf-back` row and
+`role=menuitemradio` rows); keyboard `>`/`<` must update the Speed row value too.
+
+Gotcha when driving the gear/PIP/share buttons while the video is **playing**: the first
+click after the bar has faded frequently registers as a play/pause toggle instead of hitting
+the button. Move the mouse over the player, wait for the bar, then click — and if the panel
+did not open, click the same button again before calling it a bug.
+
+Testing ~390px widths: the Chrome window cannot be resized below ~532px on this box, so
+simulate a phone viewport by loading the embed in a fixed-width iframe from a local page:
+
+```html
+<div style="width:390px;border:3px solid #ff2d78">
+  <iframe src="https://<base>/e/<slug>" width="390" height="220"
+          allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+</div>
+```
+
+The iframe document's viewport is then 390px, so `@media (max-width: 420px)` in
+`public/player/player.css` applies. Known trap: that media block is declared **before** the
+base `.sf-volume` / `.sf-volume input[type=range]` rules, so the later base rules win and the
+volume slider stays visible at mobile widths while the progress rail gets squeezed to ~0px
+and the badge overflows past the right edge. When a mobile-layout rule looks ignored, check
+rule order in `player.css` before assuming the media query does not match.
 
 ## Share sheet clipboard check
 
@@ -190,6 +227,36 @@ shipped fix look missing. Hard-reload the browser (Ctrl+Shift+R) before re-testi
 Historical bug worth re-checking after refactors: `/v/` and `/pl/` pages went blank because
 `player.js` exposed only `window.StreamForge` while `page.js`/`playlist.js` call
 `window.Videokr`; the file must end by assigning **both** globals.
+
+## Proving captions (CC) and chapters
+
+Two fixtures work, both same-origin (`HtmlAdapter` sets `crossorigin="anonymous"` whenever
+`captionsUrl` exists, so a cross-origin .vtt without CORS silently yields no track and the CC
+button is hidden entirely):
+
+1. Landing page demo (`/#demo`) is preconfigured with `/demo/videokr-demo-16x9.vtt` (cues at
+   0:01/0:08/0:18/0:38) and chapters at 0s/18s/38s — fastest fixture, needs no setup.
+2. Own video: the editor Details tab has only a **"Captions .vtt url" text field**, no file
+   picker. Upload the .vtt through the **New video** modal's file input (`POST /api/uploads`
+   accepts `text/vtt`, and falls back to the `.vtt` extension), copy the returned
+   `/media/<user>/<id>.vtt` and paste it into the captions field. Set **Duration (seconds)**
+   too, otherwise marker positions cannot be predicted. Chapters live on the editor's Chapters
+   tab (repeater rows); one "Save changes" click PATCHes the video and PUTs the chapters.
+
+What to assert: CC button present (its presence already proves the track loaded), dimmed and
+no text at load; click → cue text over the picture at the cue's timestamp; a deliberate gap
+between cues shows **no** text (guards against a static overlay); second click removes it;
+keyboard `c` toggles it too (click the stage first to focus the player root). Chapters: markers
+at `start/duration` %, hover tooltip reads `m:ss · Chapter title` and flips exactly at the
+boundary second, gear home shows a `Chapters` row, sub panel rows read `m:ss  Title`, selecting
+one seeks + plays, and the title bar reads `Video title — Chapter title`.
+
+Cosmetic thing seen on prod: caption cues render at the video's bottom edge, so while the
+control bar is visible the cue text overlaps the bar/time label. Take caption screenshots with
+the bar faded (mouse off the player) if you want clean evidence.
+
+Uploaded .vtt objects in R2 have no delete UI — deleting the video leaves the object; call that
+out as retained instead of hunting for a cleanup path.
 
 ## Devin Secrets Needed
 

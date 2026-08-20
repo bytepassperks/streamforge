@@ -389,6 +389,10 @@
       track.srclang = 'en';
       track.src = this._options.captionsUrl;
       track.default = false;
+      // Cues only exist once the file has parsed, which can land after the first toggle.
+      track.addEventListener('load', function () {
+        liftCues(track.track);
+      });
       video.appendChild(track);
     }
     this._video = video;
@@ -478,8 +482,19 @@
     if (!tracks || !tracks.length) return false;
     var on = tracks[0].mode === 'showing';
     tracks[0].mode = on ? 'hidden' : 'showing';
+    if (!on) liftCues(tracks[0]);
     return !on;
   };
+
+  /* The browser paints cues on the last line of the picture, where the control bar
+     sits. Raising them by two lines keeps the text clear of the bar and its labels. */
+  function liftCues(track) {
+    var cues = track.cues;
+    if (!cues) return;
+    for (var i = 0; i < cues.length; i += 1) {
+      if (cues[i].snapToLines !== false) cues[i].line = -3;
+    }
+  }
   /** Renditions offered by an adaptive stream; a plain file has none to choose from. */
   HtmlAdapter.prototype.qualities = function () {
     if (!this._hls || !this._hls.levels || this._hls.levels.length < 2) return [];
@@ -1654,15 +1669,28 @@
   Player.prototype._bindPointer = function () {
     var self = this;
     var hide;
+    var overBar = false;
     var show = function () {
       self.root.classList.add('sf-active');
       clearTimeout(hide);
       hide = setTimeout(function () {
-        if (!self.adapter.paused()) self.root.classList.remove('sf-active');
+        if (!overBar && !self.adapter.paused()) self.root.classList.remove('sf-active');
       }, 2500);
     };
     this.root.addEventListener('mousemove', show);
     this.root.addEventListener('touchstart', show);
+    /* A cursor resting on a control sends no further mousemove, so without this the bar
+       fades out underneath it and the next click falls through to the picture. */
+    if (this.controls) {
+      this.controls.addEventListener('mouseenter', function () {
+        overBar = true;
+        show();
+      });
+      this.controls.addEventListener('mouseleave', function () {
+        overBar = false;
+        show();
+      });
+    }
     this.overlay.addEventListener('click', function (event) {
       if (event.target === self.overlay) self.togglePlay();
     });
