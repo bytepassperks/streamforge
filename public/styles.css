@@ -161,6 +161,11 @@ textarea { min-height: 84px; resize: vertical; }
 .meter { height: 8px; border-radius: 99px; background: var(--panel); overflow: hidden; margin: 10px 0; }
 .meter-fill { height: 100%; background: var(--accent); border-radius: 99px; }
 
+.meter {
+  height: 8px; border-radius: 99px; background: rgba(244, 238, 226, .1); overflow: hidden; margin: 10px 0;
+}
+.meter-fill { height: 100%; background: var(--ember); border-radius: 99px; }
+
 .toast {
   position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
   background: var(--text); border: 0; color: #fff; padding: 12px 18px; border-radius: 12px;
