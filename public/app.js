@@ -352,6 +352,25 @@
     share: 'Share button',
   };
 
+  /* Each skin ships with the palette it was designed around. Choosing one loads
+     those values into the fields, which the customer can then override. */
+  var SKIN_PRESETS = {
+    videokr: { accent: '#ff6106', background: '#0b0908', borderRadius: 14, bigPlayButton: false },
+    frame: { accent: '#ff5a1f', background: '#000000', borderRadius: 12, bigPlayButton: true },
+    pop: { accent: '#2f7d5b', background: '#0b1210', borderRadius: 12, bigPlayButton: true },
+    studio: { accent: '#3f76ff', background: '#0d0f14', borderRadius: 8, bigPlayButton: true },
+  };
+
+  $('pc-skin').addEventListener('change', function () {
+    var preset = SKIN_PRESETS[$('pc-skin').value];
+    if (!preset) return;
+    $('pc-accent').value = preset.accent;
+    $('pc-bg').value = preset.background;
+    $('pc-radius').value = preset.borderRadius;
+    $('pc-bigplay').checked = preset.bigPlayButton;
+    renderPreview();
+  });
+
   document.querySelectorAll('#ed-tabs button').forEach(function (button) {
     button.addEventListener('click', function () {
       document.querySelectorAll('#ed-tabs button').forEach(function (other) {

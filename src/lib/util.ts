@@ -117,11 +117,29 @@ export function retentionBucket(position: number, duration: number, buckets = 10
   return Math.min(buckets - 1, Math.max(0, idx));
 }
 
+/** Shipped skins. The first is the default every new video and every surface uses. */
+export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio'] as const;
+
+/** Retired skin names still stored on old videos, mapped onto the shipped set. */
+const LEGACY_SKINS: Record<string, string> = {
+  'forge-dark': 'videokr',
+  'forge-light': 'studio',
+  minimal: 'studio',
+  bold: 'pop',
+  glass: 'frame',
+};
+
+export function normalizeSkin(skin: unknown): string {
+  const name = typeof skin === 'string' ? skin.trim() : '';
+  if ((PLAYER_SKINS as readonly string[]).includes(name)) return name;
+  return LEGACY_SKINS[name] ?? PLAYER_SKINS[0];
+}
+
 export function defaultPlayerConfig(): PlayerConfig {
   return {
-    skin: 'forge-dark',
-    accent: '#4f7cff',
-    background: '#0b0d12',
+    skin: PLAYER_SKINS[0],
+    accent: '#ff6106',
+    background: '#0b0908',
     controls: {
       playPause: true,
       progress: true,
@@ -146,10 +164,12 @@ export function defaultPlayerConfig(): PlayerConfig {
     logoLink: '',
     logoPosition: 'top-right',
     title: true,
-    bigPlayButton: true,
+    /* The default skin puts the transport button in the bar, the way the
+       reference design does, so nothing sits over the picture. */
+    bigPlayButton: false,
     sourceCaptions: false,
     sticky: false,
-    borderRadius: 12,
+    borderRadius: 14,
     related: false,
   };
 }
@@ -168,6 +188,7 @@ export function mergePlayerConfig(stored: string | null | undefined): PlayerConf
   return {
     ...base,
     ...incoming,
+    skin: normalizeSkin(incoming.skin),
     controls: { ...base.controls, ...(incoming.controls ?? {}) },
     speeds: Array.isArray(incoming.speeds) && incoming.speeds.length ? incoming.speeds : base.speeds,
   };

@@ -7,6 +7,22 @@
 
   var SPEED_FALLBACK = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+  /* Shipped skins, plus the retired names still stored on older videos. Kept in
+     step with PLAYER_SKINS on the server so an old config never renders unstyled. */
+  var SKINS = ['videokr', 'frame', 'pop', 'studio'];
+  var LEGACY_SKINS = {
+    'forge-dark': 'videokr',
+    'forge-light': 'studio',
+    minimal: 'studio',
+    bold: 'pop',
+    glass: 'frame',
+  };
+
+  function skinName(skin) {
+    if (SKINS.indexOf(skin) !== -1) return skin;
+    return LEGACY_SKINS[skin] || SKINS[0];
+  }
+
   /* A linked source flashes a centred play/pause ripple of its own on a state change;
      these are how long our still stays over it. Its edge strips are handled by the
      frame geometry, not by waiting. */
@@ -706,9 +722,9 @@
   Player.prototype.mount = function () {
     var self = this;
     var cfg = this.config;
-    this.root.classList.add('sf-player', 'sf-skin-' + (cfg.skin || 'forge-dark'));
-    this.root.style.setProperty('--sf-accent', cfg.accent || '#4f7cff');
-    this.root.style.setProperty('--sf-bg', cfg.background || '#0b0d12');
+    this.root.classList.add('sf-player', 'sf-skin-' + skinName(cfg.skin));
+    this.root.style.setProperty('--sf-accent', cfg.accent || '#ff6106');
+    this.root.style.setProperty('--sf-bg', cfg.background || '#0b0908');
     this.root.style.setProperty('--sf-radius', (cfg.borderRadius || 0) + 'px');
     this.root.innerHTML = '';
 
@@ -756,6 +772,7 @@
 
     this.controls = this._buildControls();
     this.overlay.appendChild(this.controls);
+    this._buildSideRail();
 
     this.adapter.on('ready', function () {
       self._onReady();
@@ -1018,6 +1035,23 @@
        somewhere to attach. */
     this.bar = bar;
     return bar;
+  };
+
+  /**
+   * The default skin parks captions, picture-in-picture and share in a vertical
+   * rail over the top-right corner instead of the bar. The buttons are moved,
+   * not rebuilt, so their handlers and state stay exactly as the bar built them.
+   */
+  Player.prototype._buildSideRail = function () {
+    if (skinName(this.config.skin) !== 'videokr') return;
+    var buttons = [this.ccBtn, this.pipBtn, this.shareBtn].filter(Boolean);
+    if (!buttons.length) return;
+    var rail = el('div', 'sf-rail');
+    buttons.forEach(function (button) {
+      rail.appendChild(button);
+    });
+    this.overlay.appendChild(rail);
+    this.rail = rail;
   };
 
   /** Gear button plus a panel stack: a home list of settings and one panel each. */
