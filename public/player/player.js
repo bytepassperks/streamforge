@@ -7,10 +7,11 @@
 
   var SPEED_FALLBACK = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-  /* How long a linked source keeps its own title and suggestion strips on screen
-     after a start or a seek, measured on the real frames. */
-  var TITLE_FADE = 4400;
-  var SEEK_FADE = 1800;
+  /* A linked source flashes a centred play/pause ripple of its own on a state change;
+     these are how long our still stays over it. Its edge strips are handled by the
+     frame geometry, not by waiting. */
+  var TITLE_FADE = 1200;
+  var SEEK_FADE = 900;
 
   /* ------------------------------------------------------------- helpers -- */
 
@@ -113,8 +114,12 @@
     var self = this;
     var host = el('div', 'sf-media sf-media-yt');
     var crop = el('div', 'sf-yt-crop');
+    /* See .sf-yt-frame: the frame is far taller than the picture so the source's own
+       strips fall outside the crop instead of over the video. */
+    var frame = el('div', 'sf-yt-frame');
     var mount = el('div');
-    crop.appendChild(mount);
+    frame.appendChild(mount);
+    crop.appendChild(frame);
     host.appendChild(crop);
     /* The shield keeps every pointer event off the frame, so the source's own
        title bar, watermark and suggestion overlays never get a chance to appear. */

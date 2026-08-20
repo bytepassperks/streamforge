@@ -21,15 +21,23 @@
 }
 .sf-media video { object-fit: contain; background: #000; }
 
-/* Third-party frames are cropped slightly and sealed behind a shield, so only our
-   own chrome is ever visible or clickable. */
+/* Third-party frames are sealed behind a shield and given a frame far taller than the
+   picture they carry. A linked source letterboxes its 16:9 picture inside whatever box
+   it is given and anchors its own title, channel, watermark, suggestion grid and control
+   bar to the top and bottom edges of that box — so a frame 240% of its width tall, pulled
+   up by 38.28125% of its own height, lands the picture exactly in our 16:9 stage at full
+   size while every one of those strips sits outside the crop. No scaling, so nothing is
+   cut off the picture and nothing is blown up. */
 .sf-media-yt { overflow: hidden; }
 .sf-yt-crop {
   position: absolute; inset: 0; overflow: hidden;
 }
-.sf-yt-crop > div, .sf-yt-crop iframe {
-  position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block;
-  transform: scale(1.14); transform-origin: center;
+.sf-yt-frame {
+  position: absolute; top: 0; left: 0; width: 100%; height: 0;
+  padding-bottom: 240%; transform: translateY(-38.28125%);
+}
+.sf-yt-frame > div, .sf-yt-frame iframe {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; display: block;
 }
 .sf-yt-shield { position: absolute; inset: 0; z-index: 2; background: transparent; }
 .sf-yt-cover {
