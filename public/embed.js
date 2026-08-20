@@ -61,6 +61,18 @@
     frame.style.border = '0';
     wrap.appendChild(frame);
 
+    /* A playlist's real height depends on its layout and on how many items it holds, so
+       the ratio above is only the box it starts in: the page reports its own height. */
+    if (playlistId && !script.getAttribute('data-ratio')) {
+      window.addEventListener('message', function (event) {
+        if (event.source !== frame.contentWindow) return;
+        var data = event.data;
+        if (!data || data.videokr !== 'height' || !data.height) return;
+        wrap.style.paddingBottom = '0';
+        wrap.style.height = Math.round(data.height) + 'px';
+      });
+    }
+
     var target = script.getAttribute('data-target');
     var host = target ? document.querySelector(target) : null;
     if (host) host.appendChild(wrap);

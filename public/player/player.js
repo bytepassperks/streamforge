@@ -470,11 +470,12 @@
   };
 
   /** Vimeo player adapter driven over postMessage. */
-  function VimeoAdapter(container, source) {
+  function VimeoAdapter(container, source, options) {
     Emitter.call(this);
     this.kind = 'vimeo';
     this._container = container;
     this._source = source;
+    this._options = options || {};
     this._time = 0;
     this._duration = 0;
     this._paused = true;
@@ -484,15 +485,22 @@
 
   VimeoAdapter.prototype.load = function () {
     var self = this;
-    var host = el('div', 'sf-media');
+    var host = el('div', 'sf-media sf-media-yt sf-yt-blank');
     var frame = document.createElement('iframe');
     frame.src =
-      'https://player.vimeo.com/video/' + encodeURIComponent(this._source) + '?controls=0&title=0&byline=0&portrait=0';
+      'https://player.vimeo.com/video/' +
+      encodeURIComponent(this._source) +
+      '?controls=0&title=0&byline=0&portrait=0&badge=0&pip=0&dnt=1&autopause=0';
     frame.allow = 'autoplay; fullscreen; picture-in-picture';
     frame.frameBorder = '0';
     host.appendChild(frame);
+    host.appendChild(el('div', 'sf-yt-shield'));
+    var cover = el('div', 'sf-yt-cover');
+    if (this._options.poster) cover.style.backgroundImage = 'url("' + this._options.poster + '")';
+    host.appendChild(cover);
     this._container.appendChild(host);
     this._frame = frame;
+    this._host = host;
 
     window.addEventListener('message', function (event) {
       if (!self._frame || event.source !== self._frame.contentWindow) return;
@@ -502,21 +510,58 @@
         self._post('addEventListener', 'play');
         self._post('addEventListener', 'pause');
         self._post('addEventListener', 'finish');
+        self._watch();
         self.emit('ready');
       } else if (data.event === 'playProgress' && data.data) {
         self._time = data.data.seconds;
         self._duration = data.data.duration;
       } else if (data.event === 'play') {
         self._paused = false;
+        if (!self._running) self._mask(TITLE_FADE);
+        self._running = true;
         self.emit('play');
       } else if (data.event === 'pause') {
         self._paused = true;
+        self._running = false;
+        self._mask();
         self.emit('pause');
       } else if (data.event === 'finish') {
+        /* The frame paints its own "more from this channel" grid the instant it ends, so
+           the still goes up first and the frame is rewound and stopped behind it. */
+        self._paused = true;
+        self._running = false;
+        self._mask();
+        self._post('seekTo', 0);
+        self._post('pause');
         self.emit('ended');
       }
     });
     return Promise.resolve();
+  };
+
+  VimeoAdapter.prototype._mask = function (hold) {
+    this._maskedUntil = Date.now() + (hold || 700);
+    if (this._host) this._host.classList.add('sf-yt-blank');
+  };
+
+  /* Same reasoning as the YouTube watchdog: the frame is only revealed once its own
+     clock has demonstrably moved, so no source chrome can be on screen while stopped,
+     paused, seeking or finished. */
+  VimeoAdapter.prototype._watch = function () {
+    var self = this;
+    if (this._poll) return;
+    this._poll = setInterval(function () {
+      if (!self._host) return;
+      var moving = self._time > (self._lastT || 0) + 0.01;
+      self._lastT = self._time;
+      var live = !self._paused && moving && Date.now() > (self._maskedUntil || 0);
+      self._host.classList.toggle('sf-yt-blank', !live);
+    }, 150);
+  };
+
+  VimeoAdapter.prototype.destroy = function () {
+    clearInterval(this._poll);
+    this._poll = null;
   };
 
   VimeoAdapter.prototype._post = function (method, value) {
@@ -527,6 +572,8 @@
     this._post('play');
   };
   VimeoAdapter.prototype.pause = function () {
+    this._running = false;
+    this._mask();
     this._post('pause');
   };
   VimeoAdapter.prototype.currentTime = function () {
@@ -536,6 +583,8 @@
     return this._duration;
   };
   VimeoAdapter.prototype.seek = function (t) {
+    this._mask(SEEK_FADE);
+    this._lastT = 0;
     this._post('seekTo', Math.max(0, t));
     this._time = t;
   };
@@ -581,7 +630,8 @@
         poster: v.thumbnail_url,
         sourceCaptions: !!cfg.sourceCaptions,
       });
-    if (v.source_type === 'vimeo') return new VimeoAdapter(container, v.source_ref);
+    if (v.source_type === 'vimeo')
+      return new VimeoAdapter(container, v.source_ref, { poster: v.thumbnail_url });
     return new HtmlAdapter(container, v.source_ref, {
       hls: v.source_type === 'hls',
       poster: v.thumbnail_url,
