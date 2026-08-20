@@ -33,6 +33,36 @@
     return node;
   }
 
+  /* 18x18 control glyphs, drawn to the same geometry as the reference player's icon
+     sheet so the bar reads identically at any size. */
+  var ICONS = {
+    play: '<path d="M15.562 8.1L3.87.225c-.818-.562-1.87 0-1.87.9v15.75c0 .9 1.052 1.462 1.87.9L15.563 9.9c.584-.45.584-1.35 0-1.8z"/>',
+    pause:
+      '<path d="M6 1H3c-.6 0-1 .4-1 1v14c0 .6.4 1 1 1h3c.6 0 1-.4 1-1V2c0-.6-.4-1-1-1zm6 0c-.6 0-1 .4-1 1v14c0 .6.4 1 1 1h3c.6 0 1-.4 1-1V2c0-.6-.4-1-1-1h-3z"/>',
+    rewind: '<path d="M10.125 1L0 9l10.125 8v-6.171L18 17V1l-7.875 6.171z"/>',
+    forward: '<path d="M7.875 7.171L0 1v16l7.875-6.171V17L18 9 7.875 1z"/>',
+    volume:
+      '<path d="M15.6 3.3c-.4-.4-1-.4-1.4 0-.4.4-.4 1 0 1.4C15.4 5.9 16 7.4 16 9c0 1.6-.6 3.1-1.8 4.3-.4.4-.4 1 0 1.4.2.2.5.3.7.3.3 0 .5-.1.7-.3C17.1 13.2 18 11.2 18 9s-.9-4.2-2.4-5.7z"/><path d="M11.282 5.282a.909.909 0 000 1.316c.735.735.995 1.458.995 2.402 0 .936-.425 1.917-.995 2.487a.909.909 0 000 1.316c.145.145.636.262 1.018.156a.725.725 0 00.298-.156C13.773 11.733 14.13 10.16 14.13 9c0-.17-.002-.34-.011-.51-.053-.992-.319-2.005-1.522-3.208a.909.909 0 00-1.316 0zm-7.496.726H.714C.286 6.008 0 6.31 0 6.76v4.512c0 .452.286.752.714.752h3.072l4.071 3.858c.5.3 1.143 0 1.143-.602V2.752c0-.601-.643-.977-1.143-.601L3.786 6.008z"/>',
+    muted:
+      '<path d="M12.4 12.5l2.1-2.1 2.1 2.1 1.4-1.4L15.9 9 18 6.9l-1.4-1.4-2.1 2.1-2.1-2.1L11 6.9 13.1 9 11 11.1zM3.786 6.008H.714C.286 6.008 0 6.31 0 6.76v4.512c0 .452.286.752.714.752h3.072l4.071 3.858c.5.3 1.143 0 1.143-.602V2.752c0-.601-.643-.977-1.143-.601L3.786 6.008z"/>',
+    captions:
+      '<path d="M1 1c-.6 0-1 .4-1 1v11c0 .6.4 1 1 1h4.6l2.7 2.7c.2.2.4.3.7.3.3 0 .5-.1.7-.3l2.7-2.7H17c.6 0 1-.4 1-1V2c0-.6-.4-1-1-1H1zm4.52 10.15c1.99 0 3.01-1.32 3.28-2.41l-1.29-.39c-.19.66-.78 1.45-1.99 1.45-1.14 0-2.2-.83-2.2-2.34 0-1.61 1.12-2.37 2.18-2.37 1.23 0 1.78.75 1.95 1.43l1.3-.41C8.47 4.96 7.46 3.76 5.5 3.76c-1.9 0-3.61 1.44-3.61 3.7 0 2.26 1.65 3.69 3.63 3.69zm7.57 0c1.99 0 3.01-1.32 3.28-2.41l-1.29-.39c-.19.66-.78 1.45-1.99 1.45-1.14 0-2.2-.83-2.2-2.34 0-1.61 1.12-2.37 2.18-2.37 1.23 0 1.78.75 1.95 1.43l1.3-.41c-.28-1.15-1.29-2.35-3.25-2.35-1.9 0-3.61 1.44-3.61 3.7 0 2.26 1.65 3.69 3.63 3.69z" fill-rule="evenodd"/>',
+    settings:
+      '<path d="M16.135 7.784a2 2 0 01-1.23-2.969c.322-.536.225-.998-.094-1.316l-.31-.31c-.318-.318-.78-.415-1.316-.094a2 2 0 01-2.969-1.23C10.065 1.258 9.669 1 9.219 1h-.438c-.45 0-.845.258-.997.865a2 2 0 01-2.969 1.23c-.536-.322-.999-.225-1.317.093l-.31.31c-.318.318-.415.781-.093 1.317a2 2 0 01-1.23 2.969C1.26 7.935 1 8.33 1 8.781v.438c0 .45.258.845.865.997a2 2 0 011.23 2.969c-.322.536-.225.998.094 1.316l.31.31c.319.319.782.415 1.316.094a2 2 0 012.969 1.23c.151.607.547.865.997.865h.438c.45 0 .845-.258.997-.865a2 2 0 012.969-1.23c.535.321.997.225 1.316-.094l.31-.31c.318-.318.415-.781.094-1.316a2 2 0 011.23-2.969c.607-.151.865-.547.865-.997v-.438c0-.451-.26-.846-.865-.997zM9 12a3 3 0 110-6 3 3 0 010 6z"/>',
+    pip:
+      '<path d="M13.293 3.293L7.022 9.564l1.414 1.414 6.271-6.271L17 7V1h-6z"/><path d="M13 15H3V5h5V3H2a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1v-6h-2v5z"/>',
+    fullscreen: '<path d="M10 3h3.6l-4 4L11 8.4l4-4V8h2V1h-7zM7 9.6l-4 4V10H1v7h7v-2H4.4l4-4z"/>',
+    exitFullscreen: '<path d="M1 12h3.6l-4 4L2 17.4l4-4V17h2v-7H1zM16 .6l-4 4V1h-2v7h7V6h-3.6l4-4z"/>',
+    share:
+      '<path d="M13.5 12a3.5 3.5 0 00-2.6 1.17L6.9 11.02a3.5 3.5 0 000-2.04l4-2.15A3.5 3.5 0 105.9 4.5c0 .35.05.7.15 1.02l-4 2.15a3.5 3.5 0 100 4.66l4 2.15c-.1.32-.15.67-.15 1.02a3.5 3.5 0 103.5-3.5z"/>',
+  };
+
+  function icon(name) {
+    return (
+      '<svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">' + (ICONS[name] || '') + '</svg>'
+    );
+  }
+
   function fmtTime(seconds) {
     if (!isFinite(seconds) || seconds < 0) seconds = 0;
     var s = Math.floor(seconds % 60);
@@ -359,6 +389,10 @@
       track.srclang = 'en';
       track.src = this._options.captionsUrl;
       track.default = false;
+      // Cues only exist once the file has parsed, which can land after the first toggle.
+      track.addEventListener('load', function () {
+        liftCues(track.track);
+      });
       video.appendChild(track);
     }
     this._video = video;
@@ -448,8 +482,19 @@
     if (!tracks || !tracks.length) return false;
     var on = tracks[0].mode === 'showing';
     tracks[0].mode = on ? 'hidden' : 'showing';
+    if (!on) liftCues(tracks[0]);
     return !on;
   };
+
+  /* The browser paints cues on the last line of the picture, where the control bar
+     sits. Raising them by two lines keeps the text clear of the bar and its labels. */
+  function liftCues(track) {
+    var cues = track.cues;
+    if (!cues) return;
+    for (var i = 0; i < cues.length; i += 1) {
+      if (cues[i].snapToLines !== false) cues[i].line = -3;
+    }
+  }
   /** Renditions offered by an adaptive stream; a plain file has none to choose from. */
   HtmlAdapter.prototype.qualities = function () {
     if (!this._hls || !this._hls.levels || this._hls.levels.length < 2) return [];
@@ -470,11 +515,12 @@
   };
 
   /** Vimeo player adapter driven over postMessage. */
-  function VimeoAdapter(container, source) {
+  function VimeoAdapter(container, source, options) {
     Emitter.call(this);
     this.kind = 'vimeo';
     this._container = container;
     this._source = source;
+    this._options = options || {};
     this._time = 0;
     this._duration = 0;
     this._paused = true;
@@ -484,15 +530,22 @@
 
   VimeoAdapter.prototype.load = function () {
     var self = this;
-    var host = el('div', 'sf-media');
+    var host = el('div', 'sf-media sf-media-yt sf-yt-blank');
     var frame = document.createElement('iframe');
     frame.src =
-      'https://player.vimeo.com/video/' + encodeURIComponent(this._source) + '?controls=0&title=0&byline=0&portrait=0';
+      'https://player.vimeo.com/video/' +
+      encodeURIComponent(this._source) +
+      '?controls=0&title=0&byline=0&portrait=0&badge=0&pip=0&dnt=1&autopause=0';
     frame.allow = 'autoplay; fullscreen; picture-in-picture';
     frame.frameBorder = '0';
     host.appendChild(frame);
+    host.appendChild(el('div', 'sf-yt-shield'));
+    var cover = el('div', 'sf-yt-cover');
+    if (this._options.poster) cover.style.backgroundImage = 'url("' + this._options.poster + '")';
+    host.appendChild(cover);
     this._container.appendChild(host);
     this._frame = frame;
+    this._host = host;
 
     window.addEventListener('message', function (event) {
       if (!self._frame || event.source !== self._frame.contentWindow) return;
@@ -502,21 +555,58 @@
         self._post('addEventListener', 'play');
         self._post('addEventListener', 'pause');
         self._post('addEventListener', 'finish');
+        self._watch();
         self.emit('ready');
       } else if (data.event === 'playProgress' && data.data) {
         self._time = data.data.seconds;
         self._duration = data.data.duration;
       } else if (data.event === 'play') {
         self._paused = false;
+        if (!self._running) self._mask(TITLE_FADE);
+        self._running = true;
         self.emit('play');
       } else if (data.event === 'pause') {
         self._paused = true;
+        self._running = false;
+        self._mask();
         self.emit('pause');
       } else if (data.event === 'finish') {
+        /* The frame paints its own "more from this channel" grid the instant it ends, so
+           the still goes up first and the frame is rewound and stopped behind it. */
+        self._paused = true;
+        self._running = false;
+        self._mask();
+        self._post('seekTo', 0);
+        self._post('pause');
         self.emit('ended');
       }
     });
     return Promise.resolve();
+  };
+
+  VimeoAdapter.prototype._mask = function (hold) {
+    this._maskedUntil = Date.now() + (hold || 700);
+    if (this._host) this._host.classList.add('sf-yt-blank');
+  };
+
+  /* Same reasoning as the YouTube watchdog: the frame is only revealed once its own
+     clock has demonstrably moved, so no source chrome can be on screen while stopped,
+     paused, seeking or finished. */
+  VimeoAdapter.prototype._watch = function () {
+    var self = this;
+    if (this._poll) return;
+    this._poll = setInterval(function () {
+      if (!self._host) return;
+      var moving = self._time > (self._lastT || 0) + 0.01;
+      self._lastT = self._time;
+      var live = !self._paused && moving && Date.now() > (self._maskedUntil || 0);
+      self._host.classList.toggle('sf-yt-blank', !live);
+    }, 150);
+  };
+
+  VimeoAdapter.prototype.destroy = function () {
+    clearInterval(this._poll);
+    this._poll = null;
   };
 
   VimeoAdapter.prototype._post = function (method, value) {
@@ -527,6 +617,8 @@
     this._post('play');
   };
   VimeoAdapter.prototype.pause = function () {
+    this._running = false;
+    this._mask();
     this._post('pause');
   };
   VimeoAdapter.prototype.currentTime = function () {
@@ -536,6 +628,8 @@
     return this._duration;
   };
   VimeoAdapter.prototype.seek = function (t) {
+    this._mask(SEEK_FADE);
+    this._lastT = 0;
     this._post('seekTo', Math.max(0, t));
     this._time = t;
   };
@@ -581,7 +675,8 @@
         poster: v.thumbnail_url,
         sourceCaptions: !!cfg.sourceCaptions,
       });
-    if (v.source_type === 'vimeo') return new VimeoAdapter(container, v.source_ref);
+    if (v.source_type === 'vimeo')
+      return new VimeoAdapter(container, v.source_ref, { poster: v.thumbnail_url });
     return new HtmlAdapter(container, v.source_ref, {
       hls: v.source_type === 'hls',
       poster: v.thumbnail_url,
@@ -646,21 +741,8 @@
       }
       this.overlay.appendChild(logo);
     }
-    if (this.payload.badge) {
-      // Free-tier attribution; lifetime accounts get badge: false from the api.
-      var badge = document.createElement('a');
-      badge.className = 'sf-badge';
-      badge.href = assetBase() + '/?ref=player';
-      badge.target = '_blank';
-      badge.rel = 'noopener';
-      badge.title = 'Powered by Videokr';
-      badge.innerHTML =
-        '<img src="' + assetBase() + '/brand/mark-64.png" alt="" /><span>Videokr</span>';
-      this.overlay.appendChild(badge);
-    }
-
     if (cfg.bigPlayButton) {
-      this.bigPlay = el('button', 'sf-bigplay', '<span class="sf-ico-play"></span>');
+      this.bigPlay = el('button', 'sf-bigplay', icon('play'));
       this.bigPlay.setAttribute('aria-label', 'Play video');
       this.bigPlay.setAttribute('data-sf', 'bigplay');
       this.bigPlay.addEventListener('click', function () {
@@ -680,7 +762,6 @@
     });
     this.adapter.on('play', function () {
       self.root.classList.add('sf-playing');
-      if (self.bigPlay) self.bigPlay.style.display = 'none';
       self._setPlayIcon(true);
       if (!self._started) {
         self._started = true;
@@ -721,32 +802,49 @@
     var self = this;
     var cfg = this.config;
     var bar = el('div', 'sf-controls');
-    var row = el('div', 'sf-controls-row');
-    var leftGroup = el('div', 'sf-group sf-group-left');
-    var rightGroup = el('div', 'sf-group sf-group-right');
+
+    var iconButton = function (cls, glyph, label) {
+      var btn = el('button', 'sf-btn ' + cls, icon(glyph));
+      btn.setAttribute('aria-label', label);
+      btn.setAttribute('data-tip', label);
+      btn.setAttribute('data-sf', cls.replace('sf-', ''));
+      return btn;
+    };
 
     if (cfg.controls.playPause) {
-      this.playBtn = el('button', 'sf-btn sf-play', '<span class="sf-ico-play"></span>');
-      this.playBtn.setAttribute('aria-label', 'Play');
-      this.playBtn.setAttribute('data-sf', 'play');
+      this.rewindBtn = iconButton('sf-rewind', 'rewind', 'Rewind 10s');
+      this.rewindBtn.addEventListener('click', function () {
+        self.adapter.seek(Math.max(0, self.adapter.currentTime() - 10));
+      });
+      bar.appendChild(this.rewindBtn);
+
+      this.playBtn = iconButton('sf-play', 'play', 'Play');
       this.playBtn.addEventListener('click', function () {
         self.togglePlay();
       });
-      leftGroup.appendChild(this.playBtn);
+      bar.appendChild(this.playBtn);
+
+      this.forwardBtn = iconButton('sf-forward', 'forward', 'Forward 10s');
+      this.forwardBtn.addEventListener('click', function () {
+        self.adapter.seek(self.adapter.currentTime() + 10);
+      });
+      bar.appendChild(this.forwardBtn);
     }
 
     if (cfg.controls.progress) {
       var wrap = el('div', 'sf-progress-wrap');
       this.progress = el('div', 'sf-progress');
       this.progress.setAttribute('data-sf', 'progress');
+      var rail = el('div', 'sf-progress-rail');
       this.buffer = el('div', 'sf-buffer');
       this.played = el('div', 'sf-played');
       this.handle = el('div', 'sf-handle');
       this.markers = el('div', 'sf-markers');
-      this.progress.appendChild(this.buffer);
-      this.progress.appendChild(this.played);
-      this.progress.appendChild(this.markers);
-      this.progress.appendChild(this.handle);
+      rail.appendChild(this.buffer);
+      rail.appendChild(this.played);
+      rail.appendChild(this.markers);
+      rail.appendChild(this.handle);
+      this.progress.appendChild(rail);
       this.tooltip = el('div', 'sf-tooltip');
       wrap.appendChild(this.progress);
       wrap.appendChild(this.tooltip);
@@ -795,16 +893,17 @@
     }
 
     if (cfg.controls.time) {
-      this.timeLabel = el('div', 'sf-time', '0:00 / 0:00');
+      this.timeLabel = el('div', 'sf-time sf-time-current', '0:00');
       this.timeLabel.setAttribute('data-sf', 'time');
-      leftGroup.appendChild(this.timeLabel);
+      this.durationLabel = el('div', 'sf-time sf-time-duration', '0:00');
+      this.durationLabel.setAttribute('data-sf', 'duration');
+      bar.appendChild(this.timeLabel);
+      bar.appendChild(this.durationLabel);
     }
 
     if (cfg.controls.volume) {
       var volWrap = el('div', 'sf-volume');
-      this.muteBtn = el('button', 'sf-btn sf-mute', '<span class="sf-ico-vol"></span>');
-      this.muteBtn.setAttribute('aria-label', 'Mute');
-      this.muteBtn.setAttribute('data-sf', 'mute');
+      this.muteBtn = iconButton('sf-mute', 'volume', 'Mute');
       this.volInput = document.createElement('input');
       this.volInput.type = 'range';
       this.volInput.min = '0';
@@ -823,12 +922,56 @@
       });
       volWrap.appendChild(this.muteBtn);
       volWrap.appendChild(this.volInput);
-      leftGroup.appendChild(volWrap);
+      bar.appendChild(volWrap);
+    }
+
+    if (cfg.controls.captions) {
+      this.ccBtn = iconButton('sf-cc', 'captions', 'Captions');
+      this.ccBtn.classList.add('sf-off');
+      this.ccBtn.setAttribute('data-sf', 'captions');
+      this.ccBtn.addEventListener('click', function () {
+        self.toggleCaptions();
+      });
+      bar.appendChild(this.ccBtn);
+    }
+
+    if (cfg.controls.pip) {
+      this.pipBtn = iconButton('sf-pip', 'pip', 'PIP');
+      this.pipBtn.addEventListener('click', function () {
+        if (self.adapter.togglePip) self.adapter.togglePip();
+      });
+      bar.appendChild(this.pipBtn);
+    }
+
+    /* One gear holds speed, quality and chapters, so the bar keeps a fixed width no
+       matter how many renditions or chapters a video carries. */
+    bar.appendChild(this._buildSettings());
+
+    if (cfg.controls.speed) {
+      var speeds = (cfg.speeds && cfg.speeds.length ? cfg.speeds : SPEED_FALLBACK).slice();
+      this._speeds = speeds;
+      this._rateIndex = speeds.indexOf(1);
+      this.speedSetting = this._addSetting(
+        'speed',
+        'Speed',
+        speeds.map(function (rate) {
+          return {
+            label: rate === 1 ? 'Normal' : rate + 'x',
+            onSelect: function () {
+              self.adapter.setRate(rate);
+              self._rateIndex = speeds.indexOf(rate);
+            },
+          };
+        }),
+        Math.max(0, speeds.indexOf(1)),
+      );
     }
 
     if (cfg.controls.chapters && this.chapters.length) {
-      rightGroup.appendChild(
-        this._menu('sf-chapters', 'Chapters', '<span class="sf-ico-list"></span>', this.chapters.map(function (ch) {
+      this._addSetting(
+        'chapters',
+        'Chapters',
+        this.chapters.map(function (ch) {
           return {
             label: fmtTime(ch.start_seconds) + '  ' + ch.title,
             onSelect: function () {
@@ -836,73 +979,40 @@
               self.adapter.play();
             },
           };
-        })),
-      );
-    }
-
-    if (cfg.controls.speed) {
-      var speeds = (cfg.speeds && cfg.speeds.length ? cfg.speeds : SPEED_FALLBACK).slice();
-      this.speedBtn = this._menu(
-        'sf-speed',
-        'Playback speed',
-        '<span class="sf-speed-label">1x</span>',
-        speeds.map(function (rate) {
-          return {
-            label: rate + 'x',
-            onSelect: function () {
-              self.adapter.setRate(rate);
-              var label = self.speedBtn.querySelector('.sf-speed-label');
-              if (label) label.textContent = rate + 'x';
-            },
-          };
         }),
+        -1,
       );
-      rightGroup.appendChild(this.speedBtn);
-    }
-
-    if (cfg.controls.captions) {
-      this.ccBtn = el('button', 'sf-btn sf-cc', '<span class="sf-ico-cc"></span>');
-      this.ccBtn.setAttribute('aria-label', 'Captions');
-      this.ccBtn.setAttribute('data-sf', 'captions');
-      this.ccBtn.addEventListener('click', function () {
-        self.toggleCaptions();
-      });
-      rightGroup.appendChild(this.ccBtn);
-    }
-
-    if (cfg.controls.pip) {
-      this.pipBtn = el('button', 'sf-btn sf-pip', '<span class="sf-ico-pip"></span>');
-      this.pipBtn.setAttribute('aria-label', 'Picture in picture');
-      this.pipBtn.setAttribute('data-sf', 'pip');
-      this.pipBtn.addEventListener('click', function () {
-        if (self.adapter.togglePip) self.adapter.togglePip();
-      });
-      rightGroup.appendChild(this.pipBtn);
     }
 
     if (cfg.controls.share && this.payload.share && this.payload.share.url) {
-      this.shareBtn = el('button', 'sf-btn sf-share', '<span class="sf-ico-share"></span>');
-      this.shareBtn.setAttribute('aria-label', 'Share');
-      this.shareBtn.setAttribute('data-sf', 'share');
+      this.shareBtn = iconButton('sf-share', 'share', 'Share');
       this.shareBtn.addEventListener('click', function () {
         self.toggleShare();
       });
-      rightGroup.appendChild(this.shareBtn);
+      bar.appendChild(this.shareBtn);
     }
 
     if (cfg.controls.fullscreen) {
-      this.fsBtn = el('button', 'sf-btn sf-fs', '<span class="sf-ico-fs"></span>');
-      this.fsBtn.setAttribute('aria-label', 'Fullscreen');
+      this.fsBtn = iconButton('sf-fs', 'fullscreen', 'Fullscreen');
       this.fsBtn.setAttribute('data-sf', 'fullscreen');
       this.fsBtn.addEventListener('click', function () {
         self.toggleFullscreen();
       });
-      rightGroup.appendChild(this.fsBtn);
+      bar.appendChild(this.fsBtn);
     }
 
-    row.appendChild(leftGroup);
-    row.appendChild(rightGroup);
-    bar.appendChild(row);
+    if (this.payload.badge) {
+      // Free-tier attribution; lifetime accounts get badge: false from the api.
+      var badge = document.createElement('a');
+      badge.className = 'sf-badge';
+      badge.href = assetBase() + '/?ref=player';
+      badge.target = '_blank';
+      badge.rel = 'noopener';
+      badge.title = 'Powered by Videokr';
+      badge.innerHTML =
+        '<img src="' + assetBase() + '/brand/mark-64.png" alt="" /><span>Videokr</span>';
+      bar.appendChild(badge);
+    }
 
     /* Kept so the quality menu, built after the source reports its renditions, has
        somewhere to attach. */
@@ -910,32 +1020,108 @@
     return bar;
   };
 
-  Player.prototype._menu = function (cls, label, iconHtml, items) {
-    var host = el('div', 'sf-menu ' + cls);
-    var btn = el('button', 'sf-btn', iconHtml);
-    btn.setAttribute('aria-label', label);
-    btn.setAttribute('data-sf', cls.replace('sf-', ''));
+  /** Gear button plus a panel stack: a home list of settings and one panel each. */
+  Player.prototype._buildSettings = function () {
+    var self = this;
+    var host = el('div', 'sf-menu sf-settings');
+    var btn = el('button', 'sf-btn', icon('settings'));
+    btn.setAttribute('aria-label', 'Settings');
+    btn.setAttribute('data-tip', 'Settings');
+    btn.setAttribute('data-sf', 'settings');
+    btn.setAttribute('aria-expanded', 'false');
     var list = el('div', 'sf-menu-list');
-    items.forEach(function (item) {
-      var row = el('button', 'sf-menu-item');
-      row.textContent = item.label;
-      row.addEventListener('click', function (event) {
-        event.stopPropagation();
-        item.onSelect();
-        host.classList.remove('sf-open');
-      });
-      list.appendChild(row);
-    });
+    var home = el('div', 'sf-menu-panel');
+    list.appendChild(home);
+    var close = function () {
+      host.classList.remove('sf-open');
+      btn.setAttribute('aria-expanded', 'false');
+      self._showPanel(home);
+    };
     btn.addEventListener('click', function (event) {
       event.stopPropagation();
-      host.classList.toggle('sf-open');
+      var open = !host.classList.contains('sf-open');
+      host.classList.toggle('sf-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      self._showPanel(home);
     });
-    document.addEventListener('click', function () {
-      host.classList.remove('sf-open');
+    list.addEventListener('click', function (event) {
+      event.stopPropagation();
     });
+    document.addEventListener('click', close);
     host.appendChild(btn);
     host.appendChild(list);
+    host.style.display = 'none';
+    this.settings = { host: host, list: list, home: home, close: close };
     return host;
+  };
+
+  Player.prototype._showPanel = function (panel) {
+    if (!this.settings) return;
+    var kids = this.settings.list.children;
+    for (var i = 0; i < kids.length; i++) {
+      kids[i].style.display = kids[i] === panel ? 'block' : 'none';
+    }
+  };
+
+  /**
+   * Adds one row to the settings home panel plus its own radio panel. `current` is the
+   * index selected on open, or -1 for a plain list of actions such as chapters.
+   */
+  Player.prototype._addSetting = function (key, label, items, current) {
+    if (!this.settings || !items.length) return null;
+    var self = this;
+    var settings = this.settings;
+    var row = el('button', 'sf-menu-item sf-forward');
+    row.setAttribute('data-sf', key);
+    row.appendChild(document.createTextNode(label));
+    var value = el('span', 'sf-menu-value');
+    row.appendChild(value);
+
+    var panel = el('div', 'sf-menu-panel');
+    panel.style.display = 'none';
+    var back = el('button', 'sf-menu-item sf-back');
+    back.textContent = label;
+    back.addEventListener('click', function () {
+      self._showPanel(settings.home);
+    });
+    panel.appendChild(back);
+
+    var radios = [];
+    items.forEach(function (item, index) {
+      var option = el('button', 'sf-menu-item sf-radio');
+      option.setAttribute('role', 'menuitemradio');
+      option.setAttribute('aria-checked', index === current ? 'true' : 'false');
+      option.textContent = item.label;
+      option.addEventListener('click', function () {
+        radios.forEach(function (other) {
+          other.setAttribute('aria-checked', 'false');
+        });
+        option.setAttribute('aria-checked', 'true');
+        if (current >= 0) value.textContent = item.label;
+        item.onSelect();
+        settings.close();
+      });
+      radios.push(option);
+      panel.appendChild(option);
+    });
+
+    row.addEventListener('click', function () {
+      self._showPanel(panel);
+    });
+    settings.home.appendChild(row);
+    settings.list.appendChild(panel);
+    settings.host.style.display = '';
+    if (current >= 0 && items[current]) value.textContent = items[current].label;
+    return { value: value, radios: radios, items: items };
+  };
+
+  /** Keeps a settings row in sync when a shortcut, not the menu, changes the value. */
+  Player.prototype._selectSetting = function (setting, index) {
+    if (!setting || !setting.items[index]) return;
+    setting.radios.forEach(function (option, i) {
+      option.setAttribute('aria-checked', i === index ? 'true' : 'false');
+    });
+    setting.value.textContent = setting.items[index].label;
   };
 
   Player.prototype._onReady = function () {
@@ -965,36 +1151,34 @@
 
   /** Only an adaptive source exposes renditions, so the menu is built after load. */
   Player.prototype._buildQualityMenu = function () {
-    if (!this.config.controls.quality || this.qualityBtn || !this.bar) return;
+    if (!this.config.controls.quality || this.qualitySetting || !this.settings) return;
     if (!this.adapter.qualities) return;
     var self = this;
     var levels = this.adapter.qualities();
     if (levels.length < 2) return;
-    this.qualityBtn = this._menu(
-      'sf-quality',
+    this.qualitySetting = this._addSetting(
+      'quality',
       'Quality',
-      '<span class="sf-quality-label">Auto</span>',
       levels.map(function (level) {
         return {
           label: level.label,
           onSelect: function () {
             self.adapter.setQuality(level.value);
-            var label = self.qualityBtn.querySelector('.sf-quality-label');
-            if (label) label.textContent = level.label;
           },
         };
       }),
+      0,
     );
-    var anchor = this.ccBtn || this.pipBtn || null;
-    if (anchor && anchor.parentNode === this.bar) this.bar.insertBefore(this.qualityBtn, anchor);
-    else this.bar.appendChild(this.qualityBtn);
   };
 
   /** Both the CC button and the keyboard shortcut land here so the state stays in sync. */
   Player.prototype.toggleCaptions = function () {
     if (!this.adapter.toggleCaptions) return false;
     var on = this.adapter.toggleCaptions();
-    if (this.ccBtn) this.ccBtn.classList.toggle('sf-active', !!on);
+    if (this.ccBtn) {
+      this.ccBtn.classList.toggle('sf-active', !!on);
+      this.ccBtn.classList.toggle('sf-off', !on);
+    }
     return on;
   };
 
@@ -1028,7 +1212,8 @@
       this.buffer.style.width = this.adapter.buffered() * 100 + '%';
       if (!this.markers.childNodes.length && this.chapters.length) this._renderMarkers(duration);
     }
-    if (this.timeLabel) this.timeLabel.textContent = fmtTime(t) + ' / ' + fmtTime(duration);
+    if (this.timeLabel) this.timeLabel.textContent = fmtTime(t);
+    if (this.durationLabel) this.durationLabel.textContent = fmtTime(duration);
     if (duration > 0 && t > 0) this._savePosition(t);
     this._evaluateCtas(t, duration);
 
@@ -1378,14 +1563,16 @@
 
   Player.prototype._setPlayIcon = function (playing) {
     if (!this.playBtn) return;
-    this.playBtn.innerHTML = playing ? '<span class="sf-ico-pause"></span>' : '<span class="sf-ico-play"></span>';
+    this.playBtn.innerHTML = icon(playing ? 'pause' : 'play');
     this.playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+    this.playBtn.setAttribute('data-tip', playing ? 'Pause' : 'Play');
   };
 
   Player.prototype._setVolIcon = function (muted) {
     if (!this.muteBtn) return;
-    this.muteBtn.innerHTML = muted ? '<span class="sf-ico-mute"></span>' : '<span class="sf-ico-vol"></span>';
-    this.muteBtn.classList.toggle('sf-active', !muted);
+    this.muteBtn.innerHTML = icon(muted ? 'muted' : 'volume');
+    this.muteBtn.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+    this.muteBtn.setAttribute('data-tip', muted ? 'Unmute' : 'Mute');
   };
 
   Player.prototype._bindKeys = function () {
@@ -1472,29 +1659,38 @@
   };
 
   Player.prototype._stepRate = function (direction) {
-    var speeds = this.config.speeds && this.config.speeds.length ? this.config.speeds : SPEED_FALLBACK;
+    var speeds = this._speeds || (this.config.speeds && this.config.speeds.length ? this.config.speeds : SPEED_FALLBACK);
     this._rateIndex = this._rateIndex == null ? speeds.indexOf(1) : this._rateIndex;
     this._rateIndex = Math.min(speeds.length - 1, Math.max(0, this._rateIndex + direction));
-    var rate = speeds[this._rateIndex];
-    this.adapter.setRate(rate);
-    if (this.speedBtn) {
-      var label = this.speedBtn.querySelector('.sf-speed-label');
-      if (label) label.textContent = rate + 'x';
-    }
+    this.adapter.setRate(speeds[this._rateIndex]);
+    this._selectSetting(this.speedSetting, this._rateIndex);
   };
 
   Player.prototype._bindPointer = function () {
     var self = this;
     var hide;
+    var overBar = false;
     var show = function () {
       self.root.classList.add('sf-active');
       clearTimeout(hide);
       hide = setTimeout(function () {
-        if (!self.adapter.paused()) self.root.classList.remove('sf-active');
+        if (!overBar && !self.adapter.paused()) self.root.classList.remove('sf-active');
       }, 2500);
     };
     this.root.addEventListener('mousemove', show);
     this.root.addEventListener('touchstart', show);
+    /* A cursor resting on a control sends no further mousemove, so without this the bar
+       fades out underneath it and the next click falls through to the picture. */
+    if (this.controls) {
+      this.controls.addEventListener('mouseenter', function () {
+        overBar = true;
+        show();
+      });
+      this.controls.addEventListener('mouseleave', function () {
+        overBar = false;
+        show();
+      });
+    }
     this.overlay.addEventListener('click', function (event) {
       if (event.target === self.overlay) self.togglePlay();
     });
@@ -1562,6 +1758,18 @@
       value: value || '',
       variant: this.variant,
     });
+    /* A play has to hear the answer back, because the server refuses the play that
+       crosses a hard-stop allowance; beacons are fire-and-forget, so they can't. */
+    if (kind === 'play') {
+      var self = this;
+      fetch('/api/track', { method: 'POST', headers: { 'content-type': 'application/json' }, body: body })
+        .then(function (res) { return res.json(); })
+        .then(function (result) {
+          if (result && result.capped) self.stopForCap();
+        })
+        .catch(function () {});
+      return;
+    }
     try {
       if (navigator.sendBeacon && kind !== 'load') {
         navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
@@ -1575,6 +1783,21 @@
     );
   };
 
+  /* The owning account ran out of plays mid-view: stop the picture and say so. */
+  Player.prototype.stopForCap = function () {
+    if (this._capped) return;
+    this._capped = true;
+    this._trackingEnabled = false;
+    try {
+      if (this.adapter) this.adapter.pause();
+    } catch (e) {
+      /* the adapter may already be gone */
+    }
+    var payload = { video: this.video };
+    this.destroy();
+    mountCapped(this.root, payload);
+  };
+
   Player.prototype.destroy = function () {
     clearInterval(this._tick);
     if (this.adapter && this.adapter.destroy) this.adapter.destroy();
@@ -1582,6 +1805,19 @@
   };
 
   /* ------------------------------------------------------------ password -- */
+
+  /* Shown when the owning account is out of monthly plays on a plan that stops
+     at its allowance; paid plans never reach this. */
+  function mountCapped(root, payload) {
+    root.classList.add('sf-player', 'sf-locked');
+    root.innerHTML = '';
+    var card = el('div', 'sf-lock-card');
+    card.appendChild(el('h3', null, null)).textContent = 'This video is unavailable right now';
+    card.appendChild(el('p', null, null)).textContent =
+      (payload.video && payload.video.title ? payload.video.title + ' has ' : 'This video has ') +
+      'reached the monthly play limit on its plan. Please check back next month.';
+    root.appendChild(card);
+  }
 
   function mountLocked(root, payload) {
     root.classList.add('sf-player', 'sf-locked');
@@ -1653,6 +1889,10 @@
       if (!root || !payload) return Promise.resolve(null);
       if (payload.locked) {
         mountLocked(root, payload);
+        return Promise.resolve(null);
+      }
+      if (payload.capped) {
+        mountCapped(root, payload);
         return Promise.resolve(null);
       }
       var player = new Player(root, payload);

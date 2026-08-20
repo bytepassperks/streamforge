@@ -4,8 +4,8 @@ Repo: `bytepassperks/streamforge` · branch `devin/1787054418-streamforge-app` �
 https://github.com/bytepassperks/streamforge/pull/1
 
 Live: https://streamforge.getlaunchpod.workers.dev (Cloudflare Worker, free tier)
-Last deployed Worker version: `442f7a01-8843-4065-9c33-0173af69d056`
-Last updated: 2026-08-20 (videoo.org parity pass)
+Last deployed Worker version: `2f2d0ea1-d78b-4359-a20c-8dcedaa09552`
+Last updated: 2026-08-20 (play metering + Starter/Agency plans)
 
 Product: a self-owned alternative to videoo.org / Wistia / Vidyard. Host or link video,
 brand the player, embed it anywhere, gate it, and see who watched what — two tiers, Free
@@ -67,14 +67,40 @@ buckets (drop-off), devices, referrers, countries.
 `last_attempt_at`, `last_error`) so failures are visible. Delivery + signature verified
 end-to-end against a live receiver.
 
-**Billing (Free + Lifetime, Dodo Payments) — LIVE and connected.** `src/lib/billing.ts`:
-- Dodo live product `Videokr Lifetime`, `pdt_0NlkABQZHg1IEe8PHKx3j`, one-time $69, business
+**Billing (Free, Starter, Agency, Lifetime — Dodo Payments) — LIVE and connected.**
+`src/lib/billing.ts`. Plans are metered on plays, not on storage:
+
+| Plan | Price | Plays / month | Videos | Fair-use storage | Over allowance |
+| --- | --- | --- | --- | --- | --- |
+| Free | $0 | 500 | 5 | 2 GB | playback stops until the month rolls over |
+| Starter | $5/mo or $29/yr | 10,000 | unlimited | 25 GB | keeps playing, $1 per 10,000 |
+| Agency | $29/mo or $290/yr | 150,000 | unlimited | 250 GB | keeps playing, $1 per 10,000 |
+| Lifetime | $69 → $99 → $149 one-time, on sale permanently | 10,000 forever | unlimited | 25 GB | keeps playing, $1 per 10,000 |
+
+- Dodo live products: Lifetime `pdt_0NlkABQZHg1IEe8PHKx3j`; recurring Starter monthly
+  `pdt_0NlpHnWuphLGAtw5NnKzA`, Starter annual `pdt_0NlpHnaEHSuVDufu3ixr7`, Agency monthly
+  `pdt_0NlpHneTyTAjGlTkQUOF1`, Agency annual `pdt_0NlpHnhoCRnim1RNH55Z2`, business
   `bus_0NXyVkuVr1dqXmP1O5TeG` (the same Dodo account as your other products).
 - Dodo webhook endpoint `ep_3I8tZZ4roabAgAxgULbFN08MsvK` pointing at
   `/api/billing/dodo/webhook`, with its own signing secret.
 - Worker secrets set: `DODO_PAYMENTS_API_KEY`, `DODO_WEBHOOK_SECRET`,
-  `DODO_LIFETIME_PRODUCT_ID`. `GET /api/billing` reports `checkout_ready: true` and a real
-  checkout session was created against live Dodo, so the buy button works today.
+  `DODO_LIFETIME_PRODUCT_ID`, `DODO_STARTER_PRODUCT_ID`, `DODO_STARTER_ANNUAL_PRODUCT_ID`,
+  `DODO_AGENCY_PRODUCT_ID`, `DODO_AGENCY_ANNUAL_PRODUCT_ID`. `GET /api/billing` reports
+  `checkout_ready` and `subscription_ready`, and real checkout sessions were created against
+  live Dodo for Lifetime and for Starter, so both buy paths work today.
+- `POST /api/billing/subscribe` takes `{plan: starter|agency, cycle: monthly|annual}` and
+  returns a hosted Dodo subscription checkout url.
+- Subscription lifecycle is handled from Dodo's documented events —
+  `subscription.active`, `renewed`, `plan_changed`, `unpaused` grant the plan mapped from
+  the product id; `cancelled`, `expired`, `failed`, `paused`, `on_hold` fall back to Free;
+  `subscription.updated` is classified from its `status` field. `users.subscription_id` and
+  `users.plan_renews_at` are stored. A Lifetime account is never downgraded by a
+  subscription event. Verified in production with signed synthetic events: active → Starter,
+  plan change → Agency, `updated/on_hold` → Free, and all three ignored on a Lifetime
+  account.
+- Fixed while verifying: the deployed `DODO_WEBHOOK_SECRET` did not match the signing
+  secret of the live Dodo endpoint, so real webhooks would have been rejected with 401. The
+  secret was re-read from the Dodo API and re-uploaded.
 - The product is in LIVE mode: the next step is a real card payment, which is why the
   successful-payment path (plan flip, badge removal, seat increment) is the one thing still
   unproven — see "What is left".
@@ -88,10 +114,26 @@ end-to-end against a live receiver.
   Webhooks HMAC-SHA256 verification, 5-minute timestamp window, dedupe by `webhook-id`,
   then `payment.succeeded` → `users.plan = 'lifetime'`. The browser return URL only
   re-reads the server's plan, so it cannot be spoofed into an unlock.
-- Free tier: 5 videos (`POST /api/videos` returns `402 {upgrade:true}` past the cap),
-  3 GB, 10k plays/month, and a small "Videokr" badge on the player — the embed payload
-  sets `badge: owner.plan !== 'lifetime'`, so it is removed by buying, not by editing
-  client config.
+- Free tier: 5 videos (`POST /api/videos` returns `402 {upgrade:true}` past the cap) and a
+  small "Videokr" badge on the player — the embed payload sets
+  `badge: owner.plan !== 'lifetime'`, so it is removed by buying, not by editing client
+  config.
+
+**Play metering** — migration `0006_plays.sql` adds `play_usage` (per account, per UTC
+calendar month, `YYYY-MM`) and `play_dedup` keyed `(video_id, view_id, period)`, so a
+viewer who reloads or rewatches the same video inside a month is counted once. Usage is
+attributed to the video's owner. `/api/track` counts the play synchronously and answers
+`{capped:true}` once a hard-stop plan is over its allowance; the player then stops and
+shows the monthly-limit card. Paid plans keep serving and accrue displayed overage.
+`role='admin'` or `unlimited=1` bypasses every allowance. Usage shows in the dashboard
+billing view and on each user in the admin portal. Verified in production: duplicate
+`view_id` did not increment, a new viewer did, Free blocked at 500, Starter kept playing
+past its allowance with overage shown.
+
+The remote migration was applied with `wrangler d1 execute --file` rather than
+`migrations apply`, because the remote `d1_migrations` ledger was missing entries for
+`0004`/`0005` and re-running them failed on an already-present `role` column. The ledger
+was then reconciled by hand — do not blindly re-run the old migration sequence.
 
 **Design + brand** — "Broadcast Coal" dark system across landing, login and dashboard:
 Instrument Serif display, Inter Tight UI, Caveat annotations, JetBrains Mono metadata,
@@ -208,9 +250,42 @@ real browser interaction against the live Worker, not the presence of a route.
 | User profile / channel page | **missing** | a public per-user channel listing is not built |
 | Unlimited videos | **intentionally different** | free tier caps at 5 videos (402); lifetime is uncapped |
 
-Not claimed as parity yet: Vimeo playback, real HLS quality switching, a public channel
-page, and browser-level verification of the new share sheet, related end screen and
-playlist lock (their APIs and HTML are verified; the clicking is not).
+Not claimed as parity yet: a public channel page. Vimeo playback, HLS quality switching,
+the share sheet and the playlist embed were all verified in a browser in the control-bar
+pass below.
+
+## 2d. Control-bar rebuild (2026-08-20, verified in a browser on production)
+
+The reference player we are measured against runs Plyr 3.6.8 with its default skin. Its
+layout was reproduced in our own player rather than adopting a third-party runtime, so all
+Videokr behaviour (source isolation, CTAs, gates, analytics, playlists, sticky miniplayer,
+branding) is untouched.
+
+- One flex row: rewind 10s, play/pause, forward 10s, progress, current time, duration,
+  volume, captions, PIP, settings gear, share, fullscreen, Videokr badge (the badge now
+  lives in the bar instead of floating over the picture).
+- Reference metrics: 10px control spacing, 18px inline-SVG icons, 3px control radius, 5px
+  range track with a 13px handle, translucent-white menus and tooltips, gradient bar that
+  fades in on hover or while paused, circular accent centre play button.
+- Speed, quality and chapters now live in one settings gear with a panel stack (home list →
+  sub-panel with a back row and radio rows), so the bar width no longer grows with the
+  number of renditions or chapters.
+- Progress markup: `.sf-progress` (19px hit area) wraps `.sf-progress-rail` (5px) holding
+  buffer, played, chapter markers and handle.
+
+Verified in a recorded browser pass on production (`561781ba`, then `eda3ec59` for the
+narrow fix): every control in the bar including click and drag seeking with the scrub
+tooltip, ±10s, volume/mute, PIP, the gear (speed radio rows, keyboard speed updating the
+row, HLS quality Auto→1080p applied without a stall), share sheet, fullscreen; YouTube
+source isolation still clean in stopped, first seconds, hover-while-playing, paused,
+mid-drag, seek-while-paused and resume; **Vimeo natural end now masked** (no "More from …",
+no recommendation grid, no "+ Follow"); **playlist script embed auto-height** hugs its
+content with no dead band; landing demo 16:9 with its poster; and the ≤420px layout
+(rail keeps a usable width, volume slider/rewind/forward/PIP dropped, badge mark-only and
+not clipped). No console errors, no 5xx.
+
+Still unproven in a browser: the captions toggle and the chapters gear row — no source in
+the test account carries a `.vtt` track or chapters.
 
 ## 3. What is left
 
@@ -226,9 +301,12 @@ Ordered by what blocks revenue.
    one-line mapping fix. Refunding yourself in Dodo afterwards costs only Dodo's fee.
    (If you would rather rehearse for free, set `DODO_ENVIRONMENT=test_mode` plus test-mode
    key/product/webhook secrets, run a test card, then remove the override.)
-2. **Remaining UI checks I did not spend credits on:** mobile layout at ~390px,
-   reduced-motion behaviour, and whether every brand PNG is clean on the dark background
-   (they came from the supplied images and may retain dark edges or halos).
+2. **Remaining UI checks:** reduced-motion behaviour, and whether every brand PNG is clean
+   on the dark background (they came from the supplied images and may retain dark edges or
+   halos). Also unproven: the captions toggle and the chapters row (needs a video with a
+   `.vtt` track and chapters). Minor known UX nit: while playing, the first click on the
+   gear/PIP/share can land as play/pause because the bar is still faded.
+   The ~390px layout is now verified.
 3. **Attach the custom domain** (your call — deliberately left undone). `videokr.com` was
    in pending-delete on 2026-08-18, so it needs a backorder/drop-catch, not a normal
    registration. After pointing DNS, update `PUBLIC_BASE_URL` in `wrangler.toml` and the
@@ -238,9 +316,23 @@ Ordered by what blocks revenue.
 5. **Backend naming.** Worker, D1, R2 bucket, package and repo are still named
    `streamforge`, and the legacy `x-streamforge-signature` webhook header remains. All are
    compatibility-sensitive and invisible to customers; rename only deliberately.
-6. **Nice-to-haves not built.** Storage and monthly-play enforcement (the numbers are
-   advertised and stored in `FREE_LIMITS` but only the video cap is enforced), transcript
-   search, auto-captions, and localised INR checkout in Dodo.
+6. **Overage is calculated but never collected.** Plays past a paid allowance are counted
+   and displayed to the customer and in the admin portal, but nothing bills them — there is
+   no Dodo usage-charge or invoice call yet. Until that exists, overage is a reporting
+   number, not revenue.
+7. **Storage is metadata only.** Each plan carries a fair-use storage ceiling, but uploaded
+   bytes are not totalled per account and nothing enforces the ceiling. The cold-storage
+   lifecycle (move media with no plays for 60 days to infrequent-access) is also not built.
+8. **View identity is weak.** `view_id` comes from the client, so a determined caller can
+   rotate it to inflate an owner's counted plays, or reuse one to suppress them. Fine for
+   billing at this scale, not fine as an anti-abuse control — a server-derived, salted
+   fingerprint should replace it before overage is actually charged.
+9. **Real subscription payments are unproven.** The lifecycle was verified with signed
+   synthetic events; no live card has been run through a Starter or Agency checkout, so the
+   real payload field names are still assumed from Dodo's docs.
+10. **Nice-to-haves not built.** A public per-user channel page (the only remaining
+    videoo.org parity gap), transcript search, auto-captions, and localised INR checkout in
+    Dodo.
 
 ## 4. Honest caveats to keep in the copy
 

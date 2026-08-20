@@ -151,7 +151,10 @@
               <select id="ed-project"><option value="">No project</option></select></div>
             <div class="field"><label for="ed-thumb">Thumbnail A url</label><input id="ed-thumb"></div>
             <div class="field"><label for="ed-thumb-b">Thumbnail B url (A/B test)</label><input id="ed-thumb-b"></div>
-            <div class="field"><label for="ed-captions">Captions .vtt url</label><input id="ed-captions"></div>
+            <div class="field"><label for="ed-captions">Captions .vtt url</label><input id="ed-captions">
+              <div class="row"><input id="ed-captions-file" type="file" accept=".vtt,text/vtt">
+                <button type="button" class="btn btn-sm btn-ghost" id="ed-captions-upload">Upload .vtt</button></div>
+              <span class="tiny" id="ed-captions-state"></span></div>
             <div class="field"><label for="ed-duration">Duration (seconds)</label>
               <input id="ed-duration" type="number" min="0"></div>
           </div>

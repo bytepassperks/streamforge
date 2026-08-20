@@ -578,6 +578,33 @@
     return rows;
   }
 
+  /* Captions live in R2 like any other asset, so the editor uploads the file and fills
+     in the url it gets back instead of asking for a url the customer has to host. */
+  $('ed-captions-upload').addEventListener('click', function () {
+    var file = $('ed-captions-file').files[0];
+    var status = $('ed-captions-state');
+    if (!file) {
+      status.textContent = 'Choose a .vtt file first.';
+      return;
+    }
+    var button = $('ed-captions-upload');
+    button.disabled = true;
+    status.textContent = 'Uploading…';
+    var form = new FormData();
+    form.append('file', file);
+    api('/uploads', { method: 'POST', form: form })
+      .then(function (result) {
+        $('ed-captions').value = result.url;
+        status.textContent = 'Uploaded — save to apply.';
+      })
+      .catch(function (err) {
+        status.textContent = err.message || 'Upload failed.';
+      })
+      .then(function () {
+        button.disabled = false;
+      });
+  });
+
   $('ed-save').addEventListener('click', function () {
     if (!state.video) return;
     var id = state.video.id;
@@ -1060,8 +1087,105 @@
   function planChip(billing) {
     var chip = $('plan-chip');
     if (!chip) return;
-    chip.textContent = billing.lifetime ? 'Lifetime · all features' : 'Free tier';
-    chip.className = 'tiny ' + (billing.lifetime ? 'chip chip-hot' : 'chip');
+    chip.textContent = billing.lifetime ? 'Lifetime · all features' : (billing.plan_name || 'Free') + ' plan';
+    chip.className = 'tiny ' + (billing.lifetime || billing.paid ? 'chip chip-hot' : 'chip');
+  }
+
+  function thousands(value) {
+    return Number(value || 0).toLocaleString('en-US');
+  }
+
+  /** Plays used this month, what is left, and any overage already accrued. */
+  function usageCard(billing) {
+    var plays = billing.plays;
+    var card = text('div', 'card');
+    card.appendChild(text('h3', null, 'Plays this month'));
+    var line = plays.allowance === null
+      ? thousands(plays.plays) + ' plays · unlimited'
+      : thousands(plays.plays) + ' of ' + thousands(plays.allowance) + ' plays';
+    card.appendChild(text('p', null, line));
+    if (plays.allowance !== null) {
+      var bar = text('div', 'meter');
+      var fill = text('div', 'meter-fill');
+      fill.style.width = Math.min(100, Math.round((plays.plays / plays.allowance) * 100)) + '%';
+      bar.appendChild(fill);
+      card.appendChild(bar);
+    }
+    var note;
+    if (plays.blocked) {
+      note = 'Your videos are paused until ' + plays.period + ' rolls over. Upgrade to keep them playing.';
+    } else if (plays.over > 0) {
+      note =
+        thousands(plays.over) +
+        ' plays over your allowance — $' +
+        plays.overage_usd.toFixed(2) +
+        ' overage so far, billed at $' +
+        billing.overage_per_10k_usd +
+        ' per 10,000 plays.';
+    } else if (plays.allowance !== null) {
+      note = thousands(plays.allowance - plays.plays) + ' plays left in ' + plays.period + '.';
+    } else {
+      note = 'No play limit on your plan.';
+    }
+    card.appendChild(text('p', 'muted tiny', note));
+    card.appendChild(
+      text(
+        'p',
+        'muted tiny',
+        billing.usage.videos +
+          (billing.usage.video_limit === null ? ' videos · unlimited' : ' of ' + billing.usage.video_limit + ' videos'),
+      ),
+    );
+    return card;
+  }
+
+  function subscribeButton(billing, planId, cycle, label) {
+    var button = text('button', 'btn' + (cycle === 'annual' ? '' : ' btn-ghost'), label);
+    button.type = 'button';
+    if (!billing.subscription_ready) button.disabled = true;
+    button.addEventListener('click', function () {
+      button.disabled = true;
+      api('/billing/subscribe', { method: 'POST', body: { plan: planId, cycle: cycle } })
+        .then(function (result) {
+          location.href = result.url;
+        })
+        .catch(function (error) {
+          button.disabled = false;
+          fail(error);
+        });
+    });
+    return button;
+  }
+
+  /** One card per metered plan, with monthly and annual checkout. */
+  function planCard(billing, planId) {
+    var plan = billing.plans[planId];
+    var card = text('div', 'card');
+    card.appendChild(text('h3', null, plan.name + ' — $' + plan.usd + '/mo'));
+    card.appendChild(
+      text(
+        'p',
+        'muted tiny',
+        thousands(plan.plays) +
+          ' plays a month, unlimited videos, ' +
+          Math.round(plan.storageBytes / (1024 * 1024 * 1024)) +
+          ' GB fair-use storage. Extra plays are $' +
+          billing.overage_per_10k_usd +
+          ' per 10,000.',
+      ),
+    );
+    if (billing.plan === planId) {
+      card.appendChild(text('p', 'tiny', 'This is your current plan.'));
+      return card;
+    }
+    var row = text('div', 'row');
+    row.appendChild(subscribeButton(billing, planId, 'annual', 'Get ' + plan.name + ' — $' + plan.usdAnnual + '/yr'));
+    row.appendChild(subscribeButton(billing, planId, 'monthly', '$' + plan.usd + ' monthly'));
+    card.appendChild(row);
+    if (!billing.subscription_ready) {
+      card.appendChild(text('p', 'tiny muted', 'Checkout for this plan is not connected yet.'));
+    }
+    return card;
   }
 
   function loadBilling() {
@@ -1071,11 +1195,21 @@
         var host = $('billing-body');
         host.textContent = '';
 
+        host.appendChild(usageCard(billing));
+        if (!billing.lifetime) {
+          host.appendChild(planCard(billing, 'starter'));
+          host.appendChild(planCard(billing, 'agency'));
+        }
+
         var card = text('div', 'card');
         if (billing.lifetime) {
           card.appendChild(text('h3', null, 'You own Videokr for life'));
           card.appendChild(
-            text('p', 'muted tiny', 'Unlimited videos and embeds, no badge, every feature we ship from here on.'),
+            text(
+              'p',
+              'muted tiny',
+              'Unlimited videos and embeds, no badge, 10,000 plays a month included forever, and every feature we ship from here on.',
+            ),
           );
         } else {
           card.appendChild(text('h3', null, 'Lifetime — $' + billing.offer.usd + ' once'));
@@ -1083,11 +1217,7 @@
             text(
               'p',
               'muted tiny',
-              'You are on the free tier: ' +
-                billing.usage.videos +
-                ' of ' +
-                billing.usage.video_limit +
-                ' videos used. Lifetime removes the badge and every limit. No refunds — the free tier is the trial.',
+              'Pay once, keep it forever: unlimited videos, no badge, 10,000 plays a month included for life. No refunds — the free plan is the trial.',
             ),
           );
           if (billing.offer.seats_total) {

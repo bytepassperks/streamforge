@@ -170,6 +170,7 @@
   function planPill(user) {
     if (Number(user.unlimited) === 1) return ['pill pill-ok', 'unlimited'];
     if (user.plan === 'lifetime') return ['pill', 'lifetime'];
+    if (user.plan === 'starter' || user.plan === 'agency') return ['pill', user.plan];
     return ['chip', 'free'];
   }
 
@@ -254,7 +255,13 @@
           data.videos.length +
           ' videos · ' +
           data.purchases.length +
-          ' purchases';
+          ' purchases · ' +
+          data.plays.plays +
+          ' plays this month on ' +
+          data.plays.plan_name +
+          (data.plays.allowance === null ? ' (unlimited)' : ' of ' + data.plays.allowance) +
+          (data.plays.blocked ? ' · BLOCKED, over allowance' : '') +
+          (data.plays.over && !data.plays.blocked ? ' · ' + data.plays.over + ' over ($' + data.plays.overage_usd + ')' : '');
         openModal('modal-user');
       })
       .catch(fail);

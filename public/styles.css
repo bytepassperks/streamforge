@@ -119,6 +119,11 @@ select option { background: var(--ink-2); }
 }
 .chip-hot { border-color: rgba(255, 90, 31, .5); color: var(--ember); }
 
+.meter {
+  height: 8px; border-radius: 99px; background: rgba(244, 238, 226, .1); overflow: hidden; margin: 10px 0;
+}
+.meter-fill { height: 100%; background: var(--ember); border-radius: 99px; }
+
 .toast {
   position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
   background: var(--ash); border: 1px solid var(--line-strong); padding: 12px 18px; border-radius: 12px;
@@ -222,7 +227,9 @@ select option { background: var(--ink-2); }
 .yes { color: var(--accent-2); font-weight: 700; }
 .no { color: #8b7f75; }
 
-.price-grid { display: grid; grid-template-columns: 1fr 1.14fr; gap: 22px; align-items: stretch; }
+.price-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 22px; align-items: stretch;
+}
 .price-card { display: flex; flex-direction: column; border-radius: 18px; padding: 28px; }
 .price-card.hot {
   border-color: var(--accent); position: relative; overflow: hidden;

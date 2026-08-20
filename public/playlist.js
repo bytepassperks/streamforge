@@ -63,4 +63,19 @@
   }
 
   play(0, false);
+
+  /* Embedded on somebody else's page the host cannot measure us, so the bare page reports
+     its own height and the loader sizes the iframe to it instead of guessing a ratio. */
+  if (document.body.classList.contains('sf-page-bare') && window.parent !== window) {
+    var reportHeight = function () {
+      var height = document.documentElement.scrollHeight;
+      if (height && height !== reportHeight.last) {
+        reportHeight.last = height;
+        window.parent.postMessage({ videokr: 'height', height: height }, '*');
+      }
+    };
+    reportHeight();
+    window.addEventListener('load', reportHeight);
+    setInterval(reportHeight, 500);
+  }
 })();
