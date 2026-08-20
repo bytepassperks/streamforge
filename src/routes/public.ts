@@ -43,7 +43,12 @@ pub.get('/api/public/offer', async (c) => {
   return c.json({ offer });
 });
 
-const SUBSCRIPTION_ACTIVE = new Set(['subscription.active', 'subscription.renewed', 'subscription.plan_changed']);
+const SUBSCRIPTION_ACTIVE = new Set([
+  'subscription.active',
+  'subscription.renewed',
+  'subscription.plan_changed',
+  'subscription.unpaused',
+]);
 const SUBSCRIPTION_ENDED = new Set([
   'subscription.cancelled',
   'subscription.canceled',
@@ -52,6 +57,9 @@ const SUBSCRIPTION_ENDED = new Set([
   'subscription.on_hold',
   'subscription.paused',
 ]);
+/** `subscription.updated` carries any field change, so it is read from status. */
+const ACTIVE_STATUSES = new Set(['active']);
+const ENDED_STATUSES = new Set(['cancelled', 'canceled', 'expired', 'failed', 'on_hold', 'paused']);
 
 /**
  * Dodo Payments delivers Standard Webhooks. A verified one-time
@@ -84,6 +92,7 @@ pub.post('/api/billing/dodo/webhook', async (c) => {
       total_amount?: number;
       currency?: string;
       customer?: { email?: string };
+      status?: string;
     };
   };
   try {
@@ -94,10 +103,15 @@ pub.post('/api/billing/dodo/webhook', async (c) => {
   // Recorded only once the payload parses, so a malformed body can be retried.
   await c.env.DB.prepare('INSERT INTO webhook_events (id, received_at) VALUES (?, ?)').bind(id, now()).run();
   const kind = event.type ?? '';
-  const subscriptionEvent = SUBSCRIPTION_ACTIVE.has(kind) || SUBSCRIPTION_ENDED.has(kind);
+  const data = event.data ?? {};
+  const status = (data.status ?? '').toLowerCase();
+  const ended =
+    SUBSCRIPTION_ENDED.has(kind) || (kind === 'subscription.updated' && ENDED_STATUSES.has(status));
+  const active =
+    SUBSCRIPTION_ACTIVE.has(kind) || (kind === 'subscription.updated' && ACTIVE_STATUSES.has(status));
+  const subscriptionEvent = active || ended;
   if (kind !== 'payment.succeeded' && !subscriptionEvent) return c.json({ ok: true, ignored: kind });
 
-  const data = event.data ?? {};
   const userId = data.metadata?.user_id ?? '';
   const email = (data.customer?.email ?? '').trim().toLowerCase();
   const user = userId
@@ -116,7 +130,7 @@ pub.post('/api/billing/dodo/webhook', async (c) => {
   if (subscriptionEvent) {
     /* Lifetime outranks a subscription, so a lapse can never take it away. */
     if (user.plan === 'lifetime') return c.json({ ok: true, ignored: 'lifetime account' });
-    if (SUBSCRIPTION_ENDED.has(kind)) {
+    if (ended) {
       await c.env.DB.prepare(
         "UPDATE users SET plan = 'free', subscription_id = '', plan_renews_at = 0 WHERE id = ?",
       )
