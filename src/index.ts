@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from './lib/types';
+import { closePeriod, previousPeriod } from './lib/overage';
 import { api } from './routes/api';
 import { pub } from './routes/public';
 
@@ -15,4 +16,14 @@ app.get('/healthz', (c) => c.json({ ok: true, service: 'videokr' }));
 // Anything not handled above falls through to the static assets bundle.
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
-export default app;
+export default {
+  fetch: app.fetch,
+  /**
+   * Month close. The cron runs daily so a failed collection is retried on the
+   * next run without waiting a month; both recording and collection are
+   * idempotent per account and period, so extra runs cost nothing.
+   */
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(closePeriod(env, previousPeriod()));
+  },
+};

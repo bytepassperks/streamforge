@@ -242,7 +242,7 @@ export function planForProduct(env: Env, productId: string): string | null {
   return null;
 }
 
-function apiBase(env: Env): string {
+export function apiBase(env: Env): string {
   return env.DODO_ENVIRONMENT === 'test_mode' ? 'https://test.dodopayments.com' : 'https://live.dodopayments.com';
 }
 

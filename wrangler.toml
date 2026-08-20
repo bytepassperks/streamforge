@@ -19,6 +19,10 @@ migrations_dir = "migrations"
 binding = "MEDIA"
 bucket_name = "streamforge-media"
 
+[triggers]
+# Daily so a failed overage collection retries without waiting for the next month.
+crons = ["20 3 * * *"]
+
 [vars]
 APP_NAME = "Videokr"
 PUBLIC_BASE_URL = "https://streamforge.getlaunchpod.workers.dev"
