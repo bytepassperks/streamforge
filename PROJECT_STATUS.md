@@ -4,8 +4,8 @@ Repo: `bytepassperks/streamforge` · branch `devin/1787054418-streamforge-app` �
 https://github.com/bytepassperks/streamforge/pull/1
 
 Live: https://streamforge.getlaunchpod.workers.dev (Cloudflare Worker, free tier)
-Last deployed Worker version: `442f7a01-8843-4065-9c33-0173af69d056`
-Last updated: 2026-08-20 (videoo.org parity pass)
+Last deployed Worker version: `eda3ec59-b216-40e3-87de-e4459f9a164c`
+Last updated: 2026-08-20 (control-bar rebuild + Vimeo/playlist-embed verification)
 
 Product: a self-owned alternative to videoo.org / Wistia / Vidyard. Host or link video,
 brand the player, embed it anywhere, gate it, and see who watched what — two tiers, Free
@@ -208,9 +208,42 @@ real browser interaction against the live Worker, not the presence of a route.
 | User profile / channel page | **missing** | a public per-user channel listing is not built |
 | Unlimited videos | **intentionally different** | free tier caps at 5 videos (402); lifetime is uncapped |
 
-Not claimed as parity yet: Vimeo playback, real HLS quality switching, a public channel
-page, and browser-level verification of the new share sheet, related end screen and
-playlist lock (their APIs and HTML are verified; the clicking is not).
+Not claimed as parity yet: a public channel page. Vimeo playback, HLS quality switching,
+the share sheet and the playlist embed were all verified in a browser in the control-bar
+pass below.
+
+## 2d. Control-bar rebuild (2026-08-20, verified in a browser on production)
+
+The reference player we are measured against runs Plyr 3.6.8 with its default skin. Its
+layout was reproduced in our own player rather than adopting a third-party runtime, so all
+Videokr behaviour (source isolation, CTAs, gates, analytics, playlists, sticky miniplayer,
+branding) is untouched.
+
+- One flex row: rewind 10s, play/pause, forward 10s, progress, current time, duration,
+  volume, captions, PIP, settings gear, share, fullscreen, Videokr badge (the badge now
+  lives in the bar instead of floating over the picture).
+- Reference metrics: 10px control spacing, 18px inline-SVG icons, 3px control radius, 5px
+  range track with a 13px handle, translucent-white menus and tooltips, gradient bar that
+  fades in on hover or while paused, circular accent centre play button.
+- Speed, quality and chapters now live in one settings gear with a panel stack (home list →
+  sub-panel with a back row and radio rows), so the bar width no longer grows with the
+  number of renditions or chapters.
+- Progress markup: `.sf-progress` (19px hit area) wraps `.sf-progress-rail` (5px) holding
+  buffer, played, chapter markers and handle.
+
+Verified in a recorded browser pass on production (`561781ba`, then `eda3ec59` for the
+narrow fix): every control in the bar including click and drag seeking with the scrub
+tooltip, ±10s, volume/mute, PIP, the gear (speed radio rows, keyboard speed updating the
+row, HLS quality Auto→1080p applied without a stall), share sheet, fullscreen; YouTube
+source isolation still clean in stopped, first seconds, hover-while-playing, paused,
+mid-drag, seek-while-paused and resume; **Vimeo natural end now masked** (no "More from …",
+no recommendation grid, no "+ Follow"); **playlist script embed auto-height** hugs its
+content with no dead band; landing demo 16:9 with its poster; and the ≤420px layout
+(rail keeps a usable width, volume slider/rewind/forward/PIP dropped, badge mark-only and
+not clipped). No console errors, no 5xx.
+
+Still unproven in a browser: the captions toggle and the chapters gear row — no source in
+the test account carries a `.vtt` track or chapters.
 
 ## 3. What is left
 
@@ -226,9 +259,12 @@ Ordered by what blocks revenue.
    one-line mapping fix. Refunding yourself in Dodo afterwards costs only Dodo's fee.
    (If you would rather rehearse for free, set `DODO_ENVIRONMENT=test_mode` plus test-mode
    key/product/webhook secrets, run a test card, then remove the override.)
-2. **Remaining UI checks I did not spend credits on:** mobile layout at ~390px,
-   reduced-motion behaviour, and whether every brand PNG is clean on the dark background
-   (they came from the supplied images and may retain dark edges or halos).
+2. **Remaining UI checks:** reduced-motion behaviour, and whether every brand PNG is clean
+   on the dark background (they came from the supplied images and may retain dark edges or
+   halos). Also unproven: the captions toggle and the chapters row (needs a video with a
+   `.vtt` track and chapters). Minor known UX nit: while playing, the first click on the
+   gear/PIP/share can land as play/pause because the bar is still faded.
+   The ~390px layout is now verified.
 3. **Attach the custom domain** (your call — deliberately left undone). `videokr.com` was
    in pending-delete on 2026-08-18, so it needs a backorder/drop-catch, not a normal
    registration. After pointing DNS, update `PUBLIC_BASE_URL` in `wrangler.toml` and the

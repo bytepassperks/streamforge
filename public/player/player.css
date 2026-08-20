@@ -125,7 +125,7 @@
 .sf-btn[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0) scale(1); }
 .sf-btn[aria-expanded="true"][data-tip]::after { display: none; }
 
-.sf-progress-wrap { position: relative; flex: 1; min-width: 0; padding-left: 2.5px; }
+.sf-progress-wrap { position: relative; flex: 1 1 auto; min-width: 60px; padding-left: 2.5px; }
 .sf-progress {
   position: relative; height: 19px; display: flex; align-items: center; cursor: pointer;
   color: var(--sf-accent);
@@ -163,14 +163,6 @@
 .sf-time + .sf-time { padding-left: 0; }
 .sf-time + .sf-time::before { content: "⁄"; margin-right: 5px; }
 
-/* Narrow embeds: drop the least essential controls before things collide. */
-@media (max-width: 420px) {
-  .sf-time { font-size: 11px; padding: 0 2px; }
-  .sf-volume { min-width: 0; width: auto; }
-  .sf-volume input[type="range"] { display: none; }
-  .sf-pip { display: none; }
-}
-
 .sf-volume { display: flex; align-items: center; position: relative; width: 20%; min-width: 80px; max-width: 110px; }
 .sf-volume input[type="range"] {
   -webkit-appearance: none; appearance: none; background: transparent; border: 0;
@@ -189,6 +181,16 @@
 .sf-volume input[type="range"]::-moz-range-thumb {
   width: 13px; height: 13px; border: 0; border-radius: 100%; background: #fff;
   box-shadow: 0 1px 1px rgba(35,40,47,.15), 0 0 0 1px rgba(35,40,47,.2);
+}
+
+/* Narrow embeds: drop the least essential controls before things collide. Declared
+   after the base rules so the equal-specificity overrides below actually win. */
+@media (max-width: 420px) {
+  .sf-time { font-size: 11px; padding: 0 2px; }
+  .sf-volume { min-width: 0; width: auto; max-width: none; }
+  .sf-volume input[type="range"] { display: none; }
+  .sf-pip, .sf-rewind, .sf-forward { display: none; }
+  .sf-badge span { display: none; }
 }
 
 .sf-menu { display: flex; position: relative; }
