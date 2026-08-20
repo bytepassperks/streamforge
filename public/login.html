@@ -103,6 +103,12 @@
   });
 
   render();
+
+  /* An existing session means there is nothing to sign into. */
+  fetch('/api/auth/me', { credentials: 'same-origin' })
+    .then(function (res) { return res.json(); })
+    .then(function (result) { if (result.user) location.replace('/app.html'); })
+    .catch(function () { /* stay on the form */ });
 })();
 </script>
 </body>

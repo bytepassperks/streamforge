@@ -345,6 +345,7 @@
     $('pc-resume').checked = config.resume;
     $('pc-title').checked = config.title;
     $('pc-bigplay').checked = config.bigPlayButton;
+    $('pc-srccaptions').checked = config.sourceCaptions;
     $('pc-sticky').checked = config.sticky;
 
     var controlsHost = $('pc-controls');
@@ -536,6 +537,7 @@
       logoPosition: $('pc-logo-pos').value,
       title: $('pc-title').checked,
       bigPlayButton: $('pc-bigplay').checked,
+      sourceCaptions: $('pc-srccaptions').checked,
       sticky: $('pc-sticky').checked,
       borderRadius: Number($('pc-radius').value) || 0,
     };
@@ -1106,13 +1108,16 @@
       }
       state.user = result.user;
       $('who').textContent = result.user.name || result.user.email;
-      planChip({ lifetime: result.user.plan === 'lifetime' });
+      planChip({ lifetime: result.user.plan === 'lifetime' || Number(result.user.unlimited) === 1 });
+      if (result.user.role === 'admin') $('admin-link').classList.remove('hidden');
       var params = new URLSearchParams(location.search);
       if (params.get('purchase')) {
         // Dodo returns here after checkout; the webhook is what actually grants
         // the plan, so reflect whatever the server says rather than assuming.
         showView('billing');
         toast(result.user.plan === 'lifetime' ? 'Lifetime unlocked' : 'Payment received — unlocking shortly');
+      } else if (params.get('view') === 'billing') {
+        showView('billing');
       } else {
         showView('videos');
       }

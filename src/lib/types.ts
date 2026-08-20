@@ -15,6 +15,9 @@ export interface User {
   email: string;
   name: string;
   plan: string;
+  role: string;
+  unlimited: number;
+  suspended: number;
   created_at: number;
 }
 
@@ -48,6 +51,7 @@ export interface PlayerConfig {
   logoPosition: string;
   title: boolean;
   bigPlayButton: boolean;
+  sourceCaptions: boolean;
   sticky: boolean;
   borderRadius: number;
 }

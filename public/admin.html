@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Videokr</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/brand/mark-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/brand/mark-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=Caveat:wght@600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="/app.html"><img src="/brand/logo-lockup.png" alt="Videokr"></a>
+    <div class="pill" style="margin-top:14px">admin</div>
+    <nav class="side-nav" id="side-nav">
+      <button data-view="overview" class="active">Overview</button>
+      <button data-view="users">Users</button>
+      <button data-view="videos">Videos</button>
+      <button data-view="purchases">Purchases</button>
+      <button data-view="audit">Audit log</button>
+    </nav>
+    <div class="side-foot">
+      <div id="who" class="tiny">…</div>
+      <a class="btn btn-ghost btn-sm" href="/app.html" style="margin-top:10px;display:inline-block">Back to dashboard</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- Overview ----------------------------------------------------------- -->
+    <section class="view active" id="view-overview">
+      <div class="page-head">
+        <div><h1>Overview</h1><p class="muted tiny">Everything on this deployment, counted live.</p></div>
+        <button class="btn btn-ghost" id="refresh-overview" type="button">Refresh</button>
+      </div>
+      <div class="stat-grid" id="overview-stats"></div>
+      <div class="card" id="overview-offer"></div>
+    </section>
+
+    <!-- Users -------------------------------------------------------------- -->
+    <section class="view" id="view-users">
+      <div class="page-head">
+        <div><h1>Users</h1><p class="muted tiny">Upgrade, downgrade, grant unlimited, suspend, reset a password, or sign in as anyone.</p></div>
+        <button class="btn" id="new-user" type="button">Create user</button>
+      </div>
+      <div class="field"><input id="users-q" type="search" placeholder="Search email or name…"></div>
+      <div id="users-body"></div>
+    </section>
+
+    <!-- Videos ------------------------------------------------------------- -->
+    <section class="view" id="view-videos">
+      <div class="page-head">
+        <div><h1>Videos</h1><p class="muted tiny">Every video on the platform, with its owner and play count.</p></div>
+      </div>
+      <div class="field"><input id="videos-q" type="search" placeholder="Search title, slug or owner email…"></div>
+      <div id="videos-body"></div>
+    </section>
+
+    <!-- Purchases ---------------------------------------------------------- -->
+    <section class="view" id="view-purchases">
+      <div class="page-head">
+        <div><h1>Purchases</h1><p class="muted tiny">Dodo orders and manual off-platform sales. Changing a status can move the plan with it.</p></div>
+        <button class="btn" id="new-purchase" type="button">Record manual sale</button>
+      </div>
+      <div id="purchases-body"></div>
+    </section>
+
+    <!-- Audit -------------------------------------------------------------- -->
+    <section class="view" id="view-audit">
+      <div class="page-head">
+        <div><h1>Audit log</h1><p class="muted tiny">Every admin action, newest first.</p></div>
+      </div>
+      <div id="audit-body"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Edit user ------------------------------------------------------------- -->
+<div class="modal-backdrop hidden" id="modal-user">
+  <div class="modal" style="width:min(680px,96vw)">
+    <div class="row spread"><h2 id="mu-title">User</h2><button class="btn btn-ghost btn-sm" type="button" data-close>Close</button></div>
+    <div id="mu-meta" class="tiny muted" style="margin-bottom:14px"></div>
+    <div class="grid-2">
+      <div class="field"><label for="mu-name">Name</label><input id="mu-name"></div>
+      <div class="field"><label for="mu-plan">Plan</label>
+        <select id="mu-plan"><option value="free">free</option><option value="lifetime">lifetime</option></select></div>
+      <div class="field"><label for="mu-role">Role</label>
+        <select id="mu-role"><option value="user">user</option><option value="admin">admin</option></select></div>
+      <div class="field"><label for="mu-unlimited">Unlimited override</label>
+        <select id="mu-unlimited"><option value="0">off</option><option value="1">on — bypass every limit</option></select></div>
+      <div class="field"><label for="mu-suspended">Suspended</label>
+        <select id="mu-suspended"><option value="0">no</option><option value="1">yes — block sign-in</option></select></div>
+      <div class="field"><label for="mu-password">New password (optional)</label>
+        <input id="mu-password" type="text" placeholder="min 8 characters"></div>
+    </div>
+    <div class="field"><label for="mu-notes">Internal note</label><textarea id="mu-notes" rows="2"></textarea></div>
+    <div class="form-error" id="mu-error"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" id="mu-impersonate" type="button">Sign in as user</button>
+      <button class="btn btn-danger btn-sm" id="mu-delete" type="button">Delete user</button>
+      <button class="btn" id="mu-save" type="button">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create user ----------------------------------------------------------- -->
+<div class="modal-backdrop hidden" id="modal-new-user">
+  <div class="modal" style="width:min(520px,96vw)">
+    <div class="row spread"><h2>Create user</h2><button class="btn btn-ghost btn-sm" type="button" data-close>Close</button></div>
+    <div class="field"><label for="nu-email">Email</label><input id="nu-email" type="email"></div>
+    <div class="field"><label for="nu-name">Name</label><input id="nu-name"></div>
+    <div class="field"><label for="nu-password">Password</label><input id="nu-password" type="text" placeholder="min 8 characters"></div>
+    <div class="grid-2">
+      <div class="field"><label for="nu-plan">Plan</label>
+        <select id="nu-plan"><option value="free">free</option><option value="lifetime">lifetime</option></select></div>
+      <div class="field"><label for="nu-role">Role</label>
+        <select id="nu-role"><option value="user">user</option><option value="admin">admin</option></select></div>
+    </div>
+    <div class="form-error" id="nu-error"></div>
+    <div class="modal-foot"><button class="btn" id="nu-create" type="button">Create</button></div>
+  </div>
+</div>
+
+<!-- Manual sale ----------------------------------------------------------- -->
+<div class="modal-backdrop hidden" id="modal-sale">
+  <div class="modal" style="width:min(520px,96vw)">
+    <div class="row spread"><h2>Record manual sale</h2><button class="btn btn-ghost btn-sm" type="button" data-close>Close</button></div>
+    <p class="muted tiny">Grants lifetime immediately and counts towards the seat ladder.</p>
+    <div class="field"><label for="ms-user">User</label><select id="ms-user"></select></div>
+    <div class="grid-2">
+      <div class="field"><label for="ms-amount">Amount</label><input id="ms-amount" type="number" min="0" step="1" value="69"></div>
+      <div class="field"><label for="ms-currency">Currency</label>
+        <select id="ms-currency"><option value="USD">USD</option><option value="INR">INR</option></select></div>
+    </div>
+    <div class="field"><label for="ms-note">Note</label><input id="ms-note" placeholder="WhatsApp / UPI reference"></div>
+    <div class="form-error" id="ms-error"></div>
+    <div class="modal-foot"><button class="btn" id="ms-create" type="button">Grant lifetime</button></div>
+  </div>
+</div>
+
+<script src="/admin.js"></script>
+</body>
+</html>

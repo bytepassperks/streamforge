@@ -7,7 +7,23 @@
 
   var SPEED_FALLBACK = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+  /* How long a linked source keeps its own title and suggestion strips on screen
+     after a start or a seek, measured on the real frames. */
+  var TITLE_FADE = 4400;
+  var SEEK_FADE = 1800;
+
   /* ------------------------------------------------------------- helpers -- */
+
+  /** Origin this player was served from, so embeds on other domains still resolve assets. */
+  function assetBase() {
+    var src = '';
+    var scripts = document.getElementsByTagName('script');
+    for (var i = 0; i < scripts.length; i++) {
+      if (/player\/player\.js/.test(scripts[i].src)) src = scripts[i].src;
+    }
+    if (!src) return '';
+    return src.replace(/\/player\/player\.js.*$/, '');
+  }
 
   function el(tag, cls, html) {
     var node = document.createElement(tag);
@@ -95,10 +111,32 @@
 
   YouTubeAdapter.prototype.load = function () {
     var self = this;
-    var host = el('div', 'sf-media');
+    var host = el('div', 'sf-media sf-media-yt');
+    var crop = el('div', 'sf-yt-crop');
     var mount = el('div');
-    host.appendChild(mount);
+    crop.appendChild(mount);
+    host.appendChild(crop);
+    /* The shield keeps every pointer event off the frame, so the source's own
+       title bar, watermark and suggestion overlays never get a chance to appear. */
+    host.appendChild(el('div', 'sf-yt-shield'));
+    /* Until playback is genuinely running, the frame is masked by our own still, so
+       the source's unstarted screen — its title, avatar and watch-elsewhere link —
+       is never on screen. */
+    var cover = el('div', 'sf-yt-cover');
+    var still = this._options.poster || '';
+    /* A 4:3 default still would letterbox inside our 16:9 stage, so the widescreen
+       variant is tried first and only falls back if the source never made one. */
+    var wide = 'https://i.ytimg.com/vi/' + this._source + '/maxresdefault.jpg';
+    cover.style.backgroundImage = 'url("' + (still || wide) + '")';
+    var probe = document.createElement('img');
+    probe.onload = function () {
+      if (probe.naturalWidth > 600) cover.style.backgroundImage = 'url("' + wide + '")';
+    };
+    probe.src = wide;
+    host.appendChild(cover);
+    host.classList.add('sf-yt-blank');
     this._container.appendChild(host);
+    this._host = host;
 
     return loadScript('https://www.youtube.com/iframe_api')
       .then(function () {
@@ -114,6 +152,8 @@
         return new Promise(function (resolve) {
           self._yt = new window.YT.Player(mount, {
             videoId: self._source,
+            width: '100%',
+            height: '100%',
             playerVars: {
               controls: 0,
               disablekb: 1,
@@ -121,6 +161,9 @@
               rel: 0,
               playsinline: 1,
               iv_load_policy: 3,
+              cc_load_policy: 0,
+              annotations: 3,
+              showinfo: 0,
               fs: 0,
               enablejsapi: 1,
               origin: location.origin,
@@ -128,15 +171,37 @@
             events: {
               onReady: function () {
                 self._ready = true;
+                self._watch();
+                self._dropCaptions();
                 self._duration = self._yt.getDuration() || 0;
                 self.emit('ready');
                 resolve();
               },
               onStateChange: function (e) {
                 var YTS = window.YT.PlayerState;
-                if (e.data === YTS.PLAYING) self.emit('play');
-                if (e.data === YTS.PAUSED) self.emit('pause');
-                if (e.data === YTS.ENDED) self.emit('ended');
+                if (e.data === YTS.PLAYING) {
+                  self._dropCaptions();
+                  /* A fresh start paints the source's title, channel and "More videos"
+                     strips over the picture for a few seconds before they fade, so the
+                     still stays up until they are gone. */
+                  if (!self._running) self._mask(TITLE_FADE);
+                  self._running = true;
+                  self.emit('play');
+                }
+                if (e.data === YTS.PAUSED) {
+                  self._running = false;
+                  self._mask();
+                  self.emit('pause');
+                }
+                if (e.data === YTS.ENDED) {
+                  /* Rewind so a suggestion grid can never render behind the mask. */
+                  self._running = false;
+                  self._mask();
+                  self._yt.seekTo(0, true);
+                  self._yt.pauseVideo();
+                  self.emit('ended');
+                }
+                self._watch();
               },
             },
           });
@@ -144,11 +209,70 @@
       });
   };
 
+  YouTubeAdapter.prototype._mask = function (hold) {
+    this._maskedUntil = Date.now() + (hold || 700);
+    if (this._host) this._host.classList.add('sf-yt-blank');
+  };
+
+  /* State events alone cannot be trusted: a seek makes the frame report PLAYING while
+     it is still painting its paused chrome, and a pause issued during that seek is
+     followed by a late PLAYING event. So the mask is driven by a poll of the real
+     state, and the frame is only revealed once playback is actually running and its
+     clock has moved. */
+  YouTubeAdapter.prototype._watch = function () {
+    var self = this;
+    if (this._poll) return;
+    this._poll = setInterval(function () {
+      if (!self._yt || !self._host || !window.YT) return;
+      var state = self._yt.getPlayerState ? self._yt.getPlayerState() : -1;
+      var t = self._yt.getCurrentTime ? self._yt.getCurrentTime() || 0 : 0;
+      var moving = t > (self._lastT || 0) + 0.01;
+      self._lastT = t;
+      var live = state === window.YT.PlayerState.PLAYING && moving && Date.now() > (self._maskedUntil || 0);
+      self._host.classList.toggle('sf-yt-blank', !live);
+    }, 150);
+  };
+
+  YouTubeAdapter.prototype.destroy = function () {
+    clearInterval(this._poll);
+    this._poll = null;
+    if (this._yt && this._yt.destroy) this._yt.destroy();
+  };
+
+  /** A viewer's own caption preference must not burn text over our player. */
+  YouTubeAdapter.prototype._dropCaptions = function () {
+    if (!this._yt) return;
+    var self = this;
+    if (this._options.sourceCaptions) {
+      try {
+        this._yt.loadModule('captions');
+      } catch (err) {
+        /* the frame decides whether a track exists */
+      }
+      return;
+    }
+    ['captions', 'cc'].forEach(function (mod) {
+      try {
+        self._yt.unloadModule(mod);
+      } catch (err) {
+        /* module names vary by frame build; failing is harmless */
+      }
+    });
+    try {
+      this._yt.setOption('captions', 'track', {});
+    } catch (err) {
+      /* no captions module loaded yet */
+    }
+  };
+
   YouTubeAdapter.prototype.play = function () {
     if (this._yt) this._yt.playVideo();
   };
   YouTubeAdapter.prototype.pause = function () {
-    if (this._yt) this._yt.pauseVideo();
+    if (!this._yt) return;
+    this._running = false;
+    this._mask();
+    this._yt.pauseVideo();
   };
   YouTubeAdapter.prototype.currentTime = function () {
     return this._yt && this._ready ? this._yt.getCurrentTime() || 0 : 0;
@@ -158,7 +282,12 @@
     return this._duration;
   };
   YouTubeAdapter.prototype.seek = function (t) {
-    if (this._yt) this._yt.seekTo(Math.max(0, t), true);
+    if (!this._yt) return;
+    /* A seek repaints the frame's own chrome, so it hides behind the mask until
+       playback has demonstrably resumed. */
+    this._mask(SEEK_FADE);
+    this._lastT = 0;
+    this._yt.seekTo(Math.max(0, t), true);
   };
   YouTubeAdapter.prototype.setVolume = function (v) {
     if (this._yt) this._yt.setVolume(Math.round(v * 100));
@@ -183,6 +312,15 @@
   };
   YouTubeAdapter.prototype.supportsPip = function () {
     return false;
+  };
+  YouTubeAdapter.prototype.hasCaptions = function () {
+    return true;
+  };
+  YouTubeAdapter.prototype.toggleCaptions = function () {
+    if (!this._yt) return false;
+    this._options.sourceCaptions = !this._options.sourceCaptions;
+    this._dropCaptions();
+    return this._options.sourceCaptions;
   };
   YouTubeAdapter.prototype.element = function () {
     return this._yt ? this._yt.getIframe() : null;
@@ -307,6 +445,18 @@
     tracks[0].mode = on ? 'hidden' : 'showing';
     return !on;
   };
+  /** Renditions offered by an adaptive stream; a plain file has none to choose from. */
+  HtmlAdapter.prototype.qualities = function () {
+    if (!this._hls || !this._hls.levels || this._hls.levels.length < 2) return [];
+    var list = [{ label: 'Auto', value: -1 }];
+    this._hls.levels.forEach(function (level, index) {
+      list.push({ label: (level.height ? level.height + 'p' : Math.round(level.bitrate / 1000) + 'k'), value: index });
+    });
+    return list;
+  };
+  HtmlAdapter.prototype.setQuality = function (value) {
+    if (this._hls) this._hls.currentLevel = value;
+  };
   HtmlAdapter.prototype.hasCaptions = function () {
     return !!(this._video.textTracks && this._video.textTracks.length);
   };
@@ -323,6 +473,7 @@
     this._time = 0;
     this._duration = 0;
     this._paused = true;
+    this._captionsOn = false;
   }
   VimeoAdapter.prototype = Object.create(Emitter.prototype);
 
@@ -405,6 +556,14 @@
   VimeoAdapter.prototype.supportsPip = function () {
     return false;
   };
+  VimeoAdapter.prototype.hasCaptions = function () {
+    return true;
+  };
+  VimeoAdapter.prototype.toggleCaptions = function () {
+    this._captionsOn = !this._captionsOn;
+    this._post(this._captionsOn ? 'enableTextTrack' : 'disableTextTrack', this._captionsOn ? 'en' : undefined);
+    return this._captionsOn;
+  };
   VimeoAdapter.prototype.element = function () {
     return this._frame;
   };
@@ -412,7 +571,11 @@
   function createAdapter(container, payload) {
     var v = payload.video;
     var cfg = payload.player;
-    if (v.source_type === 'youtube') return new YouTubeAdapter(container, v.source_ref, {});
+    if (v.source_type === 'youtube')
+      return new YouTubeAdapter(container, v.source_ref, {
+        poster: v.thumbnail_url,
+        sourceCaptions: !!cfg.sourceCaptions,
+      });
     if (v.source_type === 'vimeo') return new VimeoAdapter(container, v.source_ref);
     return new HtmlAdapter(container, v.source_ref, {
       hls: v.source_type === 'hls',
@@ -480,7 +643,15 @@
     }
     if (this.payload.badge) {
       // Free-tier attribution; lifetime accounts get badge: false from the api.
-      this.overlay.appendChild(el('span', 'sf-badge', 'Videokr'));
+      var badge = document.createElement('a');
+      badge.className = 'sf-badge';
+      badge.href = assetBase() + '/?ref=player';
+      badge.target = '_blank';
+      badge.rel = 'noopener';
+      badge.title = 'Powered by Videokr';
+      badge.innerHTML =
+        '<img src="' + assetBase() + '/brand/mark-64.png" alt="" /><span>Videokr</span>';
+      this.overlay.appendChild(badge);
     }
 
     if (cfg.bigPlayButton) {
@@ -586,6 +757,23 @@
         }
       };
       this.progress.addEventListener('click', seekFromEvent);
+      /* Scrubbing has to follow the pointer even once it leaves the 5px rail. */
+      this.progress.addEventListener('mousedown', function (event) {
+        event.preventDefault();
+        self._scrubbing = true;
+        seekFromEvent(event);
+        var move = function (ev) {
+          seekFromEvent(ev);
+        };
+        var up = function (ev) {
+          seekFromEvent(ev);
+          self._scrubbing = false;
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+        };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+      });
       this.progress.addEventListener('mousemove', function (event) {
         var rect = self.progress.getBoundingClientRect();
         var ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
@@ -672,10 +860,7 @@
       this.ccBtn.setAttribute('aria-label', 'Captions');
       this.ccBtn.setAttribute('data-sf', 'captions');
       this.ccBtn.addEventListener('click', function () {
-        if (self.adapter.toggleCaptions) {
-          var on = self.adapter.toggleCaptions();
-          self.ccBtn.classList.toggle('sf-active', !!on);
-        }
+        self.toggleCaptions();
       });
       rightGroup.appendChild(this.ccBtn);
     }
@@ -704,6 +889,9 @@
     row.appendChild(rightGroup);
     bar.appendChild(row);
 
+    /* Kept so the quality menu, built after the source reports its renditions, has
+       somewhere to attach. */
+    this.bar = bar;
     return bar;
   };
 
@@ -757,6 +945,42 @@
       this.ccBtn.style.display = 'none';
     }
     if (this.pipBtn && !this.adapter.supportsPip()) this.pipBtn.style.display = 'none';
+    this._buildQualityMenu();
+  };
+
+  /** Only an adaptive source exposes renditions, so the menu is built after load. */
+  Player.prototype._buildQualityMenu = function () {
+    if (!this.config.controls.quality || this.qualityBtn || !this.bar) return;
+    if (!this.adapter.qualities) return;
+    var self = this;
+    var levels = this.adapter.qualities();
+    if (levels.length < 2) return;
+    this.qualityBtn = this._menu(
+      'sf-quality',
+      'Quality',
+      '<span class="sf-quality-label">Auto</span>',
+      levels.map(function (level) {
+        return {
+          label: level.label,
+          onSelect: function () {
+            self.adapter.setQuality(level.value);
+            var label = self.qualityBtn.querySelector('.sf-quality-label');
+            if (label) label.textContent = level.label;
+          },
+        };
+      }),
+    );
+    var anchor = this.ccBtn || this.pipBtn || null;
+    if (anchor && anchor.parentNode === this.bar) this.bar.insertBefore(this.qualityBtn, anchor);
+    else this.bar.appendChild(this.qualityBtn);
+  };
+
+  /** Both the CC button and the keyboard shortcut land here so the state stays in sync. */
+  Player.prototype.toggleCaptions = function () {
+    if (!this.adapter.toggleCaptions) return false;
+    var on = this.adapter.toggleCaptions();
+    if (this.ccBtn) this.ccBtn.classList.toggle('sf-active', !!on);
+    return on;
   };
 
   Player.prototype._renderMarkers = function (duration) {
@@ -1055,7 +1279,7 @@
           self.toggleFullscreen();
           break;
         case 'c':
-          if (self.adapter.toggleCaptions) self.adapter.toggleCaptions();
+          self.toggleCaptions();
           break;
         case 'p':
           if (self.adapter.togglePip) self.adapter.togglePip();
@@ -1135,17 +1359,29 @@
 
   Player.prototype._bindSticky = function () {
     var self = this;
-    if (!('IntersectionObserver' in window)) return;
-    var observer = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          var offscreen = !entry.isIntersecting && !self.adapter.paused();
-          self.root.classList.toggle('sf-sticky', offscreen);
-        });
-      },
-      { threshold: 0.15 },
-    );
-    observer.observe(this.root);
+    /* The trigger has to be a sentinel that stays in the flow: measuring the
+       player itself puts it back on screen the moment it turns fixed, which
+       cancels the state it just entered. */
+    var anchor = el('div', 'sf-sticky-anchor');
+    if (!this.root.parentNode) return;
+    this.root.parentNode.insertBefore(anchor, this.root);
+    var height = 0;
+    var update = function () {
+      var stuck = self.root.classList.contains('sf-sticky');
+      if (!stuck) height = self.root.offsetHeight;
+      var top = anchor.getBoundingClientRect().top;
+      var gone = top + height < 40 || top > window.innerHeight - 40;
+      var next = gone && !self.adapter.paused();
+      if (next === stuck) return;
+      /* The reserved height keeps the page from jumping when the player leaves the flow. */
+      anchor.style.height = next ? height + 'px' : '';
+      self.root.classList.toggle('sf-sticky', next);
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    this.adapter.on('pause', update);
+    this.adapter.on('play', update);
   };
 
   /* ------------------------------------------------------------ tracking -- */
@@ -1194,6 +1430,7 @@
 
   Player.prototype.destroy = function () {
     clearInterval(this._tick);
+    if (this.adapter && this.adapter.destroy) this.adapter.destroy();
     this.root.innerHTML = '';
   };
 

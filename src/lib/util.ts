@@ -146,6 +146,7 @@ export function defaultPlayerConfig(): PlayerConfig {
     logoPosition: 'top-right',
     title: true,
     bigPlayButton: true,
+    sourceCaptions: false,
     sticky: false,
     borderRadius: 12,
   };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LIFETIME_TIERS, isLifetime, offerForSeats, verifyDodoSignature } from '../src/lib/billing';
+import { LIFETIME_TIERS, isAdmin, isLifetime, offerForSeats, verifyDodoSignature } from '../src/lib/billing';
 
 describe('offerForSeats', () => {
   it('walks the launch ladder as real seats sell', () => {
@@ -17,9 +17,22 @@ describe('offerForSeats', () => {
 });
 
 describe('isLifetime', () => {
-  it('only recognises the lifetime plan', () => {
+  it('recognises the lifetime plan', () => {
     expect(isLifetime({ plan: 'lifetime' })).toBe(true);
     expect(isLifetime({ plan: 'free' })).toBe(false);
+  });
+
+  it('treats a manual override and admins as unlimited', () => {
+    expect(isLifetime({ plan: 'free', unlimited: 1 })).toBe(true);
+    expect(isLifetime({ plan: 'free', role: 'admin' })).toBe(true);
+    expect(isLifetime({ plan: 'free', unlimited: 0, role: 'user' })).toBe(false);
+  });
+});
+
+describe('isAdmin', () => {
+  it('is the role check alone, not the plan', () => {
+    expect(isAdmin({ role: 'admin' })).toBe(true);
+    expect(isAdmin({ role: 'user' })).toBe(false);
   });
 });
 
