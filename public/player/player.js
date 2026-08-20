@@ -1729,8 +1729,29 @@
         show();
       });
     }
+    /* A faded bar takes no pointer events, so a click aimed at a control lands on the
+       picture. Over the bar's own footprint that click wakes the controls instead of
+       toggling playback, and elsewhere click-to-pause still works on the first click. */
+    var overHiddenControl = function (event) {
+      if (self.root.classList.contains('sf-active')) return false;
+      return [self.controls, self.rail].some(function (node) {
+        if (!node) return false;
+        var box = node.getBoundingClientRect();
+        return (
+          event.clientX >= box.left &&
+          event.clientX <= box.right &&
+          event.clientY >= box.top &&
+          event.clientY <= box.bottom
+        );
+      });
+    };
     this.overlay.addEventListener('click', function (event) {
-      if (event.target === self.overlay) self.togglePlay();
+      if (event.target !== self.overlay) return;
+      if (overHiddenControl(event)) {
+        show();
+        return;
+      }
+      self.togglePlay();
     });
     this.overlay.addEventListener('dblclick', function (event) {
       if (event.target === self.overlay) self.toggleFullscreen();

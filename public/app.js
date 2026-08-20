@@ -110,6 +110,7 @@
     leads: loadLeads,
     integrations: loadWebhooks,
     billing: loadBilling,
+    account: loadAccount,
   };
 
   function showView(name) {
@@ -851,6 +852,48 @@
     return rows;
   }
 
+  /* Posters and logos are pictures, not video: only image types are accepted and the
+     5 MB ceiling is checked here as well so an oversized file never leaves the browser. */
+  var IMAGE_LIMIT_BYTES = 5 * 1024 * 1024;
+
+  function bindImagePicker(pickerId, targetId) {
+    $(pickerId).addEventListener('change', function () {
+      var picker = $(pickerId);
+      var file = picker.files[0];
+      if (!file) return;
+      if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+        picker.value = '';
+        toast('Choose a PNG, JPG or WebP image', true);
+        return;
+      }
+      if (file.size > IMAGE_LIMIT_BYTES) {
+        picker.value = '';
+        toast('Images have to be 5 MB or smaller', true);
+        return;
+      }
+      var form = new FormData();
+      form.append('file', file);
+      picker.disabled = true;
+      api('/uploads', { method: 'POST', form: form })
+        .then(function (result) {
+          $(targetId).value = result.url;
+          if (targetId.indexOf('ed-thumb') === 0) renderThumbPreviews();
+          toast('Image uploaded — save to apply');
+        })
+        .catch(function (err) {
+          toast(err.message || 'Upload failed', true);
+        })
+        .then(function () {
+          picker.disabled = false;
+          picker.value = '';
+        });
+    });
+  }
+
+  bindImagePicker('ed-thumb-file', 'ed-thumb');
+  bindImagePicker('ed-thumb-b-file', 'ed-thumb-b');
+  bindImagePicker('pc-logo-file', 'pc-logo');
+
   /* Captions live in R2 like any other asset, so the editor uploads the file and fills
      in the url it gets back instead of asking for a url the customer has to host. */
   $('ed-captions-upload').addEventListener('click', function () {
@@ -1560,6 +1603,45 @@
     api('/auth/logout', { method: 'POST' }).then(function () {
       location.href = '/';
     });
+  });
+
+  /* ------------------------------------------------------------- account -- */
+
+  function loadAccount() {
+    if (!state.user) return;
+    $('ac-name').value = state.user.name || '';
+    $('ac-email').value = state.user.email || '';
+    $('ac-password').value = '';
+    $('ac-current').value = '';
+    $('ac-state').textContent = '';
+  }
+
+  $('ac-save').addEventListener('click', function () {
+    var button = $('ac-save');
+    var status = $('ac-state');
+    var patch = { name: $('ac-name').value.trim(), email: $('ac-email').value.trim() };
+    if ($('ac-password').value) patch.password = $('ac-password').value;
+    if ($('ac-current').value) patch.current_password = $('ac-current').value;
+    button.disabled = true;
+    status.textContent = 'Saving…';
+    api('/auth/profile', { method: 'PATCH', body: patch })
+      .then(function (result) {
+        state.user = result.user;
+        var label = result.user.name || result.user.email;
+        $('who').textContent = label;
+        $('user-initial').textContent = label.slice(0, 1).toUpperCase();
+        $('ac-password').value = '';
+        $('ac-current').value = '';
+        status.textContent = 'Saved.';
+        toast('Profile updated');
+      })
+      .catch(function (err) {
+        status.textContent = err.message || 'Could not save your profile.';
+        toast(err.message || 'Could not save your profile', true);
+      })
+      .then(function () {
+        button.disabled = false;
+      });
   });
 
   api('/auth/me')
