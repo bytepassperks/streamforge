@@ -1658,6 +1658,10 @@
         case '<':
           self._stepRate(-1);
           break;
+        case 'Escape':
+          if (self.settings && self.settings.host.classList.contains('sf-open')) self.settings.close();
+          else handled = false;
+          break;
         case 'Home':
           self.adapter.seek(0);
           break;
