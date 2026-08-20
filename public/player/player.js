@@ -166,6 +166,7 @@
             events: {
               onReady: function () {
                 self._ready = true;
+                self._watch();
                 self._dropCaptions();
                 self._duration = self._yt.getDuration() || 0;
                 self.emit('ready');
@@ -175,33 +176,55 @@
                 var YTS = window.YT.PlayerState;
                 if (e.data === YTS.PLAYING) {
                   self._dropCaptions();
-                  /* A short mask keeps the source's start-up chrome off screen. */
-                  clearTimeout(self._unmask);
-                  self._unmask = setTimeout(function () {
-                    self._host.classList.remove('sf-yt-blank');
-                  }, 900);
                   self.emit('play');
                 }
                 if (e.data === YTS.PAUSED) {
-                  /* The source paints its own title, logo and suggestion strip while
-                     paused, so the frame goes behind our still for as long as it lasts. */
-                  clearTimeout(self._unmask);
-                  self._host.classList.add('sf-yt-blank');
+                  self._mask();
                   self.emit('pause');
                 }
                 if (e.data === YTS.ENDED) {
-                  /* Blank and rewind the frame so a suggestion grid can never render. */
-                  clearTimeout(self._unmask);
-                  self._host.classList.add('sf-yt-blank');
+                  /* Rewind so a suggestion grid can never render behind the mask. */
+                  self._mask();
                   self._yt.seekTo(0, true);
                   self._yt.pauseVideo();
                   self.emit('ended');
                 }
+                self._watch();
               },
             },
           });
         });
       });
+  };
+
+  YouTubeAdapter.prototype._mask = function () {
+    this._maskedUntil = Date.now() + 400;
+    if (this._host) this._host.classList.add('sf-yt-blank');
+  };
+
+  /* State events alone cannot be trusted: a seek makes the frame report PLAYING while
+     it is still painting its paused chrome, and a pause issued during that seek is
+     followed by a late PLAYING event. So the mask is driven by a poll of the real
+     state, and the frame is only revealed once playback is actually running and its
+     clock has moved. */
+  YouTubeAdapter.prototype._watch = function () {
+    var self = this;
+    if (this._poll) return;
+    this._poll = setInterval(function () {
+      if (!self._yt || !self._host || !window.YT) return;
+      var state = self._yt.getPlayerState ? self._yt.getPlayerState() : -1;
+      var t = self._yt.getCurrentTime ? self._yt.getCurrentTime() || 0 : 0;
+      var moving = t > (self._lastT || 0) + 0.01;
+      self._lastT = t;
+      var live = state === window.YT.PlayerState.PLAYING && moving && Date.now() > (self._maskedUntil || 0);
+      self._host.classList.toggle('sf-yt-blank', !live);
+    }, 150);
+  };
+
+  YouTubeAdapter.prototype.destroy = function () {
+    clearInterval(this._poll);
+    this._poll = null;
+    if (this._yt && this._yt.destroy) this._yt.destroy();
   };
 
   /** A viewer's own caption preference must not burn text over our player. */
@@ -235,8 +258,7 @@
   };
   YouTubeAdapter.prototype.pause = function () {
     if (!this._yt) return;
-    clearTimeout(this._unmask);
-    if (this._host) this._host.classList.add('sf-yt-blank');
+    this._mask();
     this._yt.pauseVideo();
   };
   YouTubeAdapter.prototype.currentTime = function () {
@@ -247,7 +269,12 @@
     return this._duration;
   };
   YouTubeAdapter.prototype.seek = function (t) {
-    if (this._yt) this._yt.seekTo(Math.max(0, t), true);
+    if (!this._yt) return;
+    /* A seek repaints the frame's own chrome, so it hides behind the mask until
+       playback has demonstrably resumed. */
+    this._mask();
+    this._lastT = 0;
+    this._yt.seekTo(Math.max(0, t), true);
   };
   YouTubeAdapter.prototype.setVolume = function (v) {
     if (this._yt) this._yt.setVolume(Math.round(v * 100));
@@ -1378,6 +1405,7 @@
 
   Player.prototype.destroy = function () {
     clearInterval(this._tick);
+    if (this.adapter && this.adapter.destroy) this.adapter.destroy();
     this.root.innerHTML = '';
   };
 
