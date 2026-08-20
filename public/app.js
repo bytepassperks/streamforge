@@ -285,6 +285,7 @@
     pip: 'Picture-in-picture',
     fullscreen: 'Fullscreen',
     keyboard: 'Keyboard shortcuts',
+    share: 'Share button',
   };
 
   document.querySelectorAll('#ed-tabs button').forEach(function (button) {
@@ -347,6 +348,7 @@
     $('pc-bigplay').checked = config.bigPlayButton;
     $('pc-srccaptions').checked = config.sourceCaptions;
     $('pc-sticky').checked = config.sticky;
+    $('pc-related').checked = config.related;
 
     var controlsHost = $('pc-controls');
     controlsHost.textContent = '';
@@ -539,6 +541,7 @@
       bigPlayButton: $('pc-bigplay').checked,
       sourceCaptions: $('pc-srccaptions').checked,
       sticky: $('pc-sticky').checked,
+      related: $('pc-related').checked,
       borderRadius: Number($('pc-radius').value) || 0,
     };
   }
@@ -835,6 +838,58 @@
           .catch(fail);
       });
       card.appendChild(save);
+
+      /* Page-level privacy: the playlist page can be public, unlisted or gated,
+         independently of the videos on it. */
+      var privacy = text('div', 'grid-2');
+      privacy.style.marginTop = '12px';
+      var visLabel = text('label', null, 'Page privacy');
+      var vis = document.createElement('select');
+      [
+        ['public', 'Public — indexable'],
+        ['unlisted', 'Unlisted — link only'],
+        ['password', 'Password protected'],
+      ].forEach(function (option) {
+        var node = document.createElement('option');
+        node.value = option[0];
+        node.textContent = option[1];
+        vis.appendChild(node);
+      });
+      vis.value = playlist.visibility || 'public';
+      visLabel.appendChild(vis);
+      privacy.appendChild(visLabel);
+
+      var passLabel = text('label', null, 'Page password');
+      var pass = document.createElement('input');
+      pass.type = 'password';
+      pass.placeholder = playlist.has_password ? 'Set — type to replace' : 'Set a password';
+      passLabel.appendChild(pass);
+      privacy.appendChild(passLabel);
+      card.appendChild(privacy);
+
+      var savePrivacy = text('button', 'btn btn-sm btn-ghost', 'Save privacy');
+      savePrivacy.type = 'button';
+      savePrivacy.style.marginTop = '8px';
+      savePrivacy.addEventListener('click', function () {
+        api('/playlists/' + playlist.id, {
+          method: 'PATCH',
+          body: { visibility: vis.value, password: pass.value },
+        })
+          .then(function () {
+            toast('Playlist privacy saved');
+            loadPlaylists();
+          })
+          .catch(fail);
+      });
+      card.appendChild(savePrivacy);
+
+      var snippet = text('pre', 'snippet');
+      snippet.style.marginTop = '12px';
+      snippet.textContent =
+        '<script src="' + location.origin + '/embed.js" data-playlist="' + playlist.slug + '" async></' + 'script>';
+      card.appendChild(text('p', 'tiny muted', 'Embed this playlist on any site:'));
+      card.appendChild(snippet);
+
       host.appendChild(card);
     });
   }

@@ -39,6 +39,7 @@ export interface PlayerConfig {
     pip: boolean;
     fullscreen: boolean;
     keyboard: boolean;
+    share: boolean;
   };
   autoplay: boolean;
   muted: boolean;
@@ -54,6 +55,21 @@ export interface PlayerConfig {
   sourceCaptions: boolean;
   sticky: boolean;
   borderRadius: number;
+  related: boolean;
+}
+
+export interface Playlist {
+  id: string;
+  user_id: string;
+  slug: string;
+  title: string;
+  description: string;
+  layout: string;
+  autoplay_next: number;
+  visibility: 'public' | 'unlisted' | 'password';
+  password_hash: string;
+  password_salt: string;
+  created_at: number;
 }
 
 export interface Video {

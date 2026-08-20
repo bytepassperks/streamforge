@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { Chapter, Cta, Env, Video } from '../lib/types';
+import type { Chapter, Cta, Env, Playlist, Video } from '../lib/types';
 import {
   deviceFromUserAgent,
   escapeHtml,
@@ -141,6 +141,19 @@ interface EmbedPayload {
   ctas: Omit<Cta, 'video_id'>[];
   variant: 'a' | 'b';
   badge: boolean;
+  share: { url: string; embed: string };
+  related: { slug: string; title: string; thumbnail_url: string; duration: number }[];
+}
+
+function shareLinks(env: Env, slug: string, kind: 'video' | 'playlist' = 'video'): { url: string; embed: string } {
+  const base = env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  const page = kind === 'video' ? 'v' : 'pl';
+  const frame = kind === 'video' ? 'e' : 'ep';
+  const height = kind === 'video' ? 360 : 440;
+  return {
+    url: `${base}/${page}/${slug}`,
+    embed: `<iframe src="${base}/${frame}/${slug}" width="640" height="${height}" frameborder="0" allowfullscreen allow="autoplay; picture-in-picture"></iframe>`,
+  };
 }
 
 async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Promise<EmbedPayload> {
@@ -160,6 +173,18 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
   const owner = await env.DB.prepare('SELECT plan, role, unlimited FROM users WHERE id = ?')
     .bind(video.user_id)
     .first<{ plan: string; role: string; unlimited: number }>();
+  const player = mergePlayerConfig(video.player_config);
+  /* Suggestions are drawn only from the owner's own public library, so a viewer is
+     never handed somebody else's video at the end of playback. */
+  const related = player.related
+    ? await env.DB.prepare(
+        `SELECT slug, title, thumbnail_url, duration FROM videos
+          WHERE user_id = ? AND id != ? AND visibility = 'public'
+          ORDER BY created_at DESC LIMIT 6`,
+      )
+        .bind(video.user_id, video.id)
+        .all<{ slug: string; title: string; thumbnail_url: string; duration: number }>()
+    : null;
   return {
     video: {
       id: video.id,
@@ -172,11 +197,13 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
       thumbnail_url: thumbnail,
       captions_url: video.captions_url,
     },
-    player: mergePlayerConfig(video.player_config),
+    player,
     chapters: chapters.results ?? [],
     ctas: ctas.results ?? [],
     variant,
     badge: !(owner && isLifetime(owner)),
+    share: shareLinks(env, video.slug),
+    related: related?.results ?? [],
   };
 }
 
@@ -486,43 +513,118 @@ ${video.thumbnail_url ? `<meta name="twitter:image" content="${escapeHtml(video.
 }
 
 /** Public playlist page: a collection of videos on one page. */
-pub.get('/pl/:slug', async (c) => {
-  const playlist = await c.env.DB.prepare('SELECT * FROM playlists WHERE slug = ? OR id = ?')
-    .bind(c.req.param('slug'), c.req.param('slug'))
-    .first<{ id: string; title: string; description: string; layout: string; autoplay_next: number }>();
-  if (!playlist) return c.html('<p style="font:14px sans-serif">Playlist not found.</p>', 404);
-  const { results } = await c.env.DB.prepare(
+async function loadPlaylist(env: Env, key: string): Promise<Playlist | null> {
+  return env.DB.prepare('SELECT * FROM playlists WHERE slug = ? OR id = ? LIMIT 1')
+    .bind(key, key)
+    .first<Playlist>();
+}
+
+async function playlistData(env: Env, playlist: Playlist): Promise<string> {
+  const { results } = await env.DB.prepare(
     `SELECT v.* FROM playlist_items i JOIN videos v ON v.id = i.video_id
       WHERE i.playlist_id = ? ORDER BY i.position`,
   )
     .bind(playlist.id)
     .all<Video>();
-  const videos = results ?? [];
-  const payloads = await Promise.all(videos.map((v) => buildEmbedPayload(c.env, v, 'a')));
-  const data = JSON.stringify({
-    playlist: { title: playlist.title, layout: playlist.layout, autoplay_next: Boolean(playlist.autoplay_next) },
+  const payloads = await Promise.all((results ?? []).map((v) => buildEmbedPayload(env, v, 'a')));
+  return JSON.stringify({
+    playlist: {
+      title: playlist.title,
+      layout: playlist.layout,
+      autoplay_next: Boolean(playlist.autoplay_next),
+      share: shareLinks(env, playlist.slug, 'playlist'),
+    },
     items: payloads,
   });
-  return c.html(`<!doctype html>
+}
+
+function playlistLocked(playlist: Playlist, error: boolean): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>${escapeHtml(playlist.title)}</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="sf-page">
+<header class="sf-page-head"><a class="sf-brand" href="/">Videokr</a></header>
+<main class="sf-page-main">
+  <form class="sf-lock" method="post" action="/pl/${escapeHtml(playlist.slug)}/unlock">
+    <h1>${escapeHtml(playlist.title)}</h1>
+    <p>This page is password protected.</p>
+    ${error ? '<p class="sf-lock-error">Incorrect password.</p>' : ''}
+    <input type="password" name="password" placeholder="Password" aria-label="Password" autofocus>
+    <button type="submit">Unlock</button>
+  </form>
+</main>
+</body>
+</html>`;
+}
+
+function playlistShell(playlist: Playlist, data: string, chrome: boolean): string {
+  return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(playlist.title)}</title>
 <meta name="description" content="${escapeHtml(playlist.description).slice(0, 300)}">
+${playlist.visibility === 'public' ? '' : '<meta name="robots" content="noindex">'}
 <link rel="stylesheet" href="/player/player.css">
 <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="sf-page">
-<header class="sf-page-head"><a class="sf-brand" href="/">Videokr</a></header>
+<body class="sf-page${chrome ? '' : ' sf-page-bare'}">
+${chrome ? '<header class="sf-page-head"><a class="sf-brand" href="/">Videokr</a></header>' : ''}
 <main class="sf-playlist" data-layout="${escapeHtml(playlist.layout)}">
   <div class="sf-playlist-stage"><div id="sf-player" class="sf-fill"></div></div>
   <aside class="sf-playlist-list" id="sf-playlist-list"></aside>
 </main>
-<h1 class="sf-playlist-title">${escapeHtml(playlist.title)}</h1>
+${chrome ? `<h1 class="sf-playlist-title">${escapeHtml(playlist.title)}</h1>` : ''}
 <script>window.__SF_PLAYLIST__ = ${data};</script>
 <script src="/player/player.js"></script>
 <script src="/playlist.js"></script>
 </body>
-</html>`);
+</html>`;
+}
+
+/** Playlist pages and their iframe embeds share one gate: page-level privacy. */
+async function playlistUnlocked(playlist: Playlist, token: string): Promise<boolean> {
+  if (playlist.visibility !== 'password' || !playlist.password_hash) return true;
+  if (!token) return false;
+  return verifyAccessToken(playlist.password_hash, playlist.id, token);
+}
+
+pub.post('/pl/:slug/unlock', async (c) => {
+  const playlist = await loadPlaylist(c.env, c.req.param('slug'));
+  if (!playlist) return c.html('<p style="font:14px sans-serif">Playlist not found.</p>', 404);
+  if (playlist.visibility !== 'password' || !playlist.password_hash) {
+    return c.redirect(`/pl/${playlist.slug}`, 302);
+  }
+  const form = await c.req.formData();
+  const password = String(form.get('password') ?? '');
+  const ok = await verifyPassword(password, playlist.password_salt, playlist.password_hash);
+  if (!ok) return c.html(playlistLocked(playlist, true), 401);
+  const token = await signAccessToken(playlist.password_hash, playlist.id);
+  return c.redirect(`/pl/${playlist.slug}?token=${encodeURIComponent(token)}`, 302);
+});
+
+pub.get('/pl/:slug', async (c) => {
+  const playlist = await loadPlaylist(c.env, c.req.param('slug'));
+  if (!playlist) return c.html('<p style="font:14px sans-serif">Playlist not found.</p>', 404);
+  if (!(await playlistUnlocked(playlist, c.req.query('token') ?? ''))) {
+    return c.html(playlistLocked(playlist, false), 401);
+  }
+  return c.html(playlistShell(playlist, await playlistData(c.env, playlist), true));
+});
+
+/** iframe target for playlist embeds. */
+pub.get('/ep/:slug', async (c) => {
+  const playlist = await loadPlaylist(c.env, c.req.param('slug'));
+  if (!playlist) return c.html('<p style="font:14px sans-serif">Playlist not found.</p>', 404);
+  if (!(await playlistUnlocked(playlist, c.req.query('token') ?? ''))) {
+    return c.html(playlistLocked(playlist, false), 401);
+  }
+  return c.html(playlistShell(playlist, await playlistData(c.env, playlist), false));
 });

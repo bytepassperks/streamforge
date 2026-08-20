@@ -388,6 +388,23 @@ table.data tr:hover td { background: rgba(255, 255, 255, .03); }
 .sf-playlist-title { width: min(1160px, 92vw); margin: 0 auto 50px; font-family: var(--serif); font-weight: 400; font-size: 30px; }
 @media (max-width: 860px) { .sf-playlist { grid-template-columns: 1fr; } }
 
+/* Embedded playlist: no site chrome, the host page supplies the frame. */
+.sf-page-bare .sf-playlist { width: 100%; margin: 0; gap: 10px; padding: 10px; box-sizing: border-box; }
+
+/* Password gate on a playlist page. */
+.sf-lock { width: min(420px, 92vw); margin: 60px auto; display: grid; gap: 10px; text-align: center; }
+.sf-lock h1 { font-family: var(--serif); font-weight: 400; font-size: 28px; margin: 0; }
+.sf-lock p { color: var(--muted); margin: 0; font-size: 14px; }
+.sf-lock-error { color: var(--ember); }
+.sf-lock input {
+  padding: 11px 13px; border-radius: 10px; border: 1px solid var(--line);
+  background: rgba(255,255,255,.05); color: var(--cream); font-size: 14px;
+}
+.sf-lock button {
+  padding: 11px 14px; border-radius: 10px; border: 0; background: var(--ember);
+  color: #120b06; font-weight: 700; font-size: 14px; cursor: pointer;
+}
+
 /* ------------------------------------------------------- drawn-by-hand ----- */
 /* Ink blobs, tape, squiggles and reveals: the page should feel drafted, not
    generated, so every shape is an irregular path rather than a perfect circle. */
