@@ -95,9 +95,29 @@
     if (loaders[name]) loaders[name]();
   }
 
-  document.querySelectorAll('#side-nav button').forEach(function (button) {
+  document.querySelectorAll('[data-view]').forEach(function (node) {
+    node.addEventListener('click', function (event) {
+      if (node.tagName === 'A') event.preventDefault();
+      showView(node.dataset.view);
+    });
+  });
+
+  /* Sidebar collapse: icons only, the way the reference dashboard does it. */
+  $('side-collapse').addEventListener('click', function () {
+    $('app-shell').classList.toggle('side-collapsed');
+  });
+  $('side-more').addEventListener('click', function () {
+    showView('billing');
+  });
+
+  /* Videos view has two panes: the composer and the analytics summary. */
+  document.querySelectorAll('#videos-seg button').forEach(function (button) {
     button.addEventListener('click', function () {
-      showView(button.dataset.view);
+      document.querySelectorAll('#videos-seg button').forEach(function (other) {
+        other.classList.toggle('active', other === button);
+      });
+      $('pane-control').classList.toggle('hidden', button.dataset.pane !== 'control');
+      $('pane-analytics').classList.toggle('hidden', button.dataset.pane !== 'analytics');
     });
   });
 
@@ -141,7 +161,7 @@
     host.textContent = '';
     if (!state.videos.length) {
       host.appendChild(
-        text('div', 'empty', 'No videos yet. Click “New video” to add your first source.'),
+        text('div', 'empty', 'No videos yet — paste a link or choose a file above to add your first one.'),
       );
       return;
     }
@@ -206,7 +226,7 @@
   }
 
   function fillProjectSelects() {
-    ['nv-project', 'ed-project'].forEach(function (id) {
+    ['cv-project', 'ed-project'].forEach(function (id) {
       var select = $(id);
       if (!select) return;
       var current = select.value;
@@ -219,20 +239,62 @@
     });
   }
 
-  $('new-video').addEventListener('click', function () {
-    $('nv-title').value = '';
-    $('nv-source').value = '';
-    $('nv-upload').value = '';
-    $('nv-error').textContent = '';
-    openModal('modal-new-video');
+  /* ------------------------------------------------------------- composer -- */
+
+  function showComposerTab(name) {
+    document.querySelectorAll('#cv-tabs button').forEach(function (button) {
+      button.classList.toggle('active', button.dataset.tab === name);
+    });
+    document.querySelectorAll('.composer-panel').forEach(function (panel) {
+      panel.classList.toggle('active', panel.dataset.panel === name);
+    });
+  }
+
+  document.querySelectorAll('#cv-tabs button').forEach(function (button) {
+    button.addEventListener('click', function () {
+      showComposerTab(button.dataset.tab);
+    });
   });
 
-  $('nv-save').addEventListener('click', function () {
-    var button = $('nv-save');
-    var error = $('nv-error');
+  /* "Create video" stays disabled until there is something to create from. */
+  function syncComposer() {
+    var file = $('cv-upload').files[0];
+    var source = $('cv-source').value.trim();
+    $('cv-save').disabled = !file && !source;
+    var box = $('cv-file-state');
+    box.textContent = file ? '✓' : '';
+    box.title = file ? file.name : '';
+  }
+
+  $('cv-source').addEventListener('input', syncComposer);
+  $('cv-upload').addEventListener('change', syncComposer);
+  $('cv-focus-source').addEventListener('click', function () {
+    showComposerTab('source');
+    $('cv-source').focus();
+  });
+  $('cv-clear').addEventListener('click', function () {
+    $('cv-title').value = '';
+    $('cv-source').value = '';
+    $('cv-upload').value = '';
+    $('cv-error').textContent = '';
+    syncComposer();
+  });
+  $('cv-preview').addEventListener('click', function () {
+    var source = $('cv-source').value.trim();
+    if (!source) {
+      showComposerTab('source');
+      $('cv-error').textContent = 'Paste a link first to preview it.';
+      return;
+    }
+    window.open(source, '_blank', 'noopener');
+  });
+
+  $('cv-save').addEventListener('click', function () {
+    var button = $('cv-save');
+    var error = $('cv-error');
     error.textContent = '';
-    var file = $('nv-upload').files[0];
-    var source = $('nv-source').value.trim();
+    var file = $('cv-upload').files[0];
+    var source = $('cv-source').value.trim();
     if (!source && !file) {
       error.textContent = 'Paste a video link or choose a file to upload.';
       return;
@@ -252,15 +314,17 @@
         return api('/videos', {
           method: 'POST',
           body: {
-            title: $('nv-title').value.trim(),
+            title: $('cv-title').value.trim(),
             source: resolvedSource,
-            project_id: $('nv-project').value || null,
+            project_id: $('cv-project').value || null,
           },
         });
       })
       .then(function (result) {
-        button.disabled = false;
-        closeModal('modal-new-video');
+        $('cv-title').value = '';
+        $('cv-source').value = '';
+        $('cv-upload').value = '';
+        syncComposer();
         toast('Video created');
         loadVideos();
         openEditor(result.video.id);
@@ -1086,9 +1150,13 @@
 
   function planChip(billing) {
     var chip = $('plan-chip');
-    if (!chip) return;
-    chip.textContent = billing.lifetime ? 'Lifetime · all features' : (billing.plan_name || 'Free') + ' plan';
-    chip.className = 'tiny ' + (billing.lifetime || billing.paid ? 'chip chip-hot' : 'chip');
+    var name = billing.lifetime ? 'Lifetime' : billing.plan_name || 'Free';
+    if (chip) chip.textContent = 'Currently on Videokr ' + name.toLowerCase();
+    var badge = $('plan-badge');
+    if (badge) {
+      badge.textContent = name;
+      badge.classList.toggle('is-paid', Boolean(billing.lifetime || billing.paid));
+    }
   }
 
   function thousands(value) {
@@ -1292,7 +1360,9 @@
         return;
       }
       state.user = result.user;
-      $('who').textContent = result.user.name || result.user.email;
+      var label = result.user.name || result.user.email;
+      $('who').textContent = label;
+      $('user-initial').textContent = label.slice(0, 1).toUpperCase();
       planChip({ lifetime: result.user.plan === 'lifetime' || Number(result.user.unlimited) === 1 });
       if (result.user.role === 'admin') $('admin-link').classList.remove('hidden');
       var params = new URLSearchParams(location.search);

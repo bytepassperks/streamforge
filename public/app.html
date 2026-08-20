@@ -8,42 +8,174 @@
 <link rel="apple-touch-icon" href="/brand/mark-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=Caveat:wght@600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600;700;800&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 <link rel="stylesheet" href="/player/player.css">
 </head>
 <body>
-<div class="app">
+<div class="app" id="app-shell">
   <aside class="side">
-    <a class="brand" href="/"><img src="/brand/logo-lockup.png" alt="Videokr"></a>
-    <nav class="side-nav" id="side-nav">
-      <button data-view="videos" class="active">Videos</button>
-      <button data-view="playlists">Playlists</button>
-      <button data-view="projects">Projects</button>
-      <button data-view="leads">Leads</button>
-      <button data-view="integrations">Integrations</button>
-      <button data-view="billing">Lifetime</button>
-      <a class="hidden" id="admin-link" href="/admin.html">Admin</a>
-    </nav>
-    <div class="side-foot">
-      <div id="plan-chip" class="tiny" style="margin-bottom:8px"></div>
-      <div id="who" class="tiny">…</div>
-      <button class="btn btn-ghost btn-sm" id="logout" type="button" style="margin-top:10px">Sign out</button>
+    <div class="side-head">
+      <a class="brand" href="/"><img src="/brand/logo-ink.png" alt="Videokr"></a>
     </div>
+    <button class="side-collapse" id="side-collapse" type="button" aria-label="Collapse the sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+
+    <nav class="side-nav" id="side-nav">
+      <button class="nav-item active" data-view="videos" type="button">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="M15 11l6-3.5v9L15 13z"/></svg></span>
+        <span>Videos</span>
+      </button>
+      <button class="nav-item" data-view="projects" type="button">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/></svg></span>
+        <span>Projects</span>
+        <span class="tag">Files</span>
+      </button>
+      <div class="side-label">Playlist</div>
+      <button class="nav-item" data-view="playlists" type="button">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h11M4 11h11M4 16h7"/><path d="M18 13l4 3-4 3z"/></svg></span>
+        <span>Playlists</span>
+      </button>
+      <button class="nav-item" data-view="leads" type="button">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M8 13h6M8 17h4"/></svg></span>
+        <span>Leads</span>
+      </button>
+      <button class="nav-item" data-view="integrations" type="button">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7a3 3 0 116 0v4"/><path d="M15 11H8a3 3 0 000 6h2"/><path d="M12 21l3-3-3-3"/></svg></span>
+        <span>Integrations</span>
+      </button>
+      <a class="nav-item hidden" id="admin-link" href="/admin.html">
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.4 8-8 9-4.6-1-8-4-8-9V7z"/><path d="M9.5 12l1.8 1.8 3.4-3.6"/></svg></span>
+        <span>Admin</span>
+      </a>
+    </nav>
+
+    <div class="side-spacer"></div>
+
+    <button class="side-more" id="side-more" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9h16M4 15h10"/></svg>
+      <span>More</span>
+    </button>
+
+    <a class="dev-card" href="#" data-view="integrations">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5-9 5z"/><path d="M3 8v8l9 5 9-5V8"/></svg></span>
+      <div>
+        <b>Videokr For Developers</b>
+        <span>Webhook &amp; Integrations solutions</span>
+      </div>
+    </a>
+
+    <a class="side-plan" href="#" data-view="billing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h6"/></svg>
+      <div>
+        <b>View Plans</b>
+        <span id="plan-chip">Currently on Videokr free</span>
+      </div>
+      <span class="caret">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </span>
+    </a>
   </aside>
 
   <main class="main">
+    <div class="hills" data-hills></div>
+
+    <header class="topbar">
+      <a class="top-help" href="/#how">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9V18h7v-4.1A6 6 0 0012 3z"/></svg>
+        How to use
+      </a>
+      <a class="btn btn-gift" href="/#pricing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18M12 9v12"/><path d="M12 9S9.5 3.5 7 5.5 12 9 12 9zm0 0s2.5-5.5 5-3.5S12 9 12 9z"/></svg>
+        Get $10
+      </a>
+      <a class="user-chip" href="#" id="user-chip">
+        <span class="avatar" id="user-initial">V</span>
+        <b id="who">…</b>
+        <span class="plan-badge" id="plan-badge">Free</span>
+      </a>
+    </header>
+
+    <div class="main-body">
     <!-- Videos ------------------------------------------------------------- -->
     <section class="view active" id="view-videos">
-      <div class="page-head">
-        <div>
-          <h1>Videos</h1>
-          <p class="muted tiny">Add a YouTube or Vimeo link, an MP4/HLS url, or upload a file you own.</p>
+      <div class="seg-wrap">
+        <div class="seg" id="videos-seg">
+          <button class="active" data-pane="control" type="button">Player Control</button>
+          <button data-pane="analytics" type="button">
+            Analytic Dashboard
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M6 15l4-4 3 3 5-6"/></svg>
+          </button>
         </div>
-        <button class="btn" id="new-video" type="button">New video</button>
       </div>
-      <div class="stat-grid" id="stats"></div>
-      <div id="videos-body"></div>
+
+      <div id="pane-control">
+        <p class="hand-head">
+          Add New <b>Video</b> With
+          <img src="/brand/mark-180.png" alt=""><span class="serif">VideoKr</span>
+        </p>
+
+        <div class="composer">
+          <div class="composer-top">
+            <div class="seg-tabs" id="cv-tabs">
+              <button class="active" data-tab="title" type="button">Title</button>
+              <button data-tab="project" type="button">Project</button>
+              <button data-tab="source" type="button">Source URL</button>
+            </div>
+            <button class="btn btn-mint btn-sm" id="cv-preview" type="button" style="border-radius:10px;padding:9px 16px;font-size:15px">Quick Preview</button>
+          </div>
+
+          <div class="composer-panel active" data-panel="title">
+            <div class="composer-field">
+              <textarea id="cv-title" rows="8" placeholder="Add your video title."></textarea>
+              <div class="field-actions">
+                <button class="field-dot" id="cv-focus-source" type="button" aria-label="Add a source url">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+                </button>
+                <button class="field-btn" id="cv-clear" type="button" aria-label="Clear this form">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="composer-panel" data-panel="project">
+            <div class="composer-field">
+              <label class="tiny muted" for="cv-project">Put this video in a project</label>
+              <select id="cv-project"><option value="">No project</option></select>
+            </div>
+          </div>
+
+          <div class="composer-panel" data-panel="source">
+            <div class="composer-field">
+              <label class="tiny muted" for="cv-source">Paste a YouTube or Vimeo link, an MP4/WebM url, or an HLS .m3u8</label>
+              <input id="cv-source" placeholder="https://…">
+            </div>
+          </div>
+
+          <div class="file-row">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M3 9h18"/></svg></span>
+            <label for="cv-upload"><b>Choose your file</b></label>
+            <span class="cap">(max 200 MB)</span>
+            <span class="box" id="cv-file-state" aria-hidden="true"></span>
+            <input id="cv-upload" type="file" accept="video/mp4,video/webm">
+          </div>
+
+          <div class="form-error" id="cv-error"></div>
+
+          <div class="composer-foot">
+            <button class="btn" id="cv-save" type="button" disabled>Create video</button>
+          </div>
+        </div>
+
+        <div id="videos-body" style="margin-top:34px"></div>
+      </div>
+
+      <div id="pane-analytics" class="hidden">
+        <p class="hand-head">Your <b>numbers</b> so far</p>
+        <div class="stat-grid" id="stats"></div>
+      </div>
     </section>
 
     <!-- Playlists ---------------------------------------------------------- -->
@@ -96,31 +228,13 @@
     <!-- Billing ------------------------------------------------------------ -->
     <section class="view" id="view-billing">
       <div class="page-head">
-        <div><h1>Lifetime</h1><p class="muted tiny">One payment, every feature, no renewal. The free tier stays free either way.</p></div>
+        <div><h1>Plans</h1><p class="muted tiny">Pay for plays, not for storage. The free tier stays free either way.</p></div>
+        <button class="btn btn-ghost btn-sm" id="logout" type="button">Sign out</button>
       </div>
       <div id="billing-body"></div>
     </section>
-  </main>
-</div>
-
-<!-- New video modal ------------------------------------------------------- -->
-<div class="modal-backdrop hidden" id="modal-new-video">
-  <div class="modal" style="width:min(560px,96vw)">
-    <h2>New video</h2>
-    <div class="field"><label for="nv-title">Title</label>
-      <input id="nv-title" placeholder="Product walkthrough"></div>
-    <div class="field"><label for="nv-source">Source</label>
-      <input id="nv-source" placeholder="YouTube / Vimeo link, or https://…/video.mp4 or .m3u8"></div>
-    <div class="field"><label for="nv-upload">…or upload your own file (max 200 MB)</label>
-      <input id="nv-upload" type="file" accept="video/mp4,video/webm"></div>
-    <div class="field"><label for="nv-project">Project</label>
-      <select id="nv-project"><option value="">No project</option></select></div>
-    <div class="form-error" id="nv-error"></div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" data-close type="button">Cancel</button>
-      <button class="btn" id="nv-save" type="button">Create video</button>
     </div>
-  </div>
+  </main>
 </div>
 
 <!-- Video editor modal ---------------------------------------------------- -->
@@ -273,6 +387,7 @@
   </div>
 </div>
 
+<script src="/hills.js"></script>
 <script src="/player/player.js"></script>
 <script src="/app.js"></script>
 </body>

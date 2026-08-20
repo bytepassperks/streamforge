@@ -9,28 +9,32 @@
 <link rel="apple-touch-icon" href="/brand/mark-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=Caveat:wght@600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600;700;800&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <div class="app">
   <aside class="side">
-    <a class="brand" href="/app.html"><img src="/brand/logo-lockup.png" alt="Videokr"></a>
-    <div class="pill" style="margin-top:14px">admin</div>
-    <nav class="side-nav" id="side-nav">
-      <button data-view="overview" class="active">Overview</button>
-      <button data-view="users">Users</button>
-      <button data-view="videos">Videos</button>
-      <button data-view="purchases">Purchases</button>
-      <button data-view="audit">Audit log</button>
-    </nav>
-    <div class="side-foot">
-      <div id="who" class="tiny">…</div>
-      <a class="btn btn-ghost btn-sm" href="/app.html" style="margin-top:10px;display:inline-block">Back to dashboard</a>
+    <div class="side-head">
+      <a class="brand" href="/app.html"><img src="/brand/logo-ink.png" alt="Videokr"></a>
+      <span class="pill">admin</span>
     </div>
+    <nav class="side-nav" id="side-nav">
+      <button class="nav-item active" data-view="overview" type="button"><span>Overview</span></button>
+      <button class="nav-item" data-view="users" type="button"><span>Users</span></button>
+      <button class="nav-item" data-view="videos" type="button"><span>Videos</span></button>
+      <button class="nav-item" data-view="purchases" type="button"><span>Purchases</span></button>
+      <button class="nav-item" data-view="audit" type="button"><span>Audit log</span></button>
+    </nav>
+    <div class="side-spacer"></div>
+    <div class="side-plan">
+      <div><b>Signed in</b><span id="who">…</span></div>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="/app.html" style="margin-top:12px">Back to dashboard</a>
   </aside>
 
   <main class="main">
+    <div class="hills" data-hills></div>
     <!-- Overview ----------------------------------------------------------- -->
     <section class="view active" id="view-overview">
       <div class="page-head">
@@ -142,6 +146,7 @@
   </div>
 </div>
 
+<script src="/hills.js"></script>
 <script src="/admin.js"></script>
 </body>
 </html>
