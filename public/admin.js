@@ -552,8 +552,8 @@
   }
 
   $('side-nav').addEventListener('click', function (event) {
-    var view = event.target.getAttribute && event.target.getAttribute('data-view');
-    if (view) show(view);
+    var button = event.target.closest ? event.target.closest('button[data-view]') : null;
+    if (button) show(button.getAttribute('data-view'));
   });
 
   $('refresh-overview').addEventListener('click', function () {
