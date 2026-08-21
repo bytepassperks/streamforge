@@ -52,12 +52,25 @@
     );
   }
 
-  /* A pane that failed has to say so and offer a way back, rather than sitting on
-     "Loading…" behind a toast that has already gone. */
+  /* Every blank pane says what would be here and how to fill it, rather than
+     one grey line of prose. */
+  function emptyState(title, hint, kind) {
+    var box = text('div', 'empty' + (kind ? ' is-' + kind : ''));
+    box.appendChild(text('b', null, title));
+    if (hint) box.appendChild(text('span', null, hint));
+    return box;
+  }
+
+  function setLoading(host, label) {
+    host.textContent = '';
+    host.appendChild(text('div', 'loading', label || 'Loading'));
+  }
+
   function panelError(host, error, retry) {
     host.textContent = '';
-    var box = text('div', 'empty');
-    box.appendChild(text('p', null, (error && error.message) || 'Could not load this.'));
+    var box = text('div', 'empty is-bad');
+    box.appendChild(text('b', null, 'That did not load'));
+    box.appendChild(text('span', null, (error && error.message) || 'Could not load this.'));
     if (retry) {
       var again = text('button', 'btn btn-ghost btn-sm', 'Try again');
       again.type = 'button';
@@ -282,7 +295,19 @@
     if (event.target.hasAttribute && event.target.hasAttribute('data-close')) {
       var backdrop = event.target.closest('.modal-backdrop');
       if (backdrop) backdrop.classList.add('hidden');
+      return;
     }
+    /* Clicking the dimmed area outside a dialog closes it, as dialogs elsewhere do. */
+    if (event.target.classList && event.target.classList.contains('modal-backdrop')) {
+      event.target.classList.add('hidden');
+    }
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    var open = document.querySelectorAll('.modal-backdrop:not(.hidden)');
+    if (!open.length) return;
+    open[open.length - 1].classList.add('hidden');
   });
 
   /* ---------------------------------------------------------------- views -- */
@@ -354,6 +379,48 @@
       card.appendChild(text('div', 'v', String(pair[1])));
       host.appendChild(card);
     });
+    renderStatsNote(plays, impressions);
+  }
+
+  /* Six zeroes on their own read as a broken page, so say why they are zero;
+     once there is traffic, show which videos it belongs to. */
+  function renderStatsNote(plays, impressions) {
+    var note = $('stats-note');
+    if (!note) return;
+    note.textContent = '';
+    if (!plays && !impressions) {
+      note.appendChild(
+        emptyState(
+          'No plays yet',
+          'Open or embed a video and its impressions, plays, completions and leads land here.',
+          'chart',
+        ),
+      );
+      return;
+    }
+    var top = state.videos
+      .slice()
+      .sort(function (a, b) {
+        return Number(b.plays || 0) - Number(a.plays || 0);
+      })
+      .slice(0, 5);
+    if (!top.length) return;
+    var card = text('div', 'card');
+    card.appendChild(text('h3', null, 'Most played'));
+    var table = text('table', 'data');
+    var head = document.createElement('tr');
+    ['Video', 'Plays'].forEach(function (label) {
+      head.appendChild(text('th', null, label));
+    });
+    table.appendChild(head);
+    top.forEach(function (video) {
+      var row = document.createElement('tr');
+      row.appendChild(text('td', null, video.title || 'Untitled'));
+      row.appendChild(text('td', 'num', thousands(video.plays || 0)));
+      table.appendChild(row);
+    });
+    card.appendChild(table);
+    note.appendChild(card);
   }
 
   function loadVideos() {
@@ -381,12 +448,21 @@
     });
   });
 
+  function renderLibCount() {
+    var chip = $('lib-count');
+    if (!chip) return;
+    var count = state.videos.length;
+    chip.textContent = count + (count === 1 ? ' video' : ' videos');
+    chip.classList.toggle('hidden', !count);
+  }
+
   function renderVideoTable() {
     var host = $('videos-body');
     host.textContent = '';
+    renderLibCount();
     if (!state.videos.length) {
       host.appendChild(
-        text('div', 'empty', 'No videos yet — paste a link or choose a file above to add your first one.'),
+        emptyState('No videos yet', 'Paste a link or choose a file above to add your first one.'),
       );
       return;
     }
@@ -428,8 +504,8 @@
       var pillClass = video.visibility === 'public' ? 'pill pill-ok' : 'pill pill-warn';
       visCell.appendChild(text('span', pillClass, video.visibility));
       row.appendChild(visCell);
-      row.appendChild(text('td', null, String(video.plays || 0)));
-      row.appendChild(text('td', null, String(video.leads || 0)));
+      row.appendChild(text('td', 'num', String(video.plays || 0)));
+      row.appendChild(text('td', 'num', String(video.leads || 0)));
       row.appendChild(text('td', 'tiny muted', fmtDate(video.created_at)));
 
       var actions = document.createElement('td');
@@ -756,7 +832,7 @@
         ? 'Takes the poster straight from the video'
         : 'Frames can only be grabbed from uploads and MP4 links';
     $('ed-form-export').href = '/api/leads.csv?video=' + video.id;
-    $('ed-form-leads').textContent = 'Loading…';
+    setLoading($('ed-form-leads'), 'Loading submissions');
     renderSnippets(video);
   }
 
@@ -785,7 +861,7 @@
   function loadFormSubmissions() {
     if (!state.video) return;
     var host = $('ed-form-leads');
-    host.textContent = 'Loading…';
+    setLoading(host, 'Loading submissions');
     api('/leads?video=' + state.video.id)
       .then(function (data) {
         var leads = data.leads || [];
@@ -1269,7 +1345,7 @@
   function loadVideoStats() {
     if (!state.video) return;
     var host = $('stats-body');
-    host.textContent = 'Loading…';
+    setLoading(host, 'Loading analytics');
     api('/analytics/videos/' + state.video.id)
       .then(function (data) {
         host.textContent = '';
@@ -1382,7 +1458,9 @@
     var host = $('playlists-body');
     host.textContent = '';
     if (!state.playlists.length) {
-      host.appendChild(text('div', 'empty', 'No playlists yet.'));
+      host.appendChild(
+        emptyState('No playlists yet', 'Group videos into one public page viewers can binge.', 'list'),
+      );
       return;
     }
     state.playlists.forEach(function (playlist) {
@@ -1514,7 +1592,9 @@
         var host = $('projects-body');
         host.textContent = '';
         if (!state.projects.length) {
-          host.appendChild(text('div', 'empty', 'No projects yet.'));
+          host.appendChild(
+            emptyState('No projects yet', 'Projects keep videos sorted by client, campaign or product.', 'folder'),
+          );
           return;
         }
         var table = text('table', 'data');
@@ -1562,7 +1642,13 @@
         var host = $('leads-body');
         host.textContent = '';
         if (!result.leads.length) {
-          host.appendChild(text('div', 'empty', 'No leads captured yet.'));
+          host.appendChild(
+            emptyState(
+              'No leads captured yet',
+              'Add a form or an email gate to a video and submissions land here.',
+              'mail',
+            ),
+          );
           return;
         }
         var table = text('table', 'data');
@@ -1602,7 +1688,13 @@
         var host = $('webhooks-body');
         host.textContent = '';
         if (!result.webhooks.length) {
-          host.appendChild(text('div', 'empty', 'No webhooks configured.'));
+          host.appendChild(
+            emptyState(
+              'No webhooks yet',
+              'Add an endpoint above to receive play, complete, cta_click and lead events.',
+              'hook',
+            ),
+          );
           return;
         }
         var table = text('table', 'data');
@@ -1689,16 +1781,17 @@
   /** Plays used this month, what is left, and any overage already accrued. */
   function usageCard(billing) {
     var plays = billing.plays;
-    var card = text('div', 'card');
+    var card = text('div', 'card usage-card');
     card.appendChild(text('h3', null, 'Plays this month'));
     var line = plays.allowance === null
       ? thousands(plays.plays) + ' plays · unlimited'
       : thousands(plays.plays) + ' of ' + thousands(plays.allowance) + ' plays';
-    card.appendChild(text('p', null, line));
+    card.appendChild(text('p', 'usage-line', line));
     if (plays.allowance !== null) {
+      var used = plays.plays / plays.allowance;
       var bar = text('div', 'meter');
-      var fill = text('div', 'meter-fill');
-      fill.style.width = Math.min(100, Math.round((plays.plays / plays.allowance) * 100)) + '%';
+      var fill = text('div', 'meter-fill' + (used >= 1 ? ' is-full' : ''));
+      fill.style.width = Math.min(100, Math.round(used * 100)) + '%';
       bar.appendChild(fill);
       card.appendChild(bar);
     }
@@ -1718,15 +1811,17 @@
     } else {
       note = 'No play limit on your plan.';
     }
-    card.appendChild(text('p', 'muted tiny', note));
-    card.appendChild(
+    var foot = text('div', 'usage-foot');
+    foot.appendChild(text('span', 'muted tiny', note));
+    foot.appendChild(
       text(
-        'p',
-        'muted tiny',
+        'span',
+        'lib-count',
         billing.usage.videos +
           (billing.usage.video_limit === null ? ' videos · unlimited' : ' of ' + billing.usage.video_limit + ' videos'),
       ),
     );
+    card.appendChild(foot);
     return card;
   }
 
@@ -1751,8 +1846,11 @@
   /** One card per metered plan, with monthly and annual checkout. */
   function planCard(billing, planId) {
     var plan = billing.plans[planId];
-    var card = text('div', 'card');
-    card.appendChild(text('h3', null, plan.name + ' — $' + plan.usd + '/mo'));
+    var card = text('div', 'card plan-card');
+    card.appendChild(text('h3', null, plan.name));
+    var price = text('div', 'plan-price', '$' + plan.usd);
+    price.appendChild(text('span', null, '/mo'));
+    card.appendChild(price);
     card.appendChild(
       text(
         'p',
@@ -1766,7 +1864,8 @@
       ),
     );
     if (billing.plan === planId) {
-      card.appendChild(text('p', 'tiny', 'This is your current plan.'));
+      card.classList.add('is-current');
+      card.appendChild(text('p', 'pill pill-ok', 'Your current plan'));
       return card;
     }
     var row = text('div', 'row');
@@ -1787,12 +1886,16 @@
         host.textContent = '';
 
         host.appendChild(usageCard(billing));
+        /* Plans sit side by side so they can be compared, instead of one
+           full-width card per plan stacked down the page. */
+        var grid = text('div', 'plan-grid');
+        host.appendChild(grid);
         if (!billing.lifetime) {
-          host.appendChild(planCard(billing, 'starter'));
-          host.appendChild(planCard(billing, 'agency'));
+          grid.appendChild(planCard(billing, 'starter'));
+          grid.appendChild(planCard(billing, 'agency'));
         }
 
-        var card = text('div', 'card');
+        var card = text('div', 'card plan-card plan-card-lt');
         if (billing.lifetime) {
           card.appendChild(text('h3', null, 'You own Videokr for life'));
           card.appendChild(
@@ -1803,7 +1906,10 @@
             ),
           );
         } else {
-          card.appendChild(text('h3', null, 'Lifetime — $' + billing.offer.usd + ' once'));
+          card.appendChild(text('h3', null, 'Lifetime'));
+          var once = text('div', 'plan-price', '$' + billing.offer.usd);
+          once.appendChild(text('span', null, 'once'));
+          card.appendChild(once);
           card.appendChild(
             text(
               'p',
@@ -1845,9 +1951,12 @@
           });
           card.appendChild(buy);
         }
-        host.appendChild(card);
+        grid.appendChild(card);
 
         if (billing.purchases.length) {
+          var history = text('div', 'card');
+          history.appendChild(text('h3', null, 'Purchases'));
+          host.appendChild(history);
           var table = text('table', 'data');
           var head = document.createElement('tr');
           ['Purchase', 'Status', 'Amount', 'Date'].forEach(function (label) {
@@ -1862,7 +1971,7 @@
             row.appendChild(text('td', 'tiny muted', fmtDate(purchase.created_at)));
             table.appendChild(row);
           });
-          host.appendChild(table);
+          history.appendChild(table);
         }
       })
       .catch(fail);
