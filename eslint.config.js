@@ -40,6 +40,7 @@ export default [
         localStorage: 'readonly',
         sessionStorage: 'readonly',
         FormData: 'readonly',
+        File: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
         Promise: 'readonly',
