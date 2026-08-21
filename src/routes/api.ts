@@ -102,6 +102,57 @@ api.get('/auth/me', (c) => {
   return user ? c.json({ user }) : c.json({ user: null }, 200);
 });
 
+api.patch('/auth/profile', async (c) => {
+  const user = c.get('user');
+  const body = await c.req.json<{
+    name?: string;
+    email?: string;
+    current_password?: string;
+    password?: string;
+  }>();
+  const row = await c.env.DB.prepare('SELECT password_hash, password_salt FROM users WHERE id = ?')
+    .bind(user.id)
+    .first<{ password_hash: string; password_salt: string }>();
+  if (!row) return c.json({ error: 'unauthorized' }, 401);
+
+  const wantsEmail = typeof body.email === 'string' && body.email.trim().toLowerCase() !== user.email;
+  const wantsPassword = typeof body.password === 'string' && body.password.length > 0;
+  // Changing a credential always costs the current password, so a stolen session cannot
+  // take the account over.
+  if (wantsEmail || wantsPassword) {
+    const ok = await verifyPassword(body.current_password ?? '', row.password_salt, row.password_hash);
+    if (!ok) return c.json({ error: 'current password is incorrect' }, 403);
+  }
+
+  if (typeof body.name === 'string') {
+    await c.env.DB.prepare('UPDATE users SET name = ? WHERE id = ?').bind(body.name.trim(), user.id).run();
+  }
+
+  if (wantsEmail) {
+    const cleanEmail = (body.email ?? '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) return c.json({ error: 'invalid email' }, 400);
+    const taken = await c.env.DB.prepare('SELECT id FROM users WHERE email = ? AND id <> ?')
+      .bind(cleanEmail, user.id)
+      .first();
+    if (taken) return c.json({ error: 'an account with that email already exists' }, 409);
+    await c.env.DB.prepare('UPDATE users SET email = ? WHERE id = ?').bind(cleanEmail, user.id).run();
+  }
+
+  if (wantsPassword) {
+    const next = body.password ?? '';
+    if (next.length < 8) return c.json({ error: 'password must be at least 8 characters' }, 400);
+    const salt = randomSalt();
+    await c.env.DB.prepare('UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?')
+      .bind(await hashPassword(next, salt), salt, user.id)
+      .run();
+  }
+
+  const updated = await c.env.DB.prepare('SELECT id, email, name, plan, role FROM users WHERE id = ?')
+    .bind(user.id)
+    .first();
+  return c.json({ user: updated });
+});
+
 /* ------------------------------------------------------------ projects ---- */
 
 api.get('/projects', async (c) => {
@@ -558,21 +609,24 @@ api.get('/analytics/videos/:id', async (c) => {
 });
 
 api.get('/leads', async (c) => {
+  const video = c.req.query('video') ?? '';
   const { results } = await c.env.DB.prepare(
     `SELECT l.*, v.title AS video_title FROM leads l JOIN videos v ON v.id = l.video_id
-      WHERE l.user_id = ? ORDER BY l.created_at DESC LIMIT 500`,
+      WHERE l.user_id = ? AND (? = '' OR l.video_id = ?) ORDER BY l.created_at DESC LIMIT 500`,
   )
-    .bind(c.get('user').id)
+    .bind(c.get('user').id, video, video)
     .all();
   return c.json({ leads: results ?? [] });
 });
 
 api.get('/leads.csv', async (c) => {
+  const video = c.req.query('video') ?? '';
   const { results } = await c.env.DB.prepare(
     `SELECT l.email, l.name, l.phone, l.position, l.referrer, l.created_at, v.title
-       FROM leads l JOIN videos v ON v.id = l.video_id WHERE l.user_id = ? ORDER BY l.created_at DESC`,
+       FROM leads l JOIN videos v ON v.id = l.video_id
+      WHERE l.user_id = ? AND (? = '' OR l.video_id = ?) ORDER BY l.created_at DESC`,
   )
-    .bind(c.get('user').id)
+    .bind(c.get('user').id, video, video)
     .all<Record<string, string | number>>();
   const header = 'email,name,phone,position_seconds,referrer,created_at,video\n';
   const body = (results ?? [])
@@ -696,7 +750,9 @@ api.post('/billing/checkout', async (c) => {
 
 /* ------------------------------------------------------------- uploads ---- */
 
-const UPLOAD_LIMIT_BYTES = 200 * 1024 * 1024;
+/* Images and caption files are metadata, not content: a poster or a logo has no reason to
+   weigh what a video does, and a loose cap is a cheap way to fill storage. */
+const UPLOAD_LIMITS = { video: 200 * 1024 * 1024, image: 5 * 1024 * 1024, text: 1024 * 1024 };
 const ALLOWED_UPLOAD_TYPES: Record<string, string> = {
   'video/mp4': 'mp4',
   'video/webm': 'webm',
@@ -706,6 +762,12 @@ const ALLOWED_UPLOAD_TYPES: Record<string, string> = {
   'text/vtt': 'vtt',
 };
 
+function uploadLimitFor(ext: string): { bytes: number; label: string } {
+  if (ext === 'mp4' || ext === 'webm') return { bytes: UPLOAD_LIMITS.video, label: '200MB' };
+  if (ext === 'vtt') return { bytes: UPLOAD_LIMITS.text, label: '1MB' };
+  return { bytes: UPLOAD_LIMITS.image, label: '5MB' };
+}
+
 api.post('/uploads', async (c) => {
   const form = await c.req.formData();
   // workers-types narrows FormData.get() to string, so read the entry as unknown
@@ -713,10 +775,11 @@ api.post('/uploads', async (c) => {
   const entry: unknown = form.get('file');
   if (!(entry instanceof File)) return c.json({ error: 'file is required' }, 400);
   const file = entry;
-  if (file.size > UPLOAD_LIMIT_BYTES) return c.json({ error: 'file is larger than 200MB' }, 413);
   const declared = file.type || 'application/octet-stream';
   const ext = ALLOWED_UPLOAD_TYPES[declared] ?? (file.name.endsWith('.vtt') ? 'vtt' : '');
   if (!ext) return c.json({ error: `unsupported file type: ${declared}` }, 415);
+  const limit = uploadLimitFor(ext);
+  if (file.size > limit.bytes) return c.json({ error: `file is larger than ${limit.label}` }, 413);
   const key = `${c.get('user').id}/${newId()}.${ext}`;
   await c.env.MEDIA.put(key, file.stream(), { httpMetadata: { contentType: declared } });
   return c.json({ key, url: `/media/${key}` }, 201);

@@ -7,6 +7,22 @@
 
   var SPEED_FALLBACK = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
+  /* Shipped skins, plus the retired names still stored on older videos. Kept in
+     step with PLAYER_SKINS on the server so an old config never renders unstyled. */
+  var SKINS = ['videokr', 'frame', 'pop', 'studio'];
+  var LEGACY_SKINS = {
+    'forge-dark': 'videokr',
+    'forge-light': 'studio',
+    minimal: 'studio',
+    bold: 'pop',
+    glass: 'frame',
+  };
+
+  function skinName(skin) {
+    if (SKINS.indexOf(skin) !== -1) return skin;
+    return LEGACY_SKINS[skin] || SKINS[0];
+  }
+
   /* A linked source flashes a centred play/pause ripple of its own on a state change;
      these are how long our still stays over it. Its edge strips are handled by the
      frame geometry, not by waiting. */
@@ -706,9 +722,9 @@
   Player.prototype.mount = function () {
     var self = this;
     var cfg = this.config;
-    this.root.classList.add('sf-player', 'sf-skin-' + (cfg.skin || 'forge-dark'));
-    this.root.style.setProperty('--sf-accent', cfg.accent || '#4f7cff');
-    this.root.style.setProperty('--sf-bg', cfg.background || '#0b0d12');
+    this.root.classList.add('sf-player', 'sf-skin-' + skinName(cfg.skin));
+    this.root.style.setProperty('--sf-accent', cfg.accent || '#ff6106');
+    this.root.style.setProperty('--sf-bg', cfg.background || '#0b0908');
     this.root.style.setProperty('--sf-radius', (cfg.borderRadius || 0) + 'px');
     this.root.innerHTML = '';
 
@@ -756,6 +772,7 @@
 
     this.controls = this._buildControls();
     this.overlay.appendChild(this.controls);
+    this._buildSideRail();
 
     this.adapter.on('ready', function () {
       self._onReady();
@@ -1018,6 +1035,23 @@
        somewhere to attach. */
     this.bar = bar;
     return bar;
+  };
+
+  /**
+   * The default skin parks captions, picture-in-picture and share in a vertical
+   * rail over the top-right corner instead of the bar. The buttons are moved,
+   * not rebuilt, so their handlers and state stay exactly as the bar built them.
+   */
+  Player.prototype._buildSideRail = function () {
+    if (skinName(this.config.skin) !== 'videokr') return;
+    var buttons = [this.ccBtn, this.pipBtn, this.shareBtn].filter(Boolean);
+    if (!buttons.length) return;
+    var rail = el('div', 'sf-rail');
+    buttons.forEach(function (button) {
+      rail.appendChild(button);
+    });
+    this.overlay.appendChild(rail);
+    this.rail = rail;
   };
 
   /** Gear button plus a panel stack: a home list of settings and one panel each. */
@@ -1624,6 +1658,10 @@
         case '<':
           self._stepRate(-1);
           break;
+        case 'Escape':
+          if (self.settings && self.settings.host.classList.contains('sf-open')) self.settings.close();
+          else handled = false;
+          break;
         case 'Home':
           self.adapter.seek(0);
           break;
@@ -1670,7 +1708,9 @@
     var self = this;
     var hide;
     var overBar = false;
+    var wokeAt = 0;
     var show = function () {
+      if (!self.root.classList.contains('sf-active')) wokeAt = Date.now();
       self.root.classList.add('sf-active');
       clearTimeout(hide);
       hide = setTimeout(function () {
@@ -1680,19 +1720,70 @@
     this.root.addEventListener('mousemove', show);
     this.root.addEventListener('touchstart', show);
     /* A cursor resting on a control sends no further mousemove, so without this the bar
-       fades out underneath it and the next click falls through to the picture. */
-    if (this.controls) {
-      this.controls.addEventListener('mouseenter', function () {
+       fades out underneath it and the next click falls through to the picture. The rail
+       counts too: it is where the viewer's second click lands after a wake click. */
+    [this.controls, this.rail].forEach(function (node) {
+      if (!node) return;
+      node.addEventListener('mouseenter', function () {
         overBar = true;
         show();
       });
-      this.controls.addEventListener('mouseleave', function () {
+      node.addEventListener('mouseleave', function () {
         overBar = false;
         show();
       });
-    }
+    });
+    /* A faded bar takes no pointer events and slides off the bottom edge, so a click
+       aimed at a control lands on the picture instead — and the pointer move that
+       carried it there has already started the bar's 400ms slide back in. Within that
+       window a click over the bar's or rail's footprint only wakes the controls; a
+       click anywhere else still toggles playback on the first press. */
+    var WAKE_MS = 450;
+    var inBox = function (event, box) {
+      return (
+        event.clientX >= box.left &&
+        event.clientX <= box.right &&
+        event.clientY >= box.top &&
+        event.clientY <= box.bottom
+      );
+    };
+    var overHiddenControl = function (event) {
+      if (Date.now() - wokeAt > WAKE_MS) return false;
+      if (self.rail && inBox(event, self.rail.getBoundingClientRect())) return true;
+      if (!self.controls) return false;
+      var stage = self.root.getBoundingClientRect();
+      var height = self.controls.offsetHeight;
+      // Measured off the stage, not the bar: mid-slide the bar's own rect is still
+      // partly below the player.
+      return inBox(event, {
+        left: stage.left,
+        right: stage.right,
+        top: stage.bottom - height,
+        bottom: stage.bottom,
+      });
+    };
+    /* The rail only fades opacity, so the pointer move that wakes it restores its clicks
+       before the click arrives and it would fire on a button the viewer could not see.
+       Caught here so the rail and the bar behave the same: the first click only wakes. */
+    this.root.addEventListener(
+      'click',
+      function (event) {
+        if (Date.now() - wokeAt > WAKE_MS || self.adapter.paused()) return;
+        var node = event.target;
+        if (!node || !node.closest || !node.closest('.sf-rail, .sf-controls')) return;
+        event.stopPropagation();
+        event.preventDefault();
+        show();
+      },
+      true,
+    );
     this.overlay.addEventListener('click', function (event) {
-      if (event.target === self.overlay) self.togglePlay();
+      if (event.target !== self.overlay) return;
+      if (overHiddenControl(event)) {
+        show();
+        return;
+      }
+      self.togglePlay();
     });
     this.overlay.addEventListener('dblclick', function (event) {
       if (event.target === self.overlay) self.toggleFullscreen();

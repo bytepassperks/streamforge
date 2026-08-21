@@ -189,7 +189,7 @@
   .sf-time { font-size: 11px; padding: 0 2px; }
   .sf-volume { min-width: 0; width: auto; max-width: none; }
   .sf-volume input[type="range"] { display: none; }
-  .sf-pip, .sf-rewind, .sf-forward { display: none; }
+  .sf-pip, .sf-rewind, .sf-controls > .sf-forward { display: none; }
   .sf-badge span { display: none; }
 }
 
@@ -203,8 +203,9 @@
   box-shadow: 0 1px 2px rgba(0,0,0,.15); padding: 7px; text-align: left;
   white-space: nowrap; z-index: 3; animation: sf-popup .2s ease;
 }
-.sf-menu-list::after {
-  content: ""; position: absolute; top: 100%; right: 14px; width: 0; height: 0;
+/* the pointer hangs off .sf-menu, not the scrollable list, so it adds no scroll height */
+.sf-menu.sf-open::after {
+  content: ""; position: absolute; bottom: calc(100% + 2px); right: 11px; width: 0; height: 0;
   border: 4px solid transparent; border-top-color: rgba(255,255,255,.9);
 }
 .sf-menu.sf-open .sf-menu-list { display: block; }
@@ -348,18 +349,142 @@
   box-shadow: 0 20px 60px rgba(0,0,0,.55);
 }
 
-/* alternative skins */
-.sf-skin-forge-light { --sf-bg: #f4f6fb; color: #10131a; }
-.sf-skin-forge-light .sf-controls { background: linear-gradient(to top, rgba(255,255,255,.95), rgba(255,255,255,.4) 60%, transparent); }
-.sf-skin-forge-light .sf-btn, .sf-skin-forge-light .sf-time { color: #10131a; }
-.sf-skin-forge-light .sf-progress-rail, .sf-skin-forge-light .sf-buffer { background: rgba(0,0,0,.18); }
+/* ---------------------------------------------------------------- skins ---
+   Four shipped presets. Each one only restyles the single control bar the
+   player already builds, so every skin keeps every feature — a customer
+   switching skins never loses captions, chapters, quality or analytics. */
 
-.sf-skin-minimal .sf-controls { background: rgba(0,0,0,.55); margin: 8px; border-radius: 10px; padding: 6px 10px; }
-.sf-skin-minimal .sf-titlebar { display: none; }
+/* "videokr" — the default: a square orange transport button on the left, a
+   thick pill progress bar, a stacked rail of square buttons on the right and
+   the wordmark parked at the end of the bar. */
+.sf-skin-videokr { --sf-accent: #ff6106; }
+/* The bar is a floating slab rather than a gradient, so the picture keeps its
+   full contrast right up to the chrome. */
+.sf-skin-videokr .sf-controls {
+  margin: 12px; padding: 8px 12px; gap: 10px;
+  background: rgba(18,20,22,.74); backdrop-filter: blur(6px); border-radius: 12px;
+}
+.sf-skin-videokr .sf-controls > * { margin-left: 0; }
+/* Scoped to the bar's own children: the settings menu reuses .sf-forward for its rows. */
+.sf-skin-videokr .sf-rewind,
+.sf-skin-videokr .sf-controls > .sf-forward,
+.sf-skin-videokr .sf-time { display: none; }
+.sf-skin-videokr .sf-play {
+  width: 60px; height: 46px; padding: 0; display: grid; place-items: center; flex: none;
+  background: rgba(255,255,255,.08); border-radius: 10px; color: var(--sf-accent);
+}
+.sf-skin-videokr .sf-play:hover, .sf-skin-videokr .sf-play:focus-visible { background: rgba(255,255,255,.16); }
+.sf-skin-videokr .sf-play svg { width: 22px; height: 22px; fill: var(--sf-accent); }
+.sf-skin-videokr .sf-progress-wrap { margin: 0; padding: 0 2px; }
+.sf-skin-videokr .sf-progress { height: 22px; }
+.sf-skin-videokr .sf-progress-rail {
+  height: 16px; border-radius: 8px; background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.45); box-sizing: border-box;
+}
+.sf-skin-videokr .sf-buffer, .sf-skin-videokr .sf-played { border-radius: 7px; }
+.sf-skin-videokr .sf-buffer { background: rgba(255,236,230,.85); }
+.sf-skin-videokr .sf-handle { display: none; }
+.sf-skin-videokr .sf-marker { width: 2px; background: rgba(11,9,8,.45); }
+/* Volume collapses to its speaker glyph; the slider still appears on hover of
+   the group for pointer users through the shared .sf-volume rules. */
+.sf-skin-videokr .sf-volume { width: auto; min-width: 0; max-width: none; }
+.sf-skin-videokr .sf-volume input[type="range"] { display: none; }
+.sf-skin-videokr .sf-mute svg { fill: var(--sf-accent); }
+.sf-skin-videokr .sf-mute:hover svg { fill: #fff; }
+.sf-skin-videokr .sf-badge { font-weight: 700; opacity: 1; letter-spacing: .01em; }
+/* Title plate: the video name in the accent, the owner line beneath it. */
+.sf-skin-videokr .sf-titlebar {
+  right: auto; top: 14px; left: 14px; padding: 8px 14px;
+  background: rgba(8,10,12,.72); border-radius: 6px;
+  color: var(--sf-accent); font-size: 19px; font-weight: 700; opacity: 1;
+}
+@media (max-width: 480px) {
+  .sf-skin-videokr .sf-titlebar { font-size: 14px; padding: 7px 10px; }
+  .sf-skin-videokr .sf-play { width: 48px; height: 40px; }
+  .sf-skin-videokr .sf-controls { margin: 8px; padding: 6px 8px; gap: 6px; }
+  .sf-skin-videokr .sf-progress-rail { height: 12px; }
+}
+.sf-skin-videokr .sf-logo.sf-pos-top-left { top: 14px; left: 14px; }
+.sf-skin-videokr .sf-logo img { max-height: 56px; border-radius: 8px; }
+/* Corner rail: captions, picture-in-picture and share as square plates down the
+   right edge. It fades with the rest of the chrome, so an idle picture is clean. */
+.sf-rail {
+  position: absolute; top: 12px; right: 12px; z-index: 5;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.sf-rail .sf-btn {
+  width: 44px; height: 44px; padding: 0; margin: 0; display: grid; place-items: center;
+  background: rgba(18,20,22,.74); backdrop-filter: blur(6px);
+  border-radius: 10px; color: var(--sf-accent);
+}
+.sf-rail .sf-btn svg { width: 20px; height: 20px; }
+.sf-rail .sf-btn:hover, .sf-rail .sf-btn:focus-visible { background: var(--sf-accent); color: #fff; }
+.sf-rail { opacity: 0; pointer-events: none; transition: opacity .4s ease-in-out; }
+.sf-player.sf-active .sf-rail, .sf-player:not(.sf-playing) .sf-rail { opacity: 1; pointer-events: auto; }
+@media (max-width: 480px) {
+  .sf-rail { top: 8px; right: 8px; gap: 6px; }
+  .sf-rail .sf-btn { width: 36px; height: 36px; }
+  .sf-rail .sf-pip { display: none; }
+}
 
-.sf-skin-bold .sf-progress-rail { height: 8px; border-radius: 4px; }
-.sf-skin-bold .sf-controls { padding: 14px 16px 16px; }
-.sf-skin-bold .sf-bigplay { padding: 22px; }
-.sf-skin-bold .sf-bigplay svg { width: 26px; height: 26px; }
+/* "frame" — a solid dark bar with the progress on its own full-width row. */
+.sf-skin-frame .sf-controls {
+  flex-wrap: wrap; padding: 6px 10px 8px; padding-top: 30px;
+  background: linear-gradient(transparent, rgba(0,0,0,.92) 45%);
+}
+.sf-skin-frame .sf-progress-wrap { order: -1; flex: 0 0 100%; width: 100%; margin: 0 0 4px; padding: 0; }
+.sf-skin-frame .sf-progress { height: 12px; }
+.sf-skin-frame .sf-progress-rail { height: 4px; border-radius: 2px; background: rgba(255,255,255,.85); }
+.sf-skin-frame .sf-buffer { background: rgba(255,255,255,.5); }
+.sf-skin-frame .sf-handle { width: 11px; height: 11px; }
+.sf-skin-frame .sf-time { font-size: 12px; }
+.sf-skin-frame .sf-btn:hover, .sf-skin-frame .sf-btn:focus-visible { background: rgba(255,255,255,.18); }
+.sf-skin-frame .sf-titlebar { font-size: 13px; }
 
-.sf-skin-glass .sf-controls { background: rgba(255,255,255,.12); backdrop-filter: blur(14px); margin: 10px; border-radius: 14px; }
+/* "pop" — one solid rounded pill inset from the picture, oversized icons. */
+.sf-skin-pop { --sf-accent: #2f7d5b; }
+.sf-skin-pop .sf-controls {
+  margin: 10px; padding: 8px 12px; padding-top: 8px;
+  background: var(--sf-accent); border-radius: 12px;
+}
+.sf-skin-pop .sf-rewind, .sf-skin-pop .sf-controls > .sf-forward, .sf-skin-pop .sf-pip { display: none; }
+.sf-skin-pop .sf-btn svg { width: 22px; height: 22px; }
+.sf-skin-pop .sf-btn:hover, .sf-skin-pop .sf-btn:focus-visible { background: rgba(255,255,255,.2); }
+.sf-skin-pop .sf-progress-rail { height: 6px; border-radius: 3px; background: rgba(255,255,255,.35); }
+.sf-skin-pop .sf-buffer { background: rgba(255,255,255,.2); }
+.sf-skin-pop .sf-played { background: #fff; }
+.sf-skin-pop .sf-handle { width: 16px; height: 16px; }
+.sf-skin-pop .sf-time { font-size: 14px; font-weight: 600; }
+.sf-skin-pop .sf-volume { width: auto; min-width: 0; max-width: none; }
+.sf-skin-pop .sf-volume input[type="range"] { display: none; }
+/* Elapsed time reads before the bar and the duration after it, so the row is
+   play · volume · 0:00 —— 0:39 · captions · fullscreen. */
+.sf-skin-pop .sf-play { order: 1; }
+.sf-skin-pop .sf-volume { order: 2; }
+.sf-skin-pop .sf-time-current { order: 3; }
+.sf-skin-pop .sf-progress-wrap { order: 4; }
+/* The bar itself separates the two timecodes here, so drop the slash. */
+.sf-skin-pop .sf-time-duration { order: 5; }
+.sf-skin-pop .sf-time-duration::before { content: none; }
+.sf-skin-pop .sf-cc { order: 6; }
+.sf-skin-pop .sf-settings { order: 7; }
+.sf-skin-pop .sf-share { order: 8; }
+.sf-skin-pop .sf-fs { order: 9; }
+.sf-skin-pop .sf-badge { order: 10; }
+.sf-skin-pop .sf-bigplay { border-radius: 100%; padding: 20px; }
+
+/* "studio" — a light, quiet bar with mono timecodes and a hairline progress. */
+.sf-skin-studio .sf-controls {
+  flex-wrap: wrap; padding: 8px 12px 10px; padding-top: 30px;
+  background: linear-gradient(transparent, rgba(12,14,18,.86) 45%);
+}
+.sf-skin-studio .sf-progress-wrap { order: -1; flex: 0 0 100%; width: 100%; margin: 0 0 6px; padding: 0; }
+.sf-skin-studio .sf-progress { height: 12px; }
+.sf-skin-studio .sf-progress-rail { height: 3px; border-radius: 1.5px; background: rgba(255,255,255,.35); }
+.sf-skin-studio .sf-buffer { background: rgba(255,255,255,.25); }
+.sf-skin-studio .sf-played { background: #fff; }
+.sf-skin-studio .sf-handle { width: 12px; height: 12px; }
+.sf-skin-studio .sf-btn svg { width: 20px; height: 20px; }
+.sf-skin-studio .sf-time { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.sf-skin-studio .sf-titlebar { display: none; }
+.sf-skin-studio .sf-btn:hover, .sf-skin-studio .sf-btn:focus-visible { background: rgba(255,255,255,.16); }

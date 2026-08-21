@@ -5,6 +5,8 @@ import {
   escapeHtml,
   hostnameAllowed,
   mergePlayerConfig,
+  normalizeSkin,
+  PLAYER_SKINS,
   newId,
   parseSource,
   retentionBucket,
@@ -135,6 +137,27 @@ describe('player config', () => {
     expect(mergePlayerConfig('not json')).toEqual(defaultPlayerConfig());
     expect(mergePlayerConfig(null)).toEqual(defaultPlayerConfig());
     expect(mergePlayerConfig(JSON.stringify({ speeds: [] })).speeds).toEqual(defaultPlayerConfig().speeds);
+  });
+
+  it('defaults to the videokr skin', () => {
+    expect(defaultPlayerConfig().skin).toBe('videokr');
+    expect(PLAYER_SKINS[0]).toBe('videokr');
+  });
+
+  it('keeps a shipped skin and maps a retired one onto the shipped set', () => {
+    PLAYER_SKINS.forEach((skin) => expect(normalizeSkin(skin)).toBe(skin));
+    expect(normalizeSkin('forge-dark')).toBe('videokr');
+    expect(normalizeSkin('glass')).toBe('frame');
+    expect(normalizeSkin('bold')).toBe('pop');
+    expect(normalizeSkin('minimal')).toBe('studio');
+  });
+
+  it('never renders an unknown skin', () => {
+    expect(normalizeSkin('')).toBe('videokr');
+    expect(normalizeSkin(undefined)).toBe('videokr');
+    expect(normalizeSkin('<script>')).toBe('videokr');
+    expect(mergePlayerConfig(JSON.stringify({ skin: 'nope' })).skin).toBe('videokr');
+    expect(mergePlayerConfig(JSON.stringify({ skin: 'pop' })).skin).toBe('pop');
   });
 });
 
