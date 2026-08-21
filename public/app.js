@@ -3,6 +3,7 @@
   'use strict';
 
   var state = { user: null, projects: [], videos: [], playlists: [], video: null, config: null };
+  var SVG_NS = 'http://www.w3.org/2000/svg';
 
   /* ------------------------------------------------------------- helpers -- */
 
@@ -1366,44 +1367,51 @@
         var impressions = counts.load || 0;
         var plays = counts.play || 0;
 
-        var grid = text('div', 'stat-grid');
-        [
-          ['Impressions', impressions],
-          ['Plays', plays],
-          ['Play rate', impressions ? Math.round((plays / impressions) * 100) + '%' : '—'],
-          ['Completions', counts.complete || 0],
-          ['CTA clicks', counts.cta_click || 0],
-          ['Leads', counts.lead || 0],
-        ].forEach(function (pair) {
-          var card = text('div', 'stat');
-          card.appendChild(text('div', 'k', pair[0]));
-          card.appendChild(text('div', 'v', String(pair[1])));
-          grid.appendChild(card);
-        });
-        host.appendChild(grid);
+        var head = text('div', 'an-head');
+        var hero = text('div', 'an-hero');
+        hero.appendChild(text('span', 'an-hero-k', 'Plays'));
+        hero.appendChild(text('span', 'an-hero-v', String(plays)));
+        hero.appendChild(
+          text(
+            'p',
+            'hand an-note',
+            impressions
+              ? plays + ' of ' + impressions + ' people who saw it pressed play'
+              : 'nobody has loaded this video yet',
+          ),
+        );
+        head.appendChild(hero);
 
-        host.appendChild(text('h3', null, 'Audience retention'));
-        var retention = text('div', 'retention');
-        var max = 1;
-        (data.retention || []).forEach(function (row) {
-          max = Math.max(max, row.views);
+        var facts = text('dl', 'an-facts');
+        [
+          ['Impressions', String(impressions)],
+          ['Play rate', impressions ? Math.round((plays / impressions) * 100) + '%' : '—'],
+          ['Watched to the end', String(counts.complete || 0)],
+          ['CTA clicks', String(counts.cta_click || 0)],
+          ['Leads captured', String(counts.lead || 0)],
+        ].forEach(function (pair) {
+          facts.appendChild(text('dt', null, pair[0]));
+          facts.appendChild(text('dd', null, pair[1]));
         });
-        var byBucket = {};
-        (data.retention || []).forEach(function (row) {
-          byBucket[row.bucket] = row.views;
-        });
-        if (!(data.retention || []).length) {
-          host.appendChild(text('p', 'muted tiny', 'No playback data yet.'));
+        head.appendChild(facts);
+        host.appendChild(head);
+
+        var retention = data.retention || [];
+        var block = text('section', 'an-block');
+        var blockHead = text('div', 'an-block-head');
+        blockHead.appendChild(text('h3', null, 'Audience retention'));
+        blockHead.appendChild(text('span', 'tiny muted', 'share of viewers still watching'));
+        block.appendChild(blockHead);
+        if (!retention.length) {
+          block.appendChild(text('p', 'muted tiny', 'No playback data yet — retention appears after the first play.'));
         } else {
-          for (var i = 0; i < 100; i += 2) {
-            var bar = document.createElement('span');
-            var views = byBucket[i] || 0;
-            bar.style.height = Math.round((views / max) * 100) + '%';
-            bar.title = i + '–' + (i + 2) + '% · ' + views + ' views';
-            retention.appendChild(bar);
+          block.appendChild(retentionChart(retention));
+          var quit = biggestDrop(retention);
+          if (quit != null) {
+            block.appendChild(text('p', 'hand an-note', 'sharpest drop-off around ' + quit + '% of the video'));
           }
-          host.appendChild(retention);
         }
+        host.appendChild(block);
 
         appendBars(host, 'Devices', data.devices, 'device');
         appendBars(host, 'Top referrers', data.referrers, 'referrer');
@@ -1436,23 +1444,100 @@
 
   function appendBars(host, title, rows, key) {
     if (!rows || !rows.length) return;
-    host.appendChild(text('h3', null, title));
-    var wrap = text('div', 'bars');
+    var block = text('section', 'an-block');
+    var head = text('div', 'an-block-head');
+    head.appendChild(text('h3', null, title));
+    block.appendChild(head);
+    var total = rows.reduce(function (acc, row) {
+      return acc + row.n;
+    }, 0);
     var max = rows.reduce(function (acc, row) {
       return Math.max(acc, row.n);
     }, 1);
+    var wrap = text('div', 'bars');
     rows.forEach(function (row) {
       var line = text('div', 'bar-row');
-      line.appendChild(text('span', null, row[key] || 'unknown'));
+      var label = text('span', 'bar-label', row[key] || 'unknown');
+      label.title = row[key] || 'unknown';
+      line.appendChild(label);
       var track = text('div', 'bar-track');
       var fill = text('div', 'bar-fill');
       fill.style.width = Math.round((row.n / max) * 100) + '%';
       track.appendChild(fill);
       line.appendChild(track);
-      line.appendChild(text('span', 'tiny muted', String(row.n)));
+      line.appendChild(
+        text('span', 'bar-value', total ? row.n + ' · ' + Math.round((row.n / total) * 100) + '%' : String(row.n)),
+      );
       wrap.appendChild(line);
     });
-    host.appendChild(wrap);
+    block.appendChild(wrap);
+    host.appendChild(block);
+  }
+
+  /* Retention as one drawn curve rather than a row of loose sticks: a filled area
+     over a dashed baseline, with the quarter marks written under it. */
+  function retentionChart(rows) {
+    var W = 100;
+    var H = 34;
+    var byBucket = {};
+    var max = 1;
+    rows.forEach(function (row) {
+      byBucket[row.bucket] = row.views;
+      max = Math.max(max, row.views);
+    });
+    var points = [];
+    for (var b = 0; b <= 100; b += 2) {
+      var views = byBucket[b] || 0;
+      points.push([(b / 100) * W, H - (views / max) * H]);
+    }
+    var line = points
+      .map(function (point, i) {
+        return (i ? 'L' : 'M') + point[0].toFixed(2) + ' ' + point[1].toFixed(2);
+      })
+      .join(' ');
+
+    var wrap = text('div', 'an-chart');
+    var svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.setAttribute('aria-hidden', 'true');
+    var area = document.createElementNS(SVG_NS, 'path');
+    area.setAttribute('class', 'an-area');
+    area.setAttribute('d', line + ' L' + W + ' ' + H + ' L0 ' + H + ' Z');
+    svg.appendChild(area);
+    var stroke = document.createElementNS(SVG_NS, 'path');
+    stroke.setAttribute('class', 'an-line');
+    stroke.setAttribute('d', line);
+    svg.appendChild(stroke);
+    wrap.appendChild(svg);
+
+    var axis = text('div', 'an-axis');
+    ['0%', '25%', '50%', '75%', '100%'].forEach(function (mark) {
+      axis.appendChild(text('span', null, mark));
+    });
+    var box = text('div', 'an-chart-box');
+    box.appendChild(wrap);
+    box.appendChild(axis);
+    return box;
+  }
+
+  /** The bucket where the audience falls away fastest, in percent of the video. */
+  function biggestDrop(rows) {
+    var byBucket = {};
+    rows.forEach(function (row) {
+      byBucket[row.bucket] = row.views;
+    });
+    var worst = null;
+    var drop = 0;
+    for (var b = 0; b < 100; b += 2) {
+      var here = byBucket[b] || 0;
+      var next = byBucket[b + 2] || 0;
+      if (here - next > drop) {
+        drop = here - next;
+        worst = b + 2;
+      }
+    }
+    return drop > 0 ? worst : null;
   }
 
   /* ------------------------------------------------------------ playlists -- */

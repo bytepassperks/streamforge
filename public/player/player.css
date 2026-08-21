@@ -433,7 +433,7 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   right: auto; top: 14px; left: 14px; padding: 8px 14px;
   background: rgba(8,10,12,.72); border-radius: 6px;
-  color: var(--sf-accent); font-size: 19px; font-weight: 700; opacity: 1;
+  color: var(--sf-accent); font-size: 19px; font-weight: 700;
 }
 /* Nothing here re-measures the bar for small players any more: --sf-ui scales
    the whole slab, so the skin keeps its proportions all the way down. */

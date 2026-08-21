@@ -174,6 +174,10 @@ export function defaultPlayerConfig(): PlayerConfig {
   };
 }
 
+/* The accent every video carried before the orange identity. A config still holding
+   it was never actually customised, so it follows the brand rather than staying blue. */
+const LEGACY_ACCENT = '#4f7cff';
+
 export function mergePlayerConfig(stored: string | null | undefined): PlayerConfig {
   const base = defaultPlayerConfig();
   if (!stored) return base;
@@ -188,6 +192,7 @@ export function mergePlayerConfig(stored: string | null | undefined): PlayerConf
   return {
     ...base,
     ...incoming,
+    accent: incoming.accent === LEGACY_ACCENT || !incoming.accent ? base.accent : incoming.accent,
     skin: normalizeSkin(incoming.skin),
     controls: { ...base.controls, ...(incoming.controls ?? {}) },
     speeds: Array.isArray(incoming.speeds) && incoming.speeds.length ? incoming.speeds : base.speeds,
