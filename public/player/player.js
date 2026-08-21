@@ -1752,7 +1752,12 @@
       if (self.rail && inBox(event, self.rail.getBoundingClientRect())) return true;
       if (!self.controls) return false;
       var stage = self.root.getBoundingClientRect();
-      var height = self.controls.offsetHeight;
+      // The bar is drawn at --sf-ui scale, and its layout height ignores that.
+      // Width is unaffected by the slide, so it gives the scale being applied.
+      var box = self.controls.getBoundingClientRect();
+      var layoutWidth = self.controls.offsetWidth;
+      var scale = layoutWidth ? box.width / layoutWidth : 1;
+      var height = self.controls.offsetHeight * scale;
       // Measured off the stage, not the bar: mid-slide the bar's own rect is still
       // partly below the player.
       return inBox(event, {

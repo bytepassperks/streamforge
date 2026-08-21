@@ -84,7 +84,9 @@ code, pre { font-family: var(--mono); }
   justify-content: center; gap: 12px; margin: 0 0 52px; text-align: center;
 }
 .hand-head b { font-weight: 700; }
-.hand-head img { display: block; height: 1.05em; width: auto; }
+/* The mark is wider than it is tall, so it is sized off the cap height and
+   given room to breathe rather than being squeezed into the line box. */
+.hand-head img { display: block; height: .82em; width: auto; flex: none; }
 .hand-head .serif { font-family: var(--serif); font-weight: 400; letter-spacing: 0; }
 
 /* ---------------------------------------------------------------- buttons -- */
@@ -181,7 +183,7 @@ textarea { min-height: 84px; resize: vertical; }
 .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; gap: 16px; }
 .brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 800; letter-spacing: -.02em; text-decoration: none; }
 .brand img { display: block; height: 28px; width: auto; }
-.brand-mark { width: 26px; height: 26px; flex: none; background: url("/brand/mark-180.png") center/contain no-repeat; }
+.brand-mark { width: 26px; height: 26px; flex: none; background: url("/brand/mark-flat.png") center/contain no-repeat; }
 .nav-links { display: flex; gap: 24px; font-size: 14px; font-weight: 600; }
 .nav-links a { text-decoration: none; color: var(--muted); transition: color .15s ease; }
 .nav-links a:hover { color: var(--text); }
@@ -402,7 +404,7 @@ textarea { min-height: 84px; resize: vertical; }
 .side-plan span { display: block; font-size: 13px; color: var(--muted); line-height: 1.25; }
 .side-plan .caret { margin-left: auto; color: var(--muted-2); }
 
-.side-collapsed .side-head .brand img { content: url("/brand/mark-180.png"); height: 30px; }
+.side-collapsed .side-head .brand img { content: url("/brand/mark-flat.png"); height: 22px; }
 .side-collapsed .nav-item span, .side-collapsed .nav-item .tag, .side-collapsed .side-label,
 .side-collapsed .side-more span, .side-collapsed .dev-card div, .side-collapsed .side-plan div,
 .side-collapsed .side-plan .caret { display: none; }
@@ -523,6 +525,30 @@ textarea { min-height: 84px; resize: vertical; }
   display: grid; place-items: center; color: var(--green);
 }
 .file-row input[type="file"] { display: none; }
+.file-row .filepick-name { max-width: 220px; }
+
+/* Native file inputs render a fixed-width control that truncates both the
+   button and the filename, so every picker uses our own button plus a name
+   slot that can shrink without clipping the caption beside it. */
+.filepick {
+  display: flex; align-items: center; gap: 10px; margin-top: 8px; min-width: 0; flex-wrap: wrap;
+}
+.filepick input[type="file"] {
+  position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+}
+.filepick-btn {
+  flex: none; margin: 0; cursor: pointer; white-space: nowrap; font-family: inherit;
+  border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface);
+  padding: 7px 14px; font-size: 13px; font-weight: 600; color: var(--text-2);
+}
+.filepick-btn:hover { border-color: var(--accent); color: var(--accent); }
+.filepick-btn:disabled { color: var(--muted-2); border-color: var(--line); cursor: not-allowed; }
+.filepick input[type="file"]:focus-visible + .filepick-btn { outline: 2px solid var(--accent); outline-offset: 2px; }
+.filepick-name {
+  min-width: 0; flex: 1 1 auto; font-size: 12px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.filepick-name.chosen { color: var(--text-2); font-weight: 600; }
 .file-row label { margin: 0; cursor: pointer; }
 .composer-foot { display: flex; justify-content: flex-end; margin-top: 22px; }
 .composer-foot .btn { border-radius: var(--radius); padding: 14px 34px; font-size: 16px; }
@@ -605,6 +631,13 @@ table.data tr:hover td { background: var(--panel-2); }
 }
 
 .lib-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 34px 0 14px; flex-wrap: wrap; }
+/* Ink type sitting straight on the forest band disappears, so any heading that
+   can scroll over the illustration carries its own scrap of paper. */
+.lib-head > .hand-head, .main-body > .hand-head, .page-head > div > h1 {
+  background: rgba(253, 251, 252, .92); border-radius: 14px; padding: 4px 14px;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+.lib-head > .hand-head { margin: 0; }
 .vid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 18px; }
 .vid-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);

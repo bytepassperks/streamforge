@@ -80,6 +80,140 @@
     return img;
   }
 
+  /* Auto posters -------------------------------------------------------------
+     An uploaded film has no artwork of its own, and an empty tile reads as a
+     broken video. A frame out of the film itself is a better first poster, and
+     the browser can take it: the file (or our own /media url) is already
+     readable here, so nothing has to be decoded server-side. */
+  var POSTER_AT = 0.1; // a tenth in, so we skip fades to black on the first frame
+  var POSTER_MAX_WIDTH = 1280;
+
+  function grabFrame(src) {
+    return new Promise(function (resolve, reject) {
+      var video = document.createElement('video');
+      var settled = false;
+      var timer = window.setTimeout(function () {
+        finish(null, 'reading the video took too long');
+      }, 20000);
+
+      function finish(shot, reason) {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        video.removeAttribute('src');
+        video.load();
+        if (shot) resolve(shot);
+        else reject(new Error(reason));
+      }
+
+      video.muted = true;
+      video.preload = 'auto';
+      video.crossOrigin = 'anonymous';
+      video.addEventListener('loadeddata', function () {
+        var length = isFinite(video.duration) ? video.duration : 0;
+        video.currentTime = length ? Math.min(length * POSTER_AT, 10) : 0.1;
+      });
+      video.addEventListener('seeked', function () {
+        var width = video.videoWidth;
+        var height = video.videoHeight;
+        if (!width || !height) {
+          finish(null, 'this video has no picture to grab');
+          return;
+        }
+        var scale = Math.min(1, POSTER_MAX_WIDTH / width);
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
+        var paper = canvas.getContext('2d');
+        if (!paper) {
+          finish(null, 'this browser cannot copy a frame');
+          return;
+        }
+        paper.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // A cross-origin frame taints the canvas, which throws here rather than
+        // silently handing back a blank poster.
+        try {
+          canvas.toBlob(
+            function (blob) {
+              if (!blob) {
+                finish(null, 'the frame could not be saved');
+                return;
+              }
+              finish({
+                blob: blob,
+                duration: isFinite(video.duration) ? Math.round(video.duration) : 0,
+              });
+            },
+            'image/jpeg',
+            0.82,
+          );
+        } catch (err) {
+          finish(null, 'this video does not allow frames to be copied');
+        }
+      });
+      video.addEventListener('error', function () {
+        finish(null, 'this video could not be read');
+      });
+      video.src = src;
+    });
+  }
+
+  function uploadFrame(shot) {
+    var form = new FormData();
+    form.append('file', new File([shot.blob], 'poster.jpg', { type: 'image/jpeg' }));
+    return api('/uploads', { method: 'POST', form: form });
+  }
+
+  /* Grabs a poster out of a source and stores it on the video. Resolves either
+     way: artwork is a nicety and must never fail a video that already exists. */
+  function autoPoster(videoId, src, revoke) {
+    return grabFrame(src)
+      .then(function (shot) {
+        return uploadFrame(shot).then(function (result) {
+          var patch = { thumbnail_url: result.url };
+          if (shot.duration) patch.duration = shot.duration;
+          return api('/videos/' + videoId, { method: 'PATCH', body: patch }).then(function () {
+            return result.url;
+          });
+        });
+      })
+      .catch(function () {
+        return '';
+      })
+      .then(function (url) {
+        if (revoke) window.URL.revokeObjectURL(src);
+        return url;
+      });
+  }
+
+  /* Videos already in the library that never got artwork heal themselves the
+     next time the library is drawn, but only for files we host: a third-party
+     url would either taint the canvas or cost the customer a download. */
+  var POSTER_BACKFILL_PER_RENDER = 3;
+  var posterTried = {};
+
+  function backfillPosters() {
+    var pending = state.videos.filter(function (video) {
+      return (
+        !video.thumbnail_url &&
+        !posterTried[video.id] &&
+        video.source_type === 'mp4' &&
+        String(video.source_ref || '').indexOf('/media/') === 0
+      );
+    });
+    if (!pending.length) return;
+    pending.slice(0, POSTER_BACKFILL_PER_RENDER).reduce(function (chain, video) {
+      posterTried[video.id] = true;
+      return chain.then(function () {
+        return autoPoster(video.id, video.source_ref).then(function (url) {
+          if (!url) return;
+          video.thumbnail_url = url;
+          renderVideoTable();
+        });
+      });
+    }, Promise.resolve());
+  }
+
   function toast(message, isError) {
     var node = document.createElement('div');
     node.className = 'toast' + (isError ? ' toast-err' : '');
@@ -230,6 +364,7 @@
         renderStats(results[1].totals || {});
         fillProjectSelects();
         renderVideoTable();
+        backfillPosters();
       })
       .catch(fail);
   }
@@ -415,6 +550,7 @@
     box.classList.toggle('on', Boolean(file));
     box.textContent = file ? '✓' : '';
     box.title = file ? file.name : '';
+    showPickedName($('cv-upload'), file ? file.name : '');
   }
 
   $('cv-source').addEventListener('input', syncComposer);
@@ -477,7 +613,14 @@
         $('cv-upload').value = '';
         syncComposer();
         toast('Video created');
-        loadVideos();
+        // The chosen file is still in memory here, so the poster comes off it
+        // rather than downloading what we just uploaded.
+        var poster = file
+          ? autoPoster(result.video.id, window.URL.createObjectURL(file), true)
+          : Promise.resolve('');
+        poster.then(function () {
+          loadVideos();
+        });
         openEditor(result.video.id);
       })
       .catch(function (err) {
@@ -608,6 +751,10 @@
     renderChapterRows(result.chapters || []);
     renderCtaRows(result.ctas || []);
     renderThumbPreviews();
+    $('ed-thumb-grab-state').textContent =
+      video.source_type === 'mp4'
+        ? 'Takes the poster straight from the video'
+        : 'Frames can only be grabbed from uploads and MP4 links';
     $('ed-form-export').href = '/api/leads.csv?video=' + video.id;
     $('ed-form-leads').textContent = 'Loading…';
     renderSnippets(video);
@@ -904,31 +1051,53 @@
      5 MB ceiling is checked here as well so an oversized file never leaves the browser. */
   var IMAGE_LIMIT_BYTES = 5 * 1024 * 1024;
 
+  /* The name slot doubles as the hint line, so it has to be able to go back to
+     the hint once a picker is cleared. */
+  function pickName(picker) {
+    var row = picker.closest('.filepick') || picker.parentNode;
+    return row ? row.querySelector('.filepick-name') : null;
+  }
+
+  function showPickedName(picker, name) {
+    var slot = pickName(picker);
+    if (!slot) return;
+    if (slot.dataset.hint === undefined) slot.dataset.hint = slot.textContent;
+    slot.textContent = name || slot.dataset.hint;
+    slot.title = name || '';
+    slot.classList.toggle('chosen', Boolean(name));
+  }
+
   function bindImagePicker(pickerId, targetId) {
     $(pickerId).addEventListener('change', function () {
       var picker = $(pickerId);
       var file = picker.files[0];
+      showPickedName(picker, file ? file.name : '');
       if (!file) return;
       if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
         picker.value = '';
+        showPickedName(picker, '');
         toast('Choose a PNG, JPG or WebP image', true);
         return;
       }
       if (file.size > IMAGE_LIMIT_BYTES) {
         picker.value = '';
+        showPickedName(picker, '');
         toast('Images have to be 5 MB or smaller', true);
         return;
       }
       var form = new FormData();
       form.append('file', file);
       picker.disabled = true;
+      showPickedName(picker, 'Uploading ' + file.name + '…');
       api('/uploads', { method: 'POST', form: form })
         .then(function (result) {
           $(targetId).value = result.url;
           if (targetId.indexOf('ed-thumb') === 0) renderThumbPreviews();
+          showPickedName(picker, file.name + ' — save to apply');
           toast('Image uploaded — save to apply');
         })
         .catch(function (err) {
+          showPickedName(picker, '');
           toast(err.message || 'Upload failed', true);
         })
         .then(function () {
@@ -941,6 +1110,40 @@
   bindImagePicker('ed-thumb-file', 'ed-thumb');
   bindImagePicker('ed-thumb-b-file', 'ed-thumb-b');
   bindImagePicker('pc-logo-file', 'pc-logo');
+
+  /* Manual version of the automatic poster, for videos that were added before
+     we grabbed frames — or when the customer wants a different frame. */
+  $('ed-thumb-grab').addEventListener('click', function () {
+    var video = state.video;
+    var status = $('ed-thumb-grab-state');
+    var button = $('ed-thumb-grab');
+    if (!video) return;
+    if (video.source_type !== 'mp4') {
+      status.textContent = 'Only uploads and MP4 links can hand over a frame.';
+      return;
+    }
+    button.disabled = true;
+    status.textContent = 'Reading the video…';
+    grabFrame(video.source_ref)
+      .then(function (shot) {
+        return uploadFrame(shot).then(function (result) {
+          $('ed-thumb').value = result.url;
+          renderThumbPreviews();
+          status.textContent = 'Frame grabbed — save to apply.';
+        });
+      })
+      .catch(function (err) {
+        status.textContent = err.message || 'That frame could not be grabbed.';
+      })
+      .then(function () {
+        button.disabled = false;
+      });
+  });
+
+  $('ed-captions-file').addEventListener('change', function () {
+    var picker = $('ed-captions-file');
+    showPickedName(picker, picker.files[0] ? picker.files[0].name : '');
+  });
 
   /* Captions live in R2 like any other asset, so the editor uploads the file and fills
      in the url it gets back instead of asking for a url the customer has to host. */
