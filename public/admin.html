@@ -28,7 +28,7 @@
       <button class="nav-item" data-view="audit" type="button"><span>Audit log</span></button>
     </nav>
     <div class="side-spacer"></div>
-    <div class="side-plan">
+    <div class="side-plan side-who">
       <div><b>Signed in</b><span id="who">…</span></div>
     </div>
     <a class="btn btn-ghost btn-sm" href="/app.html" style="margin-top:12px">Back to dashboard</a>
@@ -52,7 +52,7 @@
         <div><h1>Users</h1><p class="muted tiny">Upgrade, downgrade, grant unlimited, suspend, reset a password, or sign in as anyone.</p></div>
         <button class="btn" id="new-user" type="button">Create user</button>
       </div>
-      <div class="field"><input id="users-q" type="search" placeholder="Search email or name…"></div>
+      <div class="field field-search"><input id="users-q" type="search" placeholder="Search email or name…"></div>
       <div id="users-body"></div>
     </section>
 
@@ -61,7 +61,7 @@
       <div class="page-head">
         <div><h1>Videos</h1><p class="muted tiny">Every video on the platform, with its owner and play count.</p></div>
       </div>
-      <div class="field"><input id="videos-q" type="search" placeholder="Search title, slug or owner email…"></div>
+      <div class="field field-search"><input id="videos-q" type="search" placeholder="Search title, slug or owner email…"></div>
       <div id="videos-body"></div>
     </section>
 

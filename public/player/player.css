@@ -1,6 +1,8 @@
 /* Videokr player skin system */
 .sf-player {
-  --sf-accent: #4f7cff;
+  /* the chrome is dark by design; auto dark mode must not repaint it */
+  color-scheme: dark;
+  --sf-accent: #ff6106;
   --sf-bg: #0b0d12;
   --sf-radius: 12px;
   /* The chrome is sized against the player's own width, not the window's: the
@@ -56,6 +58,8 @@
 .sf-overlay {
   position: absolute; inset: 0; display: block; z-index: 3; isolation: isolate;
   --sf-ui: 1;
+  /* clicking the chrome must never leave the title or a timestamp selected */
+  user-select: none; -webkit-user-select: none;
 }
 @container (max-width: 700px) { .sf-overlay { --sf-ui: .84; } }
 @container (max-width: 520px) { .sf-overlay { --sf-ui: .72; } }

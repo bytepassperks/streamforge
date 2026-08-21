@@ -858,6 +858,12 @@
     $(id).addEventListener('change', renderThumbPreviews);
   });
 
+  /** An export link with nothing to export reads as broken, so it goes flat. */
+  function setExportState(id, count) {
+    $(id).classList.toggle('is-disabled', !count);
+    $(id).title = count ? '' : 'Nothing to export yet';
+  }
+
   function loadFormSubmissions() {
     if (!state.video) return;
     var host = $('ed-form-leads');
@@ -866,6 +872,7 @@
       .then(function (data) {
         var leads = data.leads || [];
         host.textContent = '';
+        setExportState('ed-form-export', leads.length);
         if (!leads.length) {
           host.appendChild(text('div', 'empty', 'No submissions yet.'));
           return;
@@ -907,15 +914,21 @@
     $('open-page').href = '/v/' + video.slug;
   }
 
-  $('copy-script').addEventListener('click', function () {
-    var value = $('snip-script').textContent;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(value).then(function () {
-        toast('Embed code copied');
-      });
-    } else {
-      toast('Copy manually: ' + value);
-    }
+  [
+    ['copy-script', 'snip-script', 'Embed code copied'],
+    ['copy-iframe', 'snip-iframe', 'Iframe code copied'],
+    ['copy-page', 'snip-page', 'Public link copied'],
+  ].forEach(function (pair) {
+    $(pair[0]).addEventListener('click', function () {
+      var value = $(pair[1]).textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(value).then(function () {
+          toast(pair[2]);
+        });
+      } else {
+        toast('Copy manually: ' + value);
+      }
+    });
   });
 
   function chapterRow(chapter) {
@@ -1641,6 +1654,7 @@
       .then(function (result) {
         var host = $('leads-body');
         host.textContent = '';
+        setExportState('export-leads', result.leads.length);
         if (!result.leads.length) {
           host.appendChild(
             emptyState(
@@ -1843,6 +1857,30 @@
     return button;
   }
 
+  /** The plan you are on, so the ladder starts from where you actually stand. */
+  function freeCard(billing) {
+    var plan = billing.plans.free;
+    var card = text('div', 'card plan-card is-current');
+    card.appendChild(text('h3', null, plan.name));
+    var price = text('div', 'plan-price', '$0');
+    price.appendChild(text('span', null, 'forever'));
+    card.appendChild(price);
+    card.appendChild(
+      text(
+        'p',
+        'muted tiny',
+        thousands(plan.plays) +
+          ' plays a month, ' +
+          plan.videos +
+          ' videos, ' +
+          Math.round(plan.storageBytes / (1024 * 1024 * 1024)) +
+          ' GB fair-use storage. Playback pauses once the allowance runs out.',
+      ),
+    );
+    card.appendChild(text('p', 'pill pill-ok', 'Your current plan'));
+    return card;
+  }
+
   /** One card per metered plan, with monthly and annual checkout. */
   function planCard(billing, planId) {
     var plan = billing.plans[planId];
@@ -1891,6 +1929,7 @@
         var grid = text('div', 'plan-grid');
         host.appendChild(grid);
         if (!billing.lifetime) {
+          if (billing.plan === 'free') grid.appendChild(freeCard(billing));
           grid.appendChild(planCard(billing, 'starter'));
           grid.appendChild(planCard(billing, 'agency'));
         }
