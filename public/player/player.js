@@ -1720,17 +1720,19 @@
     this.root.addEventListener('mousemove', show);
     this.root.addEventListener('touchstart', show);
     /* A cursor resting on a control sends no further mousemove, so without this the bar
-       fades out underneath it and the next click falls through to the picture. */
-    if (this.controls) {
-      this.controls.addEventListener('mouseenter', function () {
+       fades out underneath it and the next click falls through to the picture. The rail
+       counts too: it is where the viewer's second click lands after a wake click. */
+    [this.controls, this.rail].forEach(function (node) {
+      if (!node) return;
+      node.addEventListener('mouseenter', function () {
         overBar = true;
         show();
       });
-      this.controls.addEventListener('mouseleave', function () {
+      node.addEventListener('mouseleave', function () {
         overBar = false;
         show();
       });
-    }
+    });
     /* A faded bar takes no pointer events and slides off the bottom edge, so a click
        aimed at a control lands on the picture instead — and the pointer move that
        carried it there has already started the bar's 400ms slide back in. Within that
