@@ -18,16 +18,66 @@
       init.body = JSON.stringify(opts.body);
     }
     if (opts.form) init.body = opts.form;
-    return fetch('/api' + path, init).then(function (res) {
-      if (res.status === 401 && path.indexOf('/auth/') !== 0) {
-        location.href = '/login.html';
-        throw new Error('unauthorized');
-      }
-      return res.json().then(function (body) {
-        if (!res.ok) throw new Error(body.error || 'Request failed');
-        return body;
-      });
+    /* Without a deadline a stalled request leaves a pane on "Loading…" for ever,
+       which reads as a dead button. */
+    if (typeof window.AbortController === 'function') {
+      var controller = new window.AbortController();
+      init.signal = controller.signal;
+      setTimeout(function () {
+        controller.abort();
+      }, opts.timeout || 20000);
+    }
+    return fetch('/api' + path, init).then(
+      function (res) {
+        if (res.status === 401 && path.indexOf('/auth/') !== 0) {
+          location.href = '/login.html';
+          throw new Error('unauthorized');
+        }
+        // An error page is not always JSON, and a parse failure must not look like
+        // a hang either.
+        return res.text().then(function (raw) {
+          var body = {};
+          try {
+            body = raw ? JSON.parse(raw) : {};
+          } catch (err) {
+            if (res.ok) throw new Error('unexpected response from the server');
+          }
+          if (!res.ok) throw new Error(body.error || 'Request failed (' + res.status + ')');
+          return body;
+        });
+      },
+      function (err) {
+        throw new Error(err && err.name === 'AbortError' ? 'the request timed out' : 'network error');
+      },
+    );
+  }
+
+  /* A pane that failed has to say so and offer a way back, rather than sitting on
+     "Loading…" behind a toast that has already gone. */
+  function panelError(host, error, retry) {
+    host.textContent = '';
+    var box = text('div', 'empty');
+    box.appendChild(text('p', null, (error && error.message) || 'Could not load this.'));
+    if (retry) {
+      var again = text('button', 'btn btn-ghost btn-sm', 'Try again');
+      again.type = 'button';
+      again.addEventListener('click', retry);
+      box.appendChild(again);
+    }
+    host.appendChild(box);
+  }
+
+  /* Library posters: a source url that 404s has to fall back, not leave a blank tile. */
+  function thumbNode(video) {
+    if (!video.thumbnail_url) return text('div', 'thumb-ph');
+    var img = document.createElement('img');
+    img.src = video.thumbnail_url;
+    img.alt = '';
+    img.addEventListener('error', function () {
+      var ph = text('div', 'thumb-ph');
+      if (img.parentNode) img.parentNode.replaceChild(ph, img);
     });
+    return img;
   }
 
   function toast(message, isError) {
@@ -223,14 +273,7 @@
       var row = document.createElement('tr');
 
       var thumbCell = text('td', 'thumb-cell');
-      if (video.thumbnail_url) {
-        var img = document.createElement('img');
-        img.src = video.thumbnail_url;
-        img.alt = '';
-        thumbCell.appendChild(img);
-      } else {
-        thumbCell.appendChild(text('div', 'thumb-ph'));
-      }
+      thumbCell.appendChild(thumbNode(video));
       row.appendChild(thumbCell);
 
       var titleCell = document.createElement('td');
@@ -279,14 +322,7 @@
       var shot = text('button', 'vid-shot');
       shot.type = 'button';
       shot.setAttribute('aria-label', 'Edit ' + video.title);
-      if (video.thumbnail_url) {
-        var img = document.createElement('img');
-        img.src = video.thumbnail_url;
-        img.alt = '';
-        shot.appendChild(img);
-      } else {
-        shot.appendChild(text('div', 'thumb-ph'));
-      }
+      shot.appendChild(thumbNode(video));
       if (video.duration) shot.appendChild(text('span', 'vid-dur', fmtClock(video.duration)));
       shot.addEventListener('click', function () {
         openEditor(video.id);
@@ -375,6 +411,8 @@
     var source = $('cv-source').value.trim();
     $('cv-save').disabled = !file && !source;
     var box = $('cv-file-state');
+    // Only a chosen file gets a tick; an empty square just looks like a dead control.
+    box.classList.toggle('on', Boolean(file));
     box.textContent = file ? '✓' : '';
     box.title = file ? file.name : '';
   }
@@ -619,7 +657,9 @@
         });
         host.appendChild(table);
       })
-      .catch(fail);
+      .catch(function (err) {
+        panelError(host, err, loadFormSubmissions);
+      });
   }
 
   function renderSnippets(video) {
@@ -1089,7 +1129,9 @@
           host.appendChild(table);
         }
       })
-      .catch(fail);
+      .catch(function (err) {
+        panelError(host, err, loadVideoStats);
+      });
   }
 
   function appendBars(host, title, rows, key) {
@@ -1154,11 +1196,14 @@
 
       card.appendChild(text('p', 'tiny muted', 'Tick the videos to include, in order of selection.'));
       var picker = text('div', 'grid-2');
+      var members = playlist.video_ids || [];
       state.videos.forEach(function (video) {
         var label = text('label', 'checkbox');
         var input = document.createElement('input');
         input.type = 'checkbox';
         input.value = video.id;
+        // Ticked from the saved playlist, so a re-render never loses the selection.
+        input.checked = members.indexOf(video.id) !== -1;
         label.appendChild(input);
         label.appendChild(document.createTextNode(' ' + video.title));
         picker.appendChild(label);
@@ -1362,6 +1407,21 @@
           row.appendChild(text('td', 'tiny', deliveryLabel(hook)));
           row.appendChild(text('td', 'tiny muted', fmtDate(hook.created_at)));
           var actions = document.createElement('td');
+          var probe = text('button', 'btn btn-ghost btn-sm', 'Test');
+          probe.type = 'button';
+          probe.addEventListener('click', function () {
+            probe.disabled = true;
+            api('/webhooks/' + hook.id + '/test', { method: 'POST' })
+              .then(function (result) {
+                toast('Test delivered — endpoint returned ' + result.status);
+              })
+              .catch(fail)
+              .then(function () {
+                probe.disabled = false;
+                loadWebhooks();
+              });
+          });
+          actions.appendChild(probe);
           var remove = text('button', 'btn btn-danger btn-sm', 'Delete');
           remove.type = 'button';
           remove.addEventListener('click', function () {

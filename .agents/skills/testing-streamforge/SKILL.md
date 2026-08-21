@@ -211,6 +211,109 @@ volume slider stays visible at mobile widths while the progress rail gets squeez
 and the badge overflows past the right edge. When a mobile-layout rule looks ignored, check
 rule order in `player.css` before assuming the media query does not match.
 
+## Skins vs. the settings gear (a real bug class here)
+
+Skins are `videokr` (default), `frame`, `pop`, `studio`, set in the editor's **Player** section
+(`Skin` select) → *Save changes* → hard-reload the public page. Per-skin bar expectations:
+`videokr` and `pop` hide the bar's own `.sf-rewind`/`.sf-forward` (pop also hides `.sf-pip`),
+while `frame` and `studio` show both skip buttons plus time labels; `videokr` hides `.sf-time`
+so speed changes cannot be measured on it — measure a rate change on `frame`/`studio`
+(e.g. pick `2x`, play, note the elapsed label advance ≈ 2× wall time).
+
+Regression to always re-check after CSS changes: the settings menu's home rows are also
+`button.sf-menu-item.sf-forward`, so any **unscoped** `.sf-forward { display: none }` (skin
+rules, or the `@media (max-width:420px)` block) empties the gear panel into a thin white
+sliver that still reports `aria-expanded="true"`. Hides must be scoped to
+`.sf-controls > .sf-forward`. Likewise an absolutely-positioned `::after` pointer on
+`.sf-menu-list` forces a scrollbar inside the scrollable list — it belongs on
+`.sf-menu.sf-open`. So "the gear opens" is never a sufficient assertion: name the rows that
+must be *visibly* present (`Speed` with its value, `Chapters`, `Quality` on HLS), drive the
+sub-panel, and check the same thing at 390px in the iframe harness.
+
+`Quality` only appears when the adapter reports ≥2 HLS levels. Quick fixture: create a video
+whose Source URL is `https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8` (hls.js is pulled
+from jsdelivr; both hosts are reachable), press play once so the manifest parses, then open
+the gear — expect `Auto / 184p / 288p / 480p / 720p / 1080p`.
+
+PIP can only open a real floating window on an `HtmlAdapter` source (MP4/HLS); on a YouTube
+iframe there is no `<video>` to hand to the PIP API. Use the HLS/MP4 fixture for PIP: the
+inline area then reads "Playing in picture-in-picture" and a separate always-on-top window
+appears over the desktop; clicking the button again returns it inline.
+
+`Escape` closes an open settings panel (since `94f71ca`); when no panel is open the handler
+sets `handled = false` so the browser still exits fullscreen. Test both, in that order.
+
+## Faded control bar and the "first click is swallowed" class of bug
+
+`show()` in `public/player/player.js` adds `.sf-active` and arms a 2.5 s fade timer that only
+fires `if (!overBar && !paused)` — so **the bar never fades while the video is paused**. To
+reach the faded state you must be playing, then leave the pointer still for >2.5 s. `overBar`
+is bound to `mouseenter`/`mouseleave` on `.sf-controls` only; the right-hand `.sf-rail` has no
+such binding, so parking over the rail *does* let the bar fade.
+
+The guard (`overHiddenControl`) only runs on the overlay's own click, i.e. when the pointer
+lands on a **hidden** control's footprint from outside. Two traps that bit real fixes here:
+the hidden bar is `transform: translateY(100%)`, so mid-slide its own `getBoundingClientRect()`
+sits *below* the stage and a footprint test against the bar never matches — the check must be
+measured off the **player** (bottom strip `controls.offsetHeight` tall); and it must be
+time-boxed (`wokeAt` + `WAKE_MS = 450`) so it does not swallow legitimate clicks once the bar
+is already visible. As of `c608527` this works on `videokr`, `frame` and at 390px.
+
+Since `0e12bc7` the same rule also covers the right rail, via a **capture-phase** `click`
+listener on the player root: within `WAKE_MS` of a wake and only while playing, a click whose
+target is inside `.sf-rail, .sf-controls` is swallowed (`stopPropagation` + `preventDefault`)
+and only re-shows the controls. Consequences when testing:
+- The rail's first click is wake-only (no share sheet, no PIP) and the second activates it.
+- Since `308cdae` the `mouseenter`/`mouseleave` → `overBar` pair is bound to **both**
+  `.sf-controls` and `.sf-rail` (loop over `[this.controls, this.rail]`), so resting the pointer
+  on the rail keeps the controls awake indefinitely and the second click can come much later
+  (verified with a ~5 s gap). The discriminating evidence for that fix is a screenshot taken
+  *during* the wait **without moving the mouse**: bar and rail must still be visible.
+- Before `308cdae` the rail was not part of `overBar`, so the controls refaded after 2.5 s and a
+  later click was *again* just a wake click. If you are testing an older build (or the hover
+  binding regresses), issue both clicks in the same tool call ~1 s apart, otherwise "the button
+  never works" is a test artefact, not a bug.
+- To test the visible-controls single-click path, hover the **bottom bar** (`.sf-controls`) for
+  ~4 s first, then click the rail button; that keeps `.sf-active` on and `wokeAt` stale.
+- The listener must stay inert while paused: a stopped/paused player must start on one click on
+  the centre/bar play button, and paused gear/share/PIP must activate on one click.
+
+### Proving rail CC end to end (needs a real `<video>` + a captions track)
+The YouTube-sourced probe video has no `<video>` and no `captions_url`, so the CC button is
+hidden (`hasCaptions()` false → `display:none`, player.js ~1179). Use the MP4/HLS video
+(`/v/hls-check`), and give it captions through the UI: editor → **Subtitles** → `Choose File`
+(`#ed-captions-file`, accepts `.vtt`) → **Upload .vtt** → status reads `Uploaded — save to apply.`
+and `Captions .vtt url` fills with `/media/....vtt` → **Save changes**. A useful fixture is a
+VTT with back-to-back 4 s cues across the whole duration and distinctive text (e.g.
+`SF CAPTION TEST cue 78`), generated with a few lines of Python — then a cue is on screen no
+matter where playback happens to be. Cues are painted by Chrome natively and lifted
+`line = -3` clear of the bar, so a screenshot is valid proof. The 1 MB vtt upload cap applies.
+
+When testing it, always assert the playback state *across* the click (centre play glyph absent
++ progress fill/elapsed still advancing); "the bar came back" is not sufficient, because a
+pausing click also brings the bar back (see the fade rule above). Also test the inverse in the
+same pass — a click on the picture away from the bottom strip/rail must still toggle play on
+the very first press, and a single click on the gear of an already-hovered bar must open the
+panel immediately — otherwise an over-eager wake guard looks like a pass.
+
+## Profile view and image uploads (dashboard)
+
+The top-bar user chip (`#user-chip[data-view="account"]`) opens the **Profile** view
+(`#ac-name`, `#ac-email`, `#ac-password`, `#ac-current`, `#ac-save`, status in `#ac-state`).
+A name-only save needs no password; an email or password change without the right
+`current_password` is refused with `current password is incorrect`. Never trust the success
+toast for a password change — prove it by signing out and checking that the **new** password
+is accepted *and* the old one is rejected, then restore the original password.
+
+File pickers `#ed-thumb-file`, `#ed-thumb-b-file` (Thumbnail section) and `#pc-logo-file`
+(Player section) accept PNG/JPEG/WebP up to 5 MB, fill the sibling url input with a
+`/media/...` url and toast `Image uploaded — save to apply`; oversize files toast
+`Images have to be 5 MB or smaller` client-side with no request. The composer's video picker
+keeps its own `(max 200 MB)` cap — check it did not inherit the image limit. Fixtures:
+`python3 -c` with Pillow for small PNG/JPG/WebP, and a valid PNG padded with zero bytes past
+5 MB for the oversize case. Chrome's native file chooser does work in this sandbox (unlike
+`confirm()`/`prompt()`), so uploads can be driven fully through the UI.
+
 ## Share sheet clipboard check
 
 Player Share button opens `.sf-share` with X / LinkedIn / Facebook / WhatsApp / Email plus
@@ -257,6 +360,22 @@ the bar faded (mouse off the player) if you want clean evidence.
 
 Uploaded .vtt objects in R2 have no delete UI — deleting the video leaves the object; call that
 out as retained instead of hunting for a cleanup path.
+
+## Auditing production
+
+Base url `https://streamforge.getlaunchpod.workers.dev`. `/app.html` and `/login.html` 307 to
+`/app` and `/login`, and `/` redirects to `/app` while a session cookie exists — sign out
+(Plans → Sign out) before auditing the landing page. Sign up a throwaway account rather than
+using a customer's; note the credentials in the report.
+
+Unlike local `wrangler dev`, native `prompt()`/`confirm()` **do** render against production in
+this Chrome session, so New project, New playlist and Delete video are all clickable there.
+
+Two traps that cost real time: MP4 fixture urls `https://test-streams.mux.dev/...mp4` (404) and
+`https://www.w3schools.com/html/mov_bbb.mp4` (403) are dead from this machine — `curl -I` a
+fixture before blaming the player. And a pane stuck on `Loading…` used to be a silent request
+failure (the toast had already expired); panes now render an error with a **Try again** button,
+so a bare `Loading…` that never resolves is a genuine new bug worth reporting.
 
 ## Devin Secrets Needed
 
