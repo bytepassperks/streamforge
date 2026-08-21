@@ -437,6 +437,9 @@
             hls.loadSource(self._source);
             hls.attachMedia(video);
             self._hls = hls;
+            hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
+              self.emit('qualities');
+            });
           } else {
             video.src = self._source;
           }
@@ -511,14 +514,23 @@
       if (cues[i].snapToLines !== false) cues[i].line = -3;
     }
   }
-  /** Renditions offered by an adaptive stream; a plain file has none to choose from. */
+  /* An adaptive stream offers its renditions. A plain file has only the one it was
+     encoded at, which is still worth naming: the viewer asks "what am I watching?"
+     as often as "give me something lighter". */
   HtmlAdapter.prototype.qualities = function () {
-    if (!this._hls || !this._hls.levels || this._hls.levels.length < 2) return [];
-    var list = [{ label: 'Auto', value: -1 }];
-    this._hls.levels.forEach(function (level, index) {
-      list.push({ label: (level.height ? level.height + 'p' : Math.round(level.bitrate / 1000) + 'k'), value: index });
-    });
-    return list;
+    if (this._hls && this._hls.levels && this._hls.levels.length > 1) {
+      var list = [{ label: 'Auto', value: -1 }];
+      this._hls.levels.forEach(function (level, index) {
+        list.push({
+          label: level.height ? level.height + 'p' : Math.round(level.bitrate / 1000) + 'k',
+          value: index,
+        });
+      });
+      return list;
+    }
+    var height = this._video && this._video.videoHeight;
+    if (!height) return [];
+    return [{ label: height + 'p (source)', value: -1 }];
   };
   HtmlAdapter.prototype.setQuality = function (value) {
     if (this._hls) this._hls.currentLevel = value;
@@ -776,6 +788,11 @@
 
     this.adapter.on('ready', function () {
       self._onReady();
+    });
+    /* An adaptive stream only knows its renditions once the manifest has parsed,
+       which lands after 'ready'. */
+    this.adapter.on('qualities', function () {
+      self._buildQualityMenu();
     });
     this.adapter.on('play', function () {
       self.root.classList.add('sf-playing');
@@ -1146,7 +1163,7 @@
     settings.list.appendChild(panel);
     settings.host.style.display = '';
     if (current >= 0 && items[current]) value.textContent = items[current].label;
-    return { value: value, radios: radios, items: items };
+    return { value: value, radios: radios, items: items, row: row, panel: panel };
   };
 
   /** Keeps a settings row in sync when a shortcut, not the menu, changes the value. */
@@ -1183,13 +1200,19 @@
     this._buildQualityMenu();
   };
 
-  /** Only an adaptive source exposes renditions, so the menu is built after load. */
+  /* Built after load, and again if an adaptive source reports its renditions later,
+     replacing the single source entry the file itself reported. */
   Player.prototype._buildQualityMenu = function () {
-    if (!this.config.controls.quality || this.qualitySetting || !this.settings) return;
-    if (!this.adapter.qualities) return;
+    if (!this.config.controls.quality || !this.settings || !this.adapter.qualities) return;
     var self = this;
     var levels = this.adapter.qualities();
-    if (levels.length < 2) return;
+    if (!levels.length) return;
+    if (this.qualitySetting) {
+      if (this.qualitySetting.items.length >= levels.length) return;
+      this.qualitySetting.row.remove();
+      this.qualitySetting.panel.remove();
+      this.qualitySetting = null;
+    }
     this.qualitySetting = this._addSetting(
       'quality',
       'Quality',
@@ -1788,7 +1811,16 @@
         show();
         return;
       }
+      var wasPaused = self.adapter.paused();
       self.togglePlay();
+      /* A click on the picture that starts playback should clear the chrome with it,
+         not leave the title plate and bar sitting over the video for another beat. */
+      if (wasPaused) {
+        clearTimeout(hide);
+        hide = setTimeout(function () {
+          if (!overBar && !self.adapter.paused()) self.root.classList.remove('sf-active');
+        }, 600);
+      }
     });
     this.overlay.addEventListener('dblclick', function (event) {
       if (event.target === self.overlay) self.toggleFullscreen();

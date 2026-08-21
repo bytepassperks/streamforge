@@ -544,6 +544,16 @@ pub.get('/v/:slug', async (c) => {
   return c.html(pageShell(video, JSON.stringify(payload), c.env));
 });
 
+/* The type and mark the rest of the product is drawn in. Without them a public page
+   falls back to a browser serif and a bare word, reading as a different product. */
+const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600;700;800&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="icon" href="/brand/mark-32.png" sizes="32x32">`;
+
+const PAGE_HEAD =
+  '<header class="sf-page-head"><a class="sf-brand" href="/"><img src="/brand/logo-ink.png" alt="Videokr"></a></header>';
+
 function pageShell(video: Video, payloadJson: string, env: Env): string {
   const base = env.PUBLIC_BASE_URL.replace(/\/$/, '');
   const jsonLd = JSON.stringify({
@@ -577,10 +587,11 @@ ${video.thumbnail_url ? `<meta name="twitter:image" content="${escapeHtml(video.
 <meta name="twitter:player:height" content="720">
 <link rel="stylesheet" href="/player/player.css">
 <link rel="stylesheet" href="/styles.css">
+${FONTS}
 <script type="application/ld+json">${jsonLd}</script>
 </head>
 <body class="sf-page">
-<header class="sf-page-head"><a class="sf-brand" href="/">Videokr</a></header>
+${PAGE_HEAD}
 <main class="sf-page-main">
   <div class="sf-page-player"><div id="sf-player" class="sf-fill"></div></div>
   <h1>${escapeHtml(video.title)}</h1>
@@ -635,9 +646,10 @@ function playlistLocked(playlist: Playlist, error: boolean): string {
 <meta name="robots" content="noindex">
 <title>${escapeHtml(playlist.title)}</title>
 <link rel="stylesheet" href="/styles.css">
+${FONTS}
 </head>
 <body class="sf-page">
-<header class="sf-page-head"><a class="sf-brand" href="/">Videokr</a></header>
+${PAGE_HEAD}
 <main class="sf-page-main">
   <form class="sf-lock" method="post" action="/pl/${escapeHtml(playlist.slug)}/unlock">
     <h1>${escapeHtml(playlist.title)}</h1>
@@ -662,9 +674,10 @@ function playlistShell(playlist: Playlist, data: string, chrome: boolean): strin
 ${playlist.visibility === 'public' ? '' : '<meta name="robots" content="noindex">'}
 <link rel="stylesheet" href="/player/player.css">
 <link rel="stylesheet" href="/styles.css">
+${FONTS}
 </head>
 <body class="sf-page${chrome ? '' : ' sf-page-bare'}">
-${chrome ? '<header class="sf-page-head"><a class="sf-brand" href="/">Videokr</a></header>' : ''}
+${chrome ? PAGE_HEAD : ''}
 <main class="sf-playlist" data-layout="${escapeHtml(playlist.layout)}">
   <div class="sf-playlist-stage"><div id="sf-player" class="sf-fill"></div></div>
   <aside class="sf-playlist-list" id="sf-playlist-list"></aside>
