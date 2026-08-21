@@ -19,6 +19,17 @@ async function sign(secret: string, body: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Signature headers for one delivery. The legacy name rides along for endpoints built against it. */
+async function signedHeaders(secret: string, body: string): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (secret) {
+    const signature = await sign(secret, body);
+    headers['x-videokr-signature'] = signature;
+    headers['x-streamforge-signature'] = signature;
+  }
+  return headers;
+}
+
 /** Send a sample event to one endpoint so a customer can prove it before a real lead. */
 export async function deliverTestWebhook(
   env: Env,
@@ -29,8 +40,7 @@ export async function deliverTestWebhook(
     sent_at: new Date().toISOString(),
     data: { message: 'Test delivery from Videokr', webhook_id: hook.id },
   });
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (hook.secret) headers['x-streamforge-signature'] = await sign(hook.secret, body);
+  const headers = await signedHeaders(hook.secret, body);
   let status = 0;
   let error = '';
   try {
@@ -69,8 +79,7 @@ export async function dispatchWebhooks(
   const attempted = Math.floor(Date.now() / 1000);
   await Promise.all(
     hooks.map(async (hook) => {
-      const headers: Record<string, string> = { 'content-type': 'application/json' };
-      if (hook.secret) headers['x-streamforge-signature'] = await sign(hook.secret, body);
+      const headers = await signedHeaders(hook.secret, body);
       let status = 0;
       let error = '';
       try {
