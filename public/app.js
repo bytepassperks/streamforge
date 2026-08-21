@@ -522,16 +522,22 @@
     renderPreview();
   });
 
+  /* Single entry point for showing an editor section, so a section that is
+     already active when the editor opens still runs its loader. */
+  function showEditorTab(name) {
+    document.querySelectorAll('#ed-tabs button').forEach(function (button) {
+      button.classList.toggle('active', button.dataset.tab === name);
+    });
+    document.querySelectorAll('#modal-editor .tab-panel').forEach(function (panel) {
+      panel.classList.toggle('active', panel.dataset.panel === name);
+    });
+    if (name === 'stats') loadVideoStats();
+    if (name === 'form') loadFormSubmissions();
+  }
+
   document.querySelectorAll('#ed-tabs button').forEach(function (button) {
     button.addEventListener('click', function () {
-      document.querySelectorAll('#ed-tabs button').forEach(function (other) {
-        other.classList.toggle('active', other === button);
-      });
-      document.querySelectorAll('#modal-editor .tab-panel').forEach(function (panel) {
-        panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab);
-      });
-      if (button.dataset.tab === 'stats') loadVideoStats();
-      if (button.dataset.tab === 'form') loadFormSubmissions();
+      showEditorTab(button.dataset.tab);
     });
   });
 
@@ -542,6 +548,7 @@
         state.config = result.player_config;
         fillEditor(result);
         openModal('modal-editor');
+        showEditorTab('stats');
         renderPreview();
       })
       .catch(fail);
@@ -798,6 +805,7 @@
     remove.type = 'button';
     remove.addEventListener('click', function () {
       card.remove();
+      renderPreview();
     });
     card.appendChild(remove);
     return card;

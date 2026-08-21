@@ -377,6 +377,46 @@ fixture before blaming the player. And a pane stuck on `Loading…` used to be a
 failure (the toast had already expired); panes now render an error with a **Try again** button,
 so a bare `Loading…` that never resolves is a genuine new bug worth reporting.
 
+### The editor's default-open pane may never call its loader
+
+Editor tab panels load their data from the tab **click** handler (`app.js`, the
+`data-tab === 'stats'` / `'form'` branches calling `loadVideoStats()` /
+`loadFormSubmissions()`), while `app.html` ships `#stats-body` pre-filled with the literal text
+`Loading…` and `data-panel="stats"` already `active`. So the pane you see when the editor
+*opens* can sit on `Loading…` for ever without any request being made — no console error, no
+`Try again`, because `panelError()` only runs if the loader ran. Discriminator: click any other
+section then click back; if the data appears instantly, the loader was never invoked on open
+and this is a wiring bug, not a slow/failing request. Never judge "the pane hangs" from the
+first open alone, and conversely never accept a `Loading…` on first open as normal latency.
+
+### Forcing the error panel through the UI (no devtools)
+
+To make a stats request legitimately fail: open a video's editor in tab A, then in tab B delete
+that same video (card → Edit → `Delete video` → accept the native confirm), then back in tab A
+click another section and click **Analytics**. `GET /videos/:id/stats` 404s and the pane renders
+`not found` + a working **Try again**. The 20s `AbortController` timeout copy
+(`the request timed out`) shares the same renderer but cannot be forced through the UI alone —
+report it as untested rather than implying you saw it.
+
+### Modal buttons move when a row is removed — re-screenshot before clicking Save
+
+`Remove CTA` / `Remove form` / removing a chapter shrinks the editor modal, so `Save changes`
+jumps up by ~60px. If you click the old coordinates the save silently never happens and the
+row "comes back" after a reload, which looks exactly like a removal-persistence bug. Always
+take a fresh screenshot after removing a row, click the button where it now is, and confirm the
+`Saved` toast before reloading. (Verified in prod: CTA and Form removal *do* persist.)
+
+### Prod fixture values that work
+
+Vimeo `https://vimeo.com/1084537` (Big Buck Bunny) returns a real oEmbed poster — the old
+`76979871` is dead. `https://postman-echo.com/post` is a reliable **200** target for the
+webhook `Test` button; `https://<base>/api/no-such-route` is a reliable failure target (the
+worker's own fetch sees **404**, so expect `endpoint returned 404 — <date>` in the LAST
+DELIVERY column). Missing/broken posters render a dashed tile reading `no art` in both Grid and
+List, so a blank grey box is a regression. Library `Copy link` really does put
+`https://<base>/v/<slug>` on the clipboard — prove it by pasting into the composer's
+**Source URL** field, not from the toast.
+
 ## Devin Secrets Needed
 
 None for local runs (simulated D1/R2). For production runs you need the deployed base URL
