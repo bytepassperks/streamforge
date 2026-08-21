@@ -1708,7 +1708,9 @@
     var self = this;
     var hide;
     var overBar = false;
+    var wokeAt = 0;
     var show = function () {
+      if (!self.root.classList.contains('sf-active')) wokeAt = Date.now();
       self.root.classList.add('sf-active');
       clearTimeout(hide);
       hide = setTimeout(function () {
@@ -1729,20 +1731,33 @@
         show();
       });
     }
-    /* A faded bar takes no pointer events, so a click aimed at a control lands on the
-       picture. Over the bar's own footprint that click wakes the controls instead of
-       toggling playback, and elsewhere click-to-pause still works on the first click. */
+    /* A faded bar takes no pointer events and slides off the bottom edge, so a click
+       aimed at a control lands on the picture instead — and the pointer move that
+       carried it there has already started the bar's 400ms slide back in. Within that
+       window a click over the bar's or rail's footprint only wakes the controls; a
+       click anywhere else still toggles playback on the first press. */
+    var WAKE_MS = 450;
+    var inBox = function (event, box) {
+      return (
+        event.clientX >= box.left &&
+        event.clientX <= box.right &&
+        event.clientY >= box.top &&
+        event.clientY <= box.bottom
+      );
+    };
     var overHiddenControl = function (event) {
-      if (self.root.classList.contains('sf-active')) return false;
-      return [self.controls, self.rail].some(function (node) {
-        if (!node) return false;
-        var box = node.getBoundingClientRect();
-        return (
-          event.clientX >= box.left &&
-          event.clientX <= box.right &&
-          event.clientY >= box.top &&
-          event.clientY <= box.bottom
-        );
+      if (Date.now() - wokeAt > WAKE_MS) return false;
+      if (self.rail && inBox(event, self.rail.getBoundingClientRect())) return true;
+      if (!self.controls) return false;
+      var stage = self.root.getBoundingClientRect();
+      var height = self.controls.offsetHeight;
+      // Measured off the stage, not the bar: mid-slide the bar's own rect is still
+      // partly below the player.
+      return inBox(event, {
+        left: stage.left,
+        right: stage.right,
+        top: stage.bottom - height,
+        bottom: stage.bottom,
       });
     };
     this.overlay.addEventListener('click', function (event) {
