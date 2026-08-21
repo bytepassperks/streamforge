@@ -113,7 +113,7 @@
       <div id="pane-control">
         <p class="hand-head">
           Add New <b>Video</b> With
-          <img src="/brand/mark-180.png" alt=""><span class="serif">VideoKr</span>
+          <img src="/brand/mark-flat.png" alt=""><span class="serif">VideoKr</span>
         </p>
 
         <div class="composer">
@@ -159,6 +159,7 @@
             <label for="cv-upload"><b>Choose your file</b></label>
             <span class="cap">(max 200 MB)</span>
             <span class="box" id="cv-file-state" aria-hidden="true"></span>
+            <span class="filepick-name" id="cv-file-name"></span>
             <input id="cv-upload" type="file" accept="video/mp4,video/webm">
           </div>
 
@@ -313,11 +314,21 @@
           </p>
           <div class="grid-2">
             <div class="field"><label for="ed-thumb">Thumbnail A url</label><input id="ed-thumb">
-              <div class="row"><input id="ed-thumb-file" type="file" accept="image/png,image/jpeg,image/webp">
-                <span class="cap">image, max 5 MB</span></div></div>
+              <div class="filepick">
+                <input id="ed-thumb-file" type="file" accept="image/png,image/jpeg,image/webp">
+                <label class="filepick-btn" for="ed-thumb-file">Choose image</label>
+                <span class="filepick-name">PNG, JPG or WebP · max 5 MB</span>
+              </div></div>
             <div class="field"><label for="ed-thumb-b">Thumbnail B url (A/B test)</label><input id="ed-thumb-b">
-              <div class="row"><input id="ed-thumb-b-file" type="file" accept="image/png,image/jpeg,image/webp">
-                <span class="cap">image, max 5 MB</span></div></div>
+              <div class="filepick">
+                <input id="ed-thumb-b-file" type="file" accept="image/png,image/jpeg,image/webp">
+                <label class="filepick-btn" for="ed-thumb-b-file">Choose image</label>
+                <span class="filepick-name">PNG, JPG or WebP · max 5 MB</span>
+              </div></div>
+          </div>
+          <div class="filepick">
+            <button type="button" class="filepick-btn" id="ed-thumb-grab">Grab a frame</button>
+            <span class="filepick-name" id="ed-thumb-grab-state">Takes the poster straight from the video</span>
           </div>
           <div class="thumb-previews" id="ed-thumb-previews"></div>
         </div>
@@ -333,8 +344,11 @@
               </select>
               <span class="tiny">Picking a skin loads its colours; every setting stays yours to change.</span></div>
             <div class="field"><label for="pc-logo">Logo image url</label><input id="pc-logo">
-              <div class="row"><input id="pc-logo-file" type="file" accept="image/png,image/jpeg,image/webp">
-                <span class="cap">image, max 5 MB</span></div></div>
+              <div class="filepick">
+                <input id="pc-logo-file" type="file" accept="image/png,image/jpeg,image/webp">
+                <label class="filepick-btn" for="pc-logo-file">Choose image</label>
+                <span class="filepick-name">PNG, JPG or WebP · max 5 MB</span>
+              </div></div>
             <div class="field"><label for="pc-logo-pos">Logo position</label>
               <select id="pc-logo-pos">
                 <option value="top-right">Top right</option>
@@ -393,8 +407,12 @@
 
         <div class="tab-panel" data-panel="subtitles">
           <div class="field"><label for="ed-captions">Captions .vtt url</label><input id="ed-captions">
-            <div class="row"><input id="ed-captions-file" type="file" accept=".vtt,text/vtt">
-              <button type="button" class="btn btn-sm btn-ghost" id="ed-captions-upload">Upload .vtt</button></div>
+            <div class="filepick">
+              <input id="ed-captions-file" type="file" accept=".vtt,text/vtt">
+              <label class="filepick-btn" for="ed-captions-file">Choose .vtt</label>
+              <span class="filepick-name">WebVTT · max 1 MB</span>
+              <button type="button" class="btn btn-sm btn-ghost" id="ed-captions-upload">Upload</button>
+            </div>
             <span class="tiny" id="ed-captions-state"></span></div>
           <label class="checkbox"><input type="checkbox" id="pc-srccaptions"> Show the source's own subtitles (linked videos)</label>
         </div>
