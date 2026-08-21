@@ -1760,6 +1760,21 @@
         bottom: stage.bottom,
       });
     };
+    /* The rail only fades opacity, so the pointer move that wakes it restores its clicks
+       before the click arrives and it would fire on a button the viewer could not see.
+       Caught here so the rail and the bar behave the same: the first click only wakes. */
+    this.root.addEventListener(
+      'click',
+      function (event) {
+        if (Date.now() - wokeAt > WAKE_MS || self.adapter.paused()) return;
+        var node = event.target;
+        if (!node || !node.closest || !node.closest('.sf-rail, .sf-controls')) return;
+        event.stopPropagation();
+        event.preventDefault();
+        show();
+      },
+      true,
+    );
     this.overlay.addEventListener('click', function (event) {
       if (event.target !== self.overlay) return;
       if (overHiddenControl(event)) {
