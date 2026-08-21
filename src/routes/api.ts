@@ -16,6 +16,7 @@ import {
 } from '../lib/billing';
 import type { Cycle } from '../lib/billing';
 import { admin } from './admin';
+import { deliverTestWebhook } from '../lib/webhooks';
 import {
   defaultPlayerConfig,
   mergePlayerConfig,
@@ -195,6 +196,23 @@ async function uniqueSlug(c: { env: Env }, title: string): Promise<string> {
   return `${base}-${newId().slice(0, 6)}`;
 }
 
+/* A library card with no poster reads as broken, so linked sources get theirs at
+   creation: YouTube from its url pattern, Vimeo from its oembed document. */
+async function posterFor(type: string, ref: string): Promise<string> {
+  if (type === 'youtube') return `https://i.ytimg.com/vi/${ref}/hqdefault.jpg`;
+  if (type !== 'vimeo') return '';
+  try {
+    const res = await fetch(`https://vimeo.com/api/oembed.json?url=https://vimeo.com/${encodeURIComponent(ref)}`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return '';
+    const doc = await res.json<{ thumbnail_url?: string }>();
+    return typeof doc.thumbnail_url === 'string' ? doc.thumbnail_url : '';
+  } catch {
+    return '';
+  }
+}
+
 api.get('/videos', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT v.id, v.slug, v.title, v.source_type, v.source_ref, v.thumbnail_url, v.visibility,
@@ -240,8 +258,7 @@ api.post('/videos', async (c) => {
   const id = newId('vid');
   const slug = await uniqueSlug(c, title);
   const ts = now();
-  const thumbnail =
-    parsed.type === 'youtube' ? `https://i.ytimg.com/vi/${parsed.ref}/hqdefault.jpg` : '';
+  const thumbnail = await posterFor(parsed.type, parsed.ref);
   await c.env.DB.prepare(
     `INSERT INTO videos (id, user_id, project_id, slug, title, description, source_type, source_ref,
                          thumbnail_url, player_config, created_at, updated_at)
@@ -419,12 +436,21 @@ api.get('/playlists', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT p.id, p.slug, p.title, p.description, p.layout, p.autoplay_next, p.visibility, p.created_at,
             p.password_hash != '' AS has_password,
-            (SELECT COUNT(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS item_count
+            (SELECT COUNT(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS item_count,
+            (SELECT GROUP_CONCAT(i.video_id) FROM (
+               SELECT video_id FROM playlist_items WHERE playlist_id = p.id ORDER BY position
+             ) i) AS item_ids
        FROM playlists p WHERE p.user_id = ? ORDER BY p.created_at DESC`,
   )
     .bind(c.get('user').id)
-    .all();
-  return c.json({ playlists: results ?? [] });
+    .all<Record<string, unknown> & { item_ids: string | null }>();
+  // The dashboard ticks the videos already on a playlist, so it needs the members,
+  // not just how many there are.
+  const playlists = (results ?? []).map(({ item_ids, ...row }) => ({
+    ...row,
+    video_ids: item_ids ? String(item_ids).split(',') : [],
+  }));
+  return c.json({ playlists });
 });
 
 api.post('/playlists', async (c) => {
@@ -664,6 +690,16 @@ api.post('/webhooks', async (c) => {
     .bind(id, c.get('user').id, url, (body.secret ?? '').trim(), (body.events ?? 'lead').trim(), now())
     .run();
   return c.json({ webhook: { id, url } }, 201);
+});
+
+/* A customer needs to know an endpoint works before waiting for a real lead. */
+api.post('/webhooks/:id/test', async (c) => {
+  const hook = await c.env.DB.prepare('SELECT id, url, secret, events FROM webhooks WHERE id = ? AND user_id = ?')
+    .bind(c.req.param('id'), c.get('user').id)
+    .first<{ id: string; url: string; secret: string; events: string }>();
+  if (!hook) return c.json({ error: 'not found' }, 404);
+  const result = await deliverTestWebhook(c.env, hook);
+  return c.json(result, result.ok ? 200 : 502);
 });
 
 api.delete('/webhooks/:id', async (c) => {

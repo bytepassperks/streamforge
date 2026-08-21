@@ -19,6 +19,33 @@ async function sign(secret: string, body: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Send a sample event to one endpoint so a customer can prove it before a real lead. */
+export async function deliverTestWebhook(
+  env: Env,
+  hook: { id: string; url: string; secret: string; events: string },
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  const body = JSON.stringify({
+    event: 'test',
+    sent_at: new Date().toISOString(),
+    data: { message: 'Test delivery from Videokr', webhook_id: hook.id },
+  });
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (hook.secret) headers['x-streamforge-signature'] = await sign(hook.secret, body);
+  let status = 0;
+  let error = '';
+  try {
+    const response = await fetch(hook.url, { method: 'POST', headers, body });
+    status = response.status;
+    if (!response.ok) error = `endpoint returned ${response.status}`;
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'delivery failed';
+  }
+  await env.DB.prepare('UPDATE webhooks SET last_status = ?, last_attempt_at = ?, last_error = ? WHERE id = ?')
+    .bind(status, Math.floor(Date.now() / 1000), error.slice(0, 200), hook.id)
+    .run();
+  return error ? { ok: false, status, error } : { ok: true, status };
+}
+
 /** Fire-and-forget delivery of an event to a user's active webhooks. */
 export async function dispatchWebhooks(
   env: Env,

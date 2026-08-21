@@ -517,7 +517,8 @@ textarea { min-height: 84px; resize: vertical; }
 .file-row .ico svg { width: 17px; height: 17px; }
 .file-row b { font-size: 16px; font-weight: 600; color: var(--text-2); }
 .file-row .cap { background: var(--mint); color: #15683f; border-radius: 9px; padding: 3px 11px; font-size: 14px; font-weight: 700; }
-.file-row .box {
+.file-row .box { display: none; }
+.file-row .box.on {
   width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface);
   display: grid; place-items: center; color: var(--green);
 }
@@ -550,6 +551,14 @@ table.data th { color: var(--muted); font-size: 11px; text-transform: uppercase;
 table.data tr:hover td { background: var(--panel-2); }
 .thumb-cell { width: 96px; }
 .thumb-cell img, .thumb-ph { width: 84px; height: 48px; object-fit: cover; border-radius: 9px; background: var(--panel); display: block; }
+/* A video with no poster still needs to look deliberate rather than broken. */
+.thumb-ph {
+  display: grid; place-items: center; border: 1px dashed var(--line-strong); background: var(--panel-2);
+}
+.thumb-ph::after {
+  content: "no art"; font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted-2);
+}
 .empty { padding: 34px; text-align: center; color: var(--muted); border: 1px dashed var(--line-strong); border-radius: var(--radius); background: var(--surface); }
 
 .modal-backdrop {
