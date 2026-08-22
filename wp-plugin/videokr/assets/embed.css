@@ -1,0 +1,31 @@
+/* Front-end embed wrapper: a fluid box the iframe fills. */
+.videokr-embed {
+  position: relative;
+  height: 0;
+  margin: 0 0 1.5em;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #0d0f14;
+}
+
+.videokr-embed > iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.videokr-align-center { margin-left: auto; margin-right: auto; }
+.videokr-align-left { float: left; margin-right: 1.5em; }
+.videokr-align-right { float: right; margin-left: 1.5em; }
+
+.videokr-notice {
+  margin: 0 0 1.5em;
+  padding: 12px 14px;
+  border: 1px dashed #e2e9f1;
+  border-radius: 12px;
+  background: #fff6ed;
+  color: #611f20;
+  font-size: 14px;
+}

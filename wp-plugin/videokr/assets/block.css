@@ -1,0 +1,123 @@
+/* Videokr picker inside the block editor — paper surface, ember accent, the
+   same handmade language as the Videokr dashboard. */
+.videokr-pick,
+.videokr-preview {
+  border: 1px solid #e7e9ee;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 32, 30, .05);
+  overflow: hidden;
+}
+
+.videokr-pick { padding: 16px; }
+
+.videokr-pick__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.videokr-pick__head p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.videokr-pick__mark {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #ffe3db;
+  color: #fd571d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.videokr-pick__kinds { margin-bottom: 10px; }
+.videokr-pick__search { margin-bottom: 12px; }
+
+.videokr-pick__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px dashed #e2e9f1;
+  border-radius: 12px;
+}
+
+.videokr-pick__list li + li { border-top: 1px dashed #e2e9f1; }
+
+.videokr-pick__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.videokr-pick__item:hover { background: #fff6ed; }
+.videokr-pick__item:focus-visible { outline: 2px solid #ff6106; outline-offset: -2px; }
+
+.videokr-pick__art {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 41px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f3f3f3;
+}
+
+.videokr-pick__art--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #93a1b3;
+  font-size: 14px;
+}
+
+.videokr-pick__meta { min-width: 0; display: flex; flex-direction: column; }
+.videokr-pick__meta strong { color: #14201e; overflow-wrap: anywhere; }
+.videokr-pick__sub { color: #64748b; font-size: 12px; }
+
+.videokr-pick__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed #e2e9f1;
+  border-radius: 12px;
+  background: #f8f8f8;
+}
+
+.videokr-pick__empty p { margin: 0; color: #37474a; }
+
+.videokr-preview__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px dashed #e2e9f1;
+  background: #f8f8f8;
+}
+
+.videokr-preview__title {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: #37474a;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.videokr-preview .videokr-embed { margin: 0; border-radius: 0; }

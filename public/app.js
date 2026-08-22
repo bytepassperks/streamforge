@@ -318,7 +318,10 @@
     playlists: loadPlaylists,
     projects: loadProjects,
     leads: loadLeads,
-    integrations: loadWebhooks,
+    integrations: function () {
+      loadApiKeys();
+      loadWebhooks();
+    },
     billing: loadBilling,
     account: loadAccount,
   };
@@ -1779,6 +1782,78 @@
         panelError($('leads-body'), error, loadLeads);
       });
   }
+
+  /* ------------------------------------------------------------ api keys -- */
+
+  function loadApiKeys() {
+    api('/keys')
+      .then(function (result) {
+        var host = $('keys-body');
+        host.textContent = '';
+        if (!result.keys.length) {
+          host.appendChild(
+            emptyState('No API keys yet', 'Create one to connect the Videokr plugin for WordPress.', 'hook'),
+          );
+          return;
+        }
+        var table = text('table', 'data');
+        var headRow = document.createElement('tr');
+        ['Label', 'Key', 'Created', 'Last used', ''].forEach(function (label) {
+          headRow.appendChild(text('th', null, label));
+        });
+        table.appendChild(headRow);
+        result.keys.forEach(function (key) {
+          var row = document.createElement('tr');
+          row.appendChild(text('td', null, key.name || 'Untitled key'));
+          row.appendChild(text('td', 'tiny', key.prefix + '••••••••'));
+          row.appendChild(text('td', 'tiny muted', fmtDate(key.created_at)));
+          row.appendChild(text('td', 'tiny muted', key.last_used_at ? fmtDate(key.last_used_at) : 'never'));
+          var actions = document.createElement('td');
+          var revoke = text('button', 'btn btn-danger btn-sm', 'Revoke');
+          revoke.type = 'button';
+          revoke.addEventListener('click', function () {
+            if (!confirm('Revoke this key? Any site using it stops working immediately.')) return;
+            api('/keys/' + key.id, { method: 'DELETE' })
+              .then(function () {
+                toast('Key revoked');
+                loadApiKeys();
+              })
+              .catch(fail);
+          });
+          actions.appendChild(revoke);
+          row.appendChild(actions);
+          table.appendChild(row);
+        });
+        host.appendChild(table);
+      })
+      .catch(function (error) {
+        panelError($('keys-body'), error, loadApiKeys);
+      });
+  }
+
+  $('key-create').addEventListener('click', function () {
+    api('/keys', { method: 'POST', body: { name: $('key-name').value.trim() } })
+      .then(function (result) {
+        $('key-name').value = '';
+        $('key-fresh-value').value = result.key;
+        $('key-fresh').classList.remove('hidden');
+        toast('Key created — copy it now, it is not shown again');
+        loadApiKeys();
+      })
+      .catch(fail);
+  });
+
+  $('key-copy').addEventListener('click', function () {
+    var value = $('key-fresh-value').value;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(value).then(function () {
+        toast('Key copied');
+      });
+    } else {
+      $('key-fresh-value').select();
+      toast('Press Ctrl+C to copy');
+    }
+  });
 
   /* ------------------------------------------------------------- webhooks -- */
 
