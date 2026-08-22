@@ -853,6 +853,10 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   margin: 0; align-items: center !important;
 }
 .modal h2 { font-family: var(--hand); font-weight: 700; font-size: 26px; letter-spacing: .01em; margin: 0; }
+/* A long unbreakable heading (an email address) would otherwise push the close
+   button past the gutter on a phone. */
+.modal > .row.spread > h2 { min-width: 0; overflow-wrap: anywhere; }
+.modal > .row.spread > .btn { flex: 0 0 auto; }
 /* The modal has no padding of its own so the header and footer can sit flush and
    stick. Everything else needs the gutter added back, or its text runs into the
    border. */

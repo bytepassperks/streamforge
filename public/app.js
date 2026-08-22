@@ -434,7 +434,9 @@
         renderVideoTable();
         backfillPosters();
       })
-      .catch(fail);
+      .catch(function (error) {
+        panelError($('videos-body'), error, loadVideos);
+      });
   }
 
   var libLayout = 'grid';
@@ -1549,7 +1551,9 @@
         state.videos = results[1].videos;
         renderPlaylists();
       })
-      .catch(fail);
+      .catch(function (error) {
+        panelError($('playlists-body'), error, loadPlaylists);
+      });
   }
 
   function renderPlaylists() {
@@ -1718,7 +1722,9 @@
         });
         host.appendChild(table);
       })
-      .catch(fail);
+      .catch(function (error) {
+        panelError($('projects-body'), error, loadProjects);
+      });
   }
 
   $('new-project').addEventListener('click', function () {
@@ -1769,7 +1775,9 @@
         });
         host.appendChild(table);
       })
-      .catch(fail);
+      .catch(function (error) {
+        panelError($('leads-body'), error, loadLeads);
+      });
   }
 
   /* ------------------------------------------------------------- webhooks -- */
@@ -1835,7 +1843,9 @@
         });
         host.appendChild(table);
       })
-      .catch(fail);
+      .catch(function (error) {
+        panelError($('webhooks-body'), error, loadWebhooks);
+      });
   }
 
   $('wh-save').addEventListener('click', function () {
@@ -2098,7 +2108,9 @@
           history.appendChild(table);
         }
       })
-      .catch(fail);
+      .catch(function (error) {
+        panelError($('billing-body'), error, loadBilling);
+      });
   }
 
   /* ----------------------------------------------------------------- boot -- */

@@ -15,20 +15,34 @@
       init.headers['content-type'] = 'application/json';
       init.body = JSON.stringify(opts.body);
     }
-    return fetch('/api' + path, init).then(function (res) {
-      if (res.status === 401) {
-        location.href = '/login.html';
-        throw new Error('unauthorized');
-      }
-      if (res.status === 403) {
-        location.href = '/app.html';
-        throw new Error('forbidden');
-      }
-      return res.json().then(function (body) {
-        if (!res.ok) throw new Error(body.error || 'Request failed');
-        return body;
-      });
-    });
+    /* Without a deadline a stalled request leaves a pane on "Loading…" for ever,
+       which reads as a dead button. */
+    if (typeof window.AbortController === 'function') {
+      var controller = new window.AbortController();
+      init.signal = controller.signal;
+      setTimeout(function () {
+        controller.abort();
+      }, opts.timeout || 20000);
+    }
+    return fetch('/api' + path, init).then(
+      function (res) {
+        if (res.status === 401) {
+          location.href = '/login.html';
+          throw new Error('unauthorized');
+        }
+        if (res.status === 403) {
+          location.href = '/app.html';
+          throw new Error('forbidden');
+        }
+        return res.json().then(function (body) {
+          if (!res.ok) throw new Error(body.error || 'Request failed');
+          return body;
+        });
+      },
+      function (err) {
+        throw new Error(err && err.name === 'AbortError' ? 'the request timed out' : 'network error');
+      },
+    );
   }
 
   function toast(message, isError) {
