@@ -84,8 +84,11 @@ class Videokr_Embed {
 		}
 		wp_enqueue_style( 'videokr-embed' );
 
+		/* `max-width` is inline because a theme's constrained-layout rule
+		   (`.is-layout-constrained > :where(...)`) sets its own max-width at the
+		   same specificity and would otherwise let a fixed width overflow. */
 		$style = sprintf(
-			'width:%s;aspect-ratio:%s',
+			'width:%s;max-width:100%%;aspect-ratio:%s',
 			esc_attr( self::width( (string) $atts['width'] ) ),
 			esc_attr( $ratio )
 		);
