@@ -17,6 +17,7 @@ class Videokr_Admin {
 
 	const SLUG  = 'videokr';
 	const NONCE = 'videokr_admin';
+	const TABS  = array( 'library', 'insights', 'settings' );
 
 	/**
 	 * Hooks the menu, assets and form handler.
@@ -122,13 +123,16 @@ class Videokr_Admin {
 	 */
 	public static function handle_refresh() {
 		self::guard();
+		/* A refresh belongs to the screen it was pressed on, so the redirect
+		   returns there instead of dropping the reader on the library. */
+		$from = isset( $_POST['videokr_tab'] ) ? sanitize_key( wp_unslash( $_POST['videokr_tab'] ) ) : '';
 		Videokr_Api::flush_cache();
 		$account = Videokr_Api::account( true );
 		if ( is_wp_error( $account ) ) {
-			self::redirect( 'error', $account->get_error_message() );
+			self::redirect( 'error', $account->get_error_message(), $from );
 		}
 		Videokr_Settings::save_connection( Videokr_Settings::api_key(), Videokr_Settings::host(), self::summary( $account ) );
-		self::redirect( 'ok', __( 'Library refreshed.', 'videokr' ) );
+		self::redirect( 'ok', __( 'Refreshed from Videokr.', 'videokr' ), $from );
 	}
 
 	/**
@@ -140,7 +144,7 @@ class Videokr_Admin {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to manage Videokr.', 'videokr' ) );
 		}
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'library'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only tab switch.
+		$tab = self::current_tab();
 		if ( ! Videokr_Settings::is_connected() ) {
 			$tab = 'settings';
 		}
@@ -326,6 +330,7 @@ class Videokr_Admin {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<?php wp_nonce_field( self::NONCE ); ?>
 				<input type="hidden" name="action" value="videokr_refresh">
+				<input type="hidden" name="videokr_tab" value="library">
 				<button class="videokr-btn videokr-btn--ghost" type="submit"><?php esc_html_e( 'Refresh', 'videokr' ); ?></button>
 			</form>
 		</div>
@@ -362,34 +367,39 @@ class Videokr_Admin {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<?php wp_nonce_field( self::NONCE ); ?>
 				<input type="hidden" name="action" value="videokr_refresh">
+				<input type="hidden" name="videokr_tab" value="insights">
 				<button class="videokr-btn videokr-btn--ghost" type="submit"><?php esc_html_e( 'Refresh', 'videokr' ); ?></button>
 			</form>
 		</div>
 
-		<?php if ( $allowance > 0 ) : ?>
-			<section class="videokr-card videokr-usage">
-				<h2><?php esc_html_e( 'This month', 'videokr' ); ?></h2>
-				<p class="videokr-usage__figure">
-					<strong><?php echo esc_html( number_format_i18n( $plays ) ); ?></strong>
-					<span class="videokr-muted">
-						<?php
+		<section class="videokr-card videokr-usage">
+			<h2><?php esc_html_e( 'This month', 'videokr' ); ?></h2>
+			<p class="videokr-usage__figure">
+				<strong><?php echo esc_html( number_format_i18n( $plays ) ); ?></strong>
+				<span class="videokr-muted">
+					<?php
+					if ( $allowance > 0 ) {
 						printf(
 							/* translators: %s: monthly play allowance. */
 							esc_html__( 'of %s plays', 'videokr' ),
 							esc_html( number_format_i18n( $allowance ) )
 						);
-						?>
-					</span>
-				</p>
+					} else {
+						esc_html_e( 'plays · no monthly limit on this plan', 'videokr' );
+					}
+					?>
+				</span>
+			</p>
+			<?php if ( $allowance > 0 ) : ?>
 				<?php $percent = min( 100, (int) round( ( $plays / max( 1, $allowance ) ) * 100 ) ); ?>
 				<div class="videokr-meter" role="img" aria-label="<?php echo esc_attr( sprintf( /* translators: %d: percentage of the allowance used. */ __( '%d%% of the monthly allowance used', 'videokr' ), $percent ) ); ?>">
 					<span style="width:<?php echo esc_attr( $percent ); ?>%"></span>
 				</div>
-				<?php if ( ! empty( $usage['blocked'] ) ) : ?>
-					<p class="videokr-notice videokr-notice--error"><?php esc_html_e( 'This account has reached its monthly play limit — embeds are paused until the allowance resets or the plan is upgraded.', 'videokr' ); ?></p>
-				<?php endif; ?>
-			</section>
-		<?php endif; ?>
+			<?php endif; ?>
+			<?php if ( ! empty( $usage['blocked'] ) ) : ?>
+				<p class="videokr-notice videokr-notice--error"><?php esc_html_e( 'This account has reached its monthly play limit — embeds are paused until the allowance resets or the plan is upgraded.', 'videokr' ); ?></p>
+			<?php endif; ?>
+		</section>
 
 		<h2 class="videokr-heading"><?php esc_html_e( 'All time', 'videokr' ); ?></h2>
 		<ul class="videokr-stats">
@@ -588,6 +598,7 @@ class Videokr_Admin {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<?php wp_nonce_field( self::NONCE ); ?>
 				<input type="hidden" name="action" value="videokr_refresh">
+				<input type="hidden" name="videokr_tab" value="<?php echo esc_attr( self::current_tab() ); ?>">
 				<button class="videokr-btn" type="submit"><?php esc_html_e( 'Try again', 'videokr' ); ?></button>
 			</form>
 		</div>
@@ -595,6 +606,16 @@ class Videokr_Admin {
 	}
 
 	/* -------------------------------------------------------------- helpers --- */
+
+	/**
+	 * The requested tab, restricted to the tabs that exist.
+	 *
+	 * @return string
+	 */
+	private static function current_tab() {
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'library'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only tab switch.
+		return in_array( $tab, self::TABS, true ) ? $tab : 'library';
+	}
 
 	/**
 	 * Seconds as `m:ss`.
@@ -645,14 +666,18 @@ class Videokr_Admin {
 	 *
 	 * @param string $status  `ok` or `error`.
 	 * @param string $message Notice text.
+	 * @param string $tab     Tab to return to; defaults by status.
 	 * @return void
 	 */
-	private static function redirect( $status, $message ) {
+	private static function redirect( $status, $message, $tab = '' ) {
+		if ( ! in_array( $tab, self::TABS, true ) ) {
+			$tab = 'error' === $status ? 'settings' : 'library';
+		}
 		wp_safe_redirect(
 			add_query_arg(
 				array(
 					'page'            => self::SLUG,
-					'tab'             => 'error' === $status ? 'settings' : 'library',
+					'tab'             => $tab,
 					'videokr_status'  => $status,
 					'videokr_message' => $message,
 				),
