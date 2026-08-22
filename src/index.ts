@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from './lib/types';
 import { closePeriod, previousPeriod } from './lib/overage';
 import { api } from './routes/api';
+import { plugin } from './routes/plugin';
 import { pub } from './routes/public';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -9,6 +10,9 @@ const app = new Hono<{ Bindings: Env }>();
 // Public viewer routes are registered first: they own a few /api/* paths
 // (embed config, tracking, lead capture) that must stay session-free.
 app.route('/', pub);
+// Key-authenticated integration API, mounted before the session API so it is
+// never subject to the cookie check.
+app.route('/api/v1', plugin);
 app.route('/api', api);
 
 app.get('/healthz', (c) => c.json({ ok: true, service: 'videokr' }));

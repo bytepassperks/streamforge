@@ -218,7 +218,29 @@
     <!-- Integrations ------------------------------------------------------- -->
     <section class="view" id="view-integrations">
       <div class="page-head">
-        <div><h1>Integrations</h1><p class="muted tiny">HMAC-signed webhooks for play, complete, cta_click and lead.</p></div>
+        <div><h1>Integrations</h1><p class="muted tiny">API keys for the WordPress plugin, and HMAC-signed webhooks for play, complete, cta_click and lead.</p></div>
+      </div>
+      <div class="card" style="margin-bottom:18px">
+        <h3>API keys</h3>
+        <p class="muted tiny" style="margin-top:0">
+          Paste a key into the Videokr WordPress plugin (or any script) to list and embed your videos.
+          A key is shown once — if you lose it, revoke it and make another.
+        </p>
+        <div class="row row-wrap">
+          <div class="field grow" style="margin-bottom:0"><label for="key-name">Label</label>
+            <input id="key-name" placeholder="my-wordpress-site.com"></div>
+          <button class="btn" id="key-create" type="button">Create key</button>
+        </div>
+        <div class="hidden" id="key-fresh" style="margin-top:14px">
+          <div class="field" style="margin-bottom:0">
+            <label for="key-fresh-value">Your new key — copy it now</label>
+            <div class="row row-wrap">
+              <input class="grow" id="key-fresh-value" readonly>
+              <button class="btn btn-ghost btn-sm" id="key-copy" type="button">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div id="keys-body" style="margin-top:14px"></div>
       </div>
       <div class="card" style="margin-bottom:18px">
         <h3>Add a webhook</h3>

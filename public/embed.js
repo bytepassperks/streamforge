@@ -29,7 +29,10 @@
     /* A playlist page carries its own queue beside the stage, so it needs a taller box. */
     var ratio = script.getAttribute('data-ratio') || (videoId ? '16/9' : '16/11');
     var parts = ratio.split('/');
-    var aspect = (parseFloat(parts[1]) / parseFloat(parts[0])) * 100 || 56.25;
+    var aspect =
+      parseFloat(parts[0]) > 0 && parseFloat(parts[1]) > 0
+        ? parseFloat(parts[0]) + ' / ' + parseFloat(parts[1])
+        : '16 / 9';
 
     var params = [];
     ['autoplay', 'muted', 'start', 'token'].forEach(function (name) {
@@ -41,8 +44,10 @@
     wrap.className = 'videokr-embed';
     wrap.style.position = 'relative';
     wrap.style.width = script.getAttribute('data-width') || '100%';
-    wrap.style.paddingBottom = aspect + '%';
-    wrap.style.height = '0';
+    /* The shape lives on the box itself: percentage padding would resolve
+       against the host's containing block and mis-size a fixed-width embed. */
+    wrap.style.maxWidth = '100%';
+    wrap.style.aspectRatio = aspect;
 
     var frame = document.createElement('iframe');
     frame.src =
@@ -68,7 +73,7 @@
         if (event.source !== frame.contentWindow) return;
         var data = event.data;
         if (!data || data.videokr !== 'height' || !data.height) return;
-        wrap.style.paddingBottom = '0';
+        wrap.style.aspectRatio = 'auto';
         wrap.style.height = Math.round(data.height) + 'px';
       });
     }

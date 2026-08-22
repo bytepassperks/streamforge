@@ -17,6 +17,7 @@ import {
 import type { Cycle } from '../lib/billing';
 import { admin } from './admin';
 import { deliverTestWebhook } from '../lib/webhooks';
+import { generateApiKey, hashApiKey, keyPrefix } from '../lib/apikeys';
 import {
   defaultPlayerConfig,
   mergePlayerConfig,
@@ -705,6 +706,38 @@ api.post('/webhooks/:id/test', async (c) => {
 api.delete('/webhooks/:id', async (c) => {
   await c.env.DB.prepare('DELETE FROM webhooks WHERE id = ? AND user_id = ?')
     .bind(c.req.param('id'), c.get('user').id)
+    .run();
+  return c.json({ ok: true });
+});
+
+/* ------------------------------------------------------------ api keys ---- */
+
+api.get('/keys', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, name, prefix, created_at, last_used_at FROM api_keys
+      WHERE user_id = ? AND revoked_at = 0 ORDER BY created_at DESC`,
+  )
+    .bind(c.get('user').id)
+    .all();
+  return c.json({ keys: results ?? [] });
+});
+
+/** The only time the full key exists outside the integration that stores it. */
+api.post('/keys', async (c) => {
+  const body = await c.req.json<{ name?: string }>().catch(() => ({ name: '' }));
+  const key = generateApiKey();
+  const id = newId('key');
+  await c.env.DB.prepare(
+    'INSERT INTO api_keys (id, user_id, name, prefix, key_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+  )
+    .bind(id, c.get('user').id, (body.name ?? '').trim().slice(0, 60), keyPrefix(key), await hashApiKey(key), now())
+    .run();
+  return c.json({ id, key }, 201);
+});
+
+api.delete('/keys/:id', async (c) => {
+  await c.env.DB.prepare('UPDATE api_keys SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at = 0')
+    .bind(now(), c.req.param('id'), c.get('user').id)
     .run();
   return c.json({ ok: true });
 });

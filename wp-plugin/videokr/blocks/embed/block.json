@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "videokr/embed",
+  "title": "Videokr",
+  "category": "media",
+  "icon": "video-alt3",
+  "description": "Embed a Videokr video or playlist with your branded player.",
+  "keywords": ["video", "player", "playlist", "videokr", "embed"],
+  "textdomain": "videokr",
+  "supports": {
+    "align": ["left", "center", "right", "wide", "full"],
+    "html": false,
+    "spacing": { "margin": true }
+  },
+  "attributes": {
+    "kind": { "type": "string", "default": "video" },
+    "videoId": { "type": "string", "default": "" },
+    "playlistId": { "type": "string", "default": "" },
+    "title": { "type": "string", "default": "" },
+    "ratio": { "type": "string", "default": "" },
+    "width": { "type": "string", "default": "100%" },
+    "align": { "type": "string", "default": "" },
+    "autoplay": { "type": "boolean", "default": false },
+    "muted": { "type": "boolean", "default": false },
+    "start": { "type": "string", "default": "" }
+  },
+  "editorScript": "videokr-block",
+  "editorStyle": "videokr-block-editor",
+  "style": "videokr-embed"
+}
