@@ -200,6 +200,31 @@
       });
   }
 
+  /* The poster the customer picked in the composer, stored on the video the same
+     way a grabbed frame is. Failure only costs the artwork, never the video. */
+  function uploadThumb(videoId, file) {
+    var form = new FormData();
+    form.append('file', file);
+    return api('/uploads', { method: 'POST', form: form })
+      .then(function (result) {
+        return api('/videos/' + videoId, {
+          method: 'PATCH',
+          body: { thumbnail_url: result.url },
+        }).then(function () {
+          if (state.video && state.video.id === videoId) {
+            state.video.thumbnail_url = result.url;
+            $('ed-thumb').value = result.url;
+            renderThumbPreviews();
+          }
+          return result.url;
+        });
+      })
+      .catch(function () {
+        toast('Thumbnail upload failed — the video was created', true);
+        return '';
+      });
+  }
+
   /* Videos already in the library that never got artwork heal themselves the
      next time the library is drawn, but only for files we host: a third-party
      url would either taint the canvas or cost the customer a download. */
@@ -630,18 +655,38 @@
   /* "Create video" stays disabled until there is something to create from. */
   function syncComposer() {
     var file = $('cv-upload').files[0];
+    var thumb = $('cv-thumb').files[0];
     var source = $('cv-source').value.trim();
     $('cv-save').disabled = !file && !source;
-    var box = $('cv-file-state');
     // Only a chosen file gets a tick; an empty square just looks like a dead control.
-    box.classList.toggle('on', Boolean(file));
-    box.textContent = file ? '✓' : '';
-    box.title = file ? file.name : '';
-    showPickedName($('cv-upload'), file ? file.name : '');
+    [[$('cv-file-state'), $('cv-upload'), file], [$('cv-thumb-state'), $('cv-thumb'), thumb]].forEach(
+      function (row) {
+        var box = row[0];
+        var picked = row[2];
+        box.classList.toggle('on', Boolean(picked));
+        box.textContent = picked ? '✓' : '';
+        box.title = picked ? picked.name : '';
+        showPickedName(row[1], picked ? picked.name : '');
+      },
+    );
   }
 
   $('cv-source').addEventListener('input', syncComposer);
   $('cv-upload').addEventListener('change', syncComposer);
+  /* Thumbnails are pictures, and small ones: rejecting here keeps an oversized
+     file from being uploaded only to be refused. */
+  $('cv-thumb').addEventListener('change', function () {
+    var picker = $('cv-thumb');
+    var file = picker.files[0];
+    if (file && !/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      picker.value = '';
+      toast('Choose a PNG, JPG or WebP image', true);
+    } else if (file && file.size > IMAGE_LIMIT_BYTES) {
+      picker.value = '';
+      toast('Images have to be 5 MB or smaller', true);
+    }
+    syncComposer();
+  });
   $('cv-focus-source').addEventListener('click', function () {
     showComposerTab('source');
     $('cv-source').focus();
@@ -650,6 +695,7 @@
     $('cv-title').value = '';
     $('cv-source').value = '';
     $('cv-upload').value = '';
+    $('cv-thumb').value = '';
     $('cv-error').textContent = '';
     syncComposer();
   });
@@ -668,6 +714,7 @@
     var error = $('cv-error');
     error.textContent = '';
     var file = $('cv-upload').files[0];
+    var thumb = $('cv-thumb').files[0];
     var source = $('cv-source').value.trim();
     if (!source && !file) {
       error.textContent = 'Paste a video link or choose a file to upload.';
@@ -698,13 +745,20 @@
         $('cv-title').value = '';
         $('cv-source').value = '';
         $('cv-upload').value = '';
+        $('cv-thumb').value = '';
         syncComposer();
         toast('Video created');
-        // The chosen file is still in memory here, so the poster comes off it
-        // rather than downloading what we just uploaded.
-        var poster = file
-          ? autoPoster(result.video.id, window.URL.createObjectURL(file), true)
-          : Promise.resolve('');
+        // A chosen thumbnail wins over the automatic frame grab. Where there is
+        // none, the chosen file is still in memory here, so the poster comes off
+        // it rather than downloading what we just uploaded.
+        var poster;
+        if (thumb) {
+          poster = uploadThumb(result.video.id, thumb);
+        } else if (file) {
+          poster = autoPoster(result.video.id, window.URL.createObjectURL(file), true);
+        } else {
+          poster = Promise.resolve('');
+        }
         poster.then(function () {
           loadVideos();
         });
