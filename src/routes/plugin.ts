@@ -69,7 +69,9 @@ plugin.get('/account', async (c) => {
   return c.json({
     account: { email: user.email, name: user.name, plan: user.plan, plan_name: plan.name },
     usage: { plays: usage.plays, allowance: usage.allowance, blocked: usage.blocked },
-    base_url: c.env.PUBLIC_BASE_URL,
+    /* The origin the key was presented to, so an integration echoes back the
+       host it is actually talking to rather than a configured default. */
+    base_url: new URL(c.req.url).origin,
   });
 });
 

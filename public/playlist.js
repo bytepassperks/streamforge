@@ -67,8 +67,14 @@
   /* Embedded on somebody else's page the host cannot measure us, so the bare page reports
      its own height and the loader sizes the iframe to it instead of guessing a ratio. */
   if (document.body.classList.contains('sf-page-bare') && window.parent !== window) {
+    var main = document.querySelector('.sf-playlist');
     var reportHeight = function () {
-      var height = document.documentElement.scrollHeight;
+      /* Measure the content itself: the document can be taller than the queue
+         (min-height rules, margins) and would leave dead space in the host. */
+      var box = main ? main.getBoundingClientRect() : null;
+      var height = box
+        ? Math.ceil(box.height + box.top * 2)
+        : document.documentElement.scrollHeight;
       if (height && height !== reportHeight.last) {
         reportHeight.last = height;
         window.parent.postMessage({ videokr: 'height', height: height }, '*');

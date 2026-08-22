@@ -16,7 +16,7 @@
     Array.prototype.forEach.call(boxes(), function (box) {
       var frame = box.querySelector('iframe');
       if (!frame || event.source !== frame.contentWindow) return;
-      box.style.paddingBottom = '0';
+      box.classList.add('videokr-sized');
       box.style.height = Math.round(data.height) + 'px';
     });
   });

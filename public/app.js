@@ -327,6 +327,11 @@
   };
 
   function showView(name) {
+    /* A key is shown once: leaving Integrations drops the plaintext copy. */
+    if (name !== 'integrations') {
+      $('key-fresh-value').value = '';
+      $('key-fresh').classList.add('hidden');
+    }
     document.querySelectorAll('.view').forEach(function (view) {
       view.classList.toggle('active', view.id === 'view-' + name);
     });

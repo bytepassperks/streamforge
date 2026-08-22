@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { Chapter, Cta, Env, Playlist, Video } from '../lib/types';
+import type { Chapter, Cta, Env, PlayerConfig, Playlist, Video } from '../lib/types';
 import {
   deviceFromUserAgent,
   escapeHtml,
@@ -283,6 +283,27 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
   };
 }
 
+/**
+ * An embed may carry playback overrides in its URL (`?autoplay=1&muted=1&start=30`),
+ * which is what the embed loader and the WordPress plugin emit. An explicit start
+ * also turns resume off, otherwise a saved position would win over the request.
+ */
+function applyEmbedQuery(url: string, player: PlayerConfig): PlayerConfig {
+  const params = new URL(url).searchParams;
+  const on = (name: string): boolean => {
+    const value = params.get(name);
+    return value !== null && value !== '0' && value !== 'false';
+  };
+  if (on('autoplay')) player.autoplay = true;
+  if (on('muted')) player.muted = true;
+  const start = Number(params.get('start'));
+  if (Number.isFinite(start) && start > 0) {
+    player.startAt = Math.floor(start);
+    player.resume = false;
+  }
+  return player;
+}
+
 pub.get('/api/embed/:key', async (c) => {
   const video = await loadVideoBySlugOrId(c.env, c.req.param('key'));
   if (!video) return c.json({ error: 'not found' }, 404);
@@ -299,7 +320,9 @@ pub.get('/api/embed/:key', async (c) => {
   }
 
   const variant: 'a' | 'b' = video.thumbnail_url_b && Math.random() < 0.5 ? 'b' : 'a';
-  return c.json(await buildEmbedPayload(c.env, video, variant));
+  const payload = await buildEmbedPayload(c.env, video, variant);
+  payload.player = applyEmbedQuery(c.req.url, payload.player);
+  return c.json(payload);
 });
 
 pub.post('/api/embed/:key/unlock', async (c) => {
@@ -526,6 +549,7 @@ pub.get('/e/:key', async (c) => {
   }
   const variant: 'a' | 'b' = video.thumbnail_url_b && Math.random() < 0.5 ? 'b' : 'a';
   const payload = await buildEmbedPayload(c.env, video, variant);
+  payload.player = applyEmbedQuery(c.req.url, payload.player);
   return c.html(playerShell(JSON.stringify(payload), video.title));
 });
 

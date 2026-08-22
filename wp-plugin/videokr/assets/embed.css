@@ -1,7 +1,10 @@
-/* Front-end embed wrapper: a fluid box the iframe fills. */
+/* Front-end embed wrapper: a fluid box the iframe fills. The shape comes from
+   `aspect-ratio` on the element itself rather than percentage padding, which
+   would resolve against the containing block and mis-size a fixed-width embed.
+   `max-width` keeps a fixed width from overflowing a narrow screen. */
 .videokr-embed {
   position: relative;
-  height: 0;
+  max-width: 100%;
   margin: 0 0 1.5em;
   overflow: hidden;
   border-radius: 16px;
@@ -15,6 +18,9 @@
   height: 100%;
   border: 0;
 }
+
+/* A playlist that reports its own height is sized in pixels instead. */
+.videokr-embed.videokr-sized { aspect-ratio: auto; }
 
 .videokr-align-center { margin-left: auto; margin-right: auto; }
 .videokr-align-left { float: left; margin-right: 1.5em; }

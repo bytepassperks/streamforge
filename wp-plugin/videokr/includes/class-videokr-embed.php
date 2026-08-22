@@ -85,9 +85,9 @@ class Videokr_Embed {
 		wp_enqueue_style( 'videokr-embed' );
 
 		$style = sprintf(
-			'width:%s;padding-bottom:%s%%',
+			'width:%s;aspect-ratio:%s',
 			esc_attr( self::width( (string) $atts['width'] ) ),
-			esc_attr( (string) $ratio )
+			esc_attr( $ratio )
 		);
 
 		return sprintf(
@@ -100,15 +100,19 @@ class Videokr_Embed {
 	}
 
 	/**
-	 * Converts a `w/h` ratio into the padding percentage the wrapper needs.
+	 * Normalises a `16/9` or `16:9` ratio into a CSS `aspect-ratio` value. A
+	 * percentage padding box cannot be used here: percentage padding resolves
+	 * against the *containing block*, so a fixed-width embed inside a wider
+	 * column would get a wildly wrong height.
+	 *
 	 * A playlist starts taller because its queue sits beside the stage.
 	 *
 	 * @param string $ratio    Ratio such as `16/9`.
 	 * @param bool   $is_video Whether this is a single video.
-	 * @return float
+	 * @return string
 	 */
 	private static function ratio( $ratio, $is_video ) {
-		$fallback = $is_video ? 56.25 : 68.75;
+		$fallback = $is_video ? '16 / 9' : '16 / 11';
 		$parts    = explode( '/', str_replace( ':', '/', $ratio ) );
 		if ( 2 !== count( $parts ) ) {
 			return $fallback;
@@ -118,7 +122,7 @@ class Videokr_Embed {
 		if ( $width <= 0 || $height <= 0 ) {
 			return $fallback;
 		}
-		return round( ( $height / $width ) * 100, 4 );
+		return $width . ' / ' . $height;
 	}
 
 	/**

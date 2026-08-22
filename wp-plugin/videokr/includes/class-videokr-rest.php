@@ -79,11 +79,11 @@ class Videokr_Rest {
 		$fresh  = (bool) $request->get_param( 'fresh' );
 		$videos = Videokr_Api::videos( (string) $request->get_param( 'search' ), $fresh );
 		if ( is_wp_error( $videos ) ) {
-			return new WP_Error( $videos->get_error_code(), $videos->get_error_message(), array( 'status' => 502 ) );
+			return self::upstream_error( $videos );
 		}
 		$playlists = Videokr_Api::playlists( $fresh );
 		if ( is_wp_error( $playlists ) ) {
-			return new WP_Error( $playlists->get_error_code(), $playlists->get_error_message(), array( 'status' => 502 ) );
+			return self::upstream_error( $playlists );
 		}
 
 		return rest_ensure_response(
@@ -93,5 +93,17 @@ class Videokr_Rest {
 				'host'      => Videokr_Settings::host(),
 			)
 		);
+	}
+
+	/**
+	 * Re-wraps an API failure, keeping a rejected key a 401 rather than
+	 * reporting it as a gateway failure.
+	 *
+	 * @param WP_Error $error API error.
+	 * @return WP_Error
+	 */
+	private static function upstream_error( WP_Error $error ) {
+		$status = 'videokr_unauthorized' === $error->get_error_code() ? 401 : 502;
+		return new WP_Error( $error->get_error_code(), $error->get_error_message(), array( 'status' => $status ) );
 	}
 }
