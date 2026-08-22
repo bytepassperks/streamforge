@@ -4,7 +4,7 @@ Tags: video, video player, playlist, embed, video hosting
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,6 +57,9 @@ Yes — a play is a play wherever the embed lives, and usage is shown in Videokr
 Yes, by passing a valid access token with the `token` attribute. Without it the embed asks for the password.
 
 == Changelog ==
+
+= 1.1.0 =
+* Insights tab: monthly play usage against your allowance, all-time totals, plays over the last 30 days, most played videos and recent leads.
 
 = 1.0.0 =
 * First release: shortcode, block with library picker, connection screen and playlist embeds.

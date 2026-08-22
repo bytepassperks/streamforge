@@ -303,9 +303,114 @@
 .videokr-empty p { margin: 0; }
 .videokr-empty--error { border-color: #f3c9c9; background: #fdeeee; }
 
+/* ----------------------------------------------------------- insights --- */
+
+.videokr-usage { margin-top: 16px; }
+
+.videokr-usage__figure {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.videokr-usage__figure strong {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--vk-accent-ink);
+}
+
+.videokr-meter {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--vk-accent-pill);
+  overflow: hidden;
+}
+
+.videokr-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--vk-accent);
+}
+
+.videokr-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.videokr-stat { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; }
+
+.videokr-stat strong {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+/* Day-by-day plays: a bar per day, tall enough to read at a glance. */
+.videokr-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 140px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.videokr-chart > li {
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 0;
+  height: 100%;
+  min-width: 4px;
+}
+
+.videokr-chart__bar {
+  display: block;
+  width: 100%;
+  border-radius: 6px 6px 3px 3px;
+  background: var(--vk-accent);
+}
+
+.videokr-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px dashed var(--vk-line-dash);
+  border-radius: 16px;
+  background: var(--vk-surface);
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.videokr-table th,
+.videokr-table td { padding: 10px 14px; text-align: left; }
+
+.videokr-table thead th {
+  background: var(--vk-panel);
+  color: var(--vk-text-2);
+  font-size: 12px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.videokr-table tbody tr + tr th,
+.videokr-table tbody tr + tr td { border-top: 1px dashed var(--vk-line-dash); }
+
 @media (max-width: 782px) {
   .videokr-wrap { margin-right: 10px; }
   .videokr-logo { font-size: 28px; }
   .videokr-item { flex-direction: column; }
   .videokr-item__art { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .videokr-chart { height: 110px; }
+  .videokr-table { display: block; overflow-x: auto; }
 }
