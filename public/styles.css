@@ -853,7 +853,12 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   margin: 0; align-items: center !important;
 }
 .modal h2 { font-family: var(--hand); font-weight: 700; font-size: 26px; letter-spacing: .01em; margin: 0; }
-.modal > .editor-grid, .modal > .modal-foot { padding: 0 var(--s4); }
+/* The modal has no padding of its own so the header and footer can sit flush and
+   stick. Everything else needs the gutter added back, or its text runs into the
+   border. */
+.modal > *:not(.row.spread):not(.modal-foot) { padding-left: var(--s4); padding-right: var(--s4); }
+.modal > *:last-child:not(.modal-foot) { padding-bottom: var(--s4); }
+.modal > .row.spread + * { padding-top: var(--s3); }
 .modal-foot {
   display: flex; justify-content: flex-end; gap: var(--s2); margin-top: var(--s4);
   position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
