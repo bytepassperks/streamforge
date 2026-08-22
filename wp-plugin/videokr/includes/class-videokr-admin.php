@@ -423,45 +423,70 @@ class Videokr_Admin {
 		</ul>
 
 		<h2 class="videokr-heading"><?php esc_html_e( 'Plays, last 30 days', 'videokr' ); ?></h2>
-		<?php if ( empty( $daily ) ) : ?>
-			<div class="videokr-empty"><?php esc_html_e( 'No plays recorded yet.', 'videokr' ); ?></div>
-		<?php else : ?>
-			<section class="videokr-card">
-				<?php
-				$peak = 1;
-				foreach ( $daily as $row ) {
-					$peak = max( $peak, (int) ( isset( $row['plays'] ) ? $row['plays'] : 0 ) );
-				}
-				?>
-				<ul class="videokr-chart">
-					<?php foreach ( $daily as $row ) : ?>
-						<?php
-						$day   = isset( $row['day'] ) ? (string) $row['day'] : '';
-						$count = (int) ( isset( $row['plays'] ) ? $row['plays'] : 0 );
-						$label = sprintf(
-							/* translators: 1: play count, 2: date. */
-							_n( '%1$s play on %2$s', '%1$s plays on %2$s', $count, 'videokr' ),
-							number_format_i18n( $count ),
-							$day
-						);
-						?>
-						<li title="<?php echo esc_attr( $label ); ?>">
-							<span class="videokr-chart__bar" style="height:<?php echo esc_attr( max( 4, (int) round( ( $count / $peak ) * 100 ) ) ); ?>%"></span>
-							<span class="screen-reader-text"><?php echo esc_html( $label ); ?></span>
-						</li>
-					<?php endforeach; ?>
-				</ul>
-				<p class="videokr-muted videokr-tiny">
+		<?php
+		/* The API only returns days that had plays, so the axis is filled in
+		   here: every one of the 30 days gets a column, quiet days included. */
+		$counts = array();
+		$peak   = 1;
+		foreach ( $daily as $row ) {
+			$day = isset( $row['day'] ) ? (string) $row['day'] : '';
+			if ( '' === $day ) {
+				continue;
+			}
+			$counts[ $day ] = (int) ( isset( $row['plays'] ) ? $row['plays'] : 0 );
+			$peak           = max( $peak, $counts[ $day ] );
+		}
+		$days = array();
+		for ( $back = 29; $back >= 0; $back-- ) {
+			$day    = gmdate( 'Y-m-d', time() - ( $back * DAY_IN_SECONDS ) );
+			$days[] = array(
+				'day'   => $day,
+				'plays' => isset( $counts[ $day ] ) ? $counts[ $day ] : 0,
+			);
+		}
+		$window = array_sum( wp_list_pluck( $days, 'plays' ) );
+		$last   = $days[ count( $days ) - 1 ]['day'];
+		?>
+		<section class="videokr-card">
+			<ul class="videokr-chart">
+				<?php foreach ( $days as $row ) : ?>
+					<?php
+					$count = (int) $row['plays'];
+					$label = sprintf(
+						/* translators: 1: play count, 2: date. */
+						_n( '%1$s play on %2$s', '%1$s plays on %2$s', $count, 'videokr' ),
+						number_format_i18n( $count ),
+						$row['day']
+					);
+					?>
+					<li title="<?php echo esc_attr( $label ); ?>">
+						<span
+							class="videokr-chart__bar<?php echo 0 === $count ? ' is-empty' : ''; ?>"
+							style="height:<?php echo esc_attr( 0 === $count ? 3 : max( 6, (int) round( ( $count / $peak ) * 100 ) ) ); ?>%"
+						></span>
+						<span class="screen-reader-text"><?php echo esc_html( $label ); ?></span>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<p class="videokr-chart__axis videokr-muted videokr-tiny">
+				<span><?php echo esc_html( $days[0]['day'] ); ?></span>
+				<span><?php echo esc_html( $last ); ?></span>
+			</p>
+			<p class="videokr-muted videokr-tiny">
+				<?php if ( $window > 0 ) : ?>
 					<?php
 					printf(
-						/* translators: %s: highest daily play count. */
-						esc_html__( 'Peak %s plays in a day', 'videokr' ),
+						/* translators: 1: plays in the window, 2: highest daily play count. */
+						esc_html__( '%1$s plays in the window · peak %2$s in a day', 'videokr' ),
+						esc_html( number_format_i18n( $window ) ),
 						esc_html( number_format_i18n( $peak ) )
 					);
 					?>
-				</p>
-			</section>
-		<?php endif; ?>
+				<?php else : ?>
+					<?php esc_html_e( 'No plays in the last 30 days yet — embed a video and the days will fill in.', 'videokr' ); ?>
+				<?php endif; ?>
+			</p>
+		</section>
 
 		<h2 class="videokr-heading"><?php esc_html_e( 'Most played', 'videokr' ); ?></h2>
 		<?php if ( empty( $top ) ) : ?>

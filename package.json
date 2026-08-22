@@ -10,7 +10,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply streamforge --remote",
     "seed:local": "node scripts/seed.mjs",
     "seed:remote": "node scripts/seed.mjs --remote",
-    "deploy": "wrangler deploy",
+    "wp:zip": "node scripts/wp-zip.mjs",
+    "deploy": "npm run wp:zip && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run"

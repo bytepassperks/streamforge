@@ -380,6 +380,15 @@
   background: var(--vk-accent);
 }
 
+/* A quiet day still gets a tick, so the 30-day axis reads as a timeline. */
+.videokr-chart__bar.is-empty { background: var(--vk-accent-pill); }
+
+.videokr-chart__axis {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 6px;
+}
+
 .videokr-table {
   width: 100%;
   margin: 0;

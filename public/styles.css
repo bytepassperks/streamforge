@@ -150,6 +150,8 @@ a.btn.is-disabled { pointer-events: none; }
 .btn-sm svg { width: 15px; height: 15px; }
 .btn-lg { padding: 0 28px; min-height: 52px; font-size: 16px; }
 .btn-block { width: 100%; }
+/* a long label would otherwise run past a narrow grid column, since buttons don't wrap */
+.btn-wrap { white-space: normal; max-width: 100%; text-align: center; padding-top: 10px; padding-bottom: 10px; }
 
 /* Amber "Get $10" style reward pill. */
 .btn-gift {
