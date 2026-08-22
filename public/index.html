@@ -78,8 +78,8 @@
   <div class="wrap">
     <div class="section-head">
       <span class="eyebrow">not a mockup →</span>
-      <h2>This is the actual player.</h2>
-      <p class="section-lede">Same code your embeds run. Hit play, drag the bar, press <b>C</b>, <b>F</b> or <b>P</b> — chapters, speed, picture-in-picture, keyboard control, all standard on both tiers.</p>
+      <h2>The product film, hosted on Videokr.</h2>
+      <p class="section-lede">Two minutes recorded inside the product — uploads, the branded player, chapters, captions, in-video lead forms, embeds and the analytics behind them. It is playing through the same player and the same hosting your embeds use: jump a chapter, press <b>C</b> for subtitles, <b>F</b> or <b>P</b> for full screen and picture-in-picture.</p>
     </div>
     <div class="hero-demo"><div id="demo-player"></div></div>
   </div>
@@ -345,19 +345,19 @@
   Videokr.mount(document.getElementById('demo-player'), {
     tracking: false,
     video: {
-      id: 'demo',
-      slug: 'demo',
-      title: 'Sintel — Blender Foundation (CC BY 3.0)',
+      id: 'vid_hyksysukg4r4qmsx',
+      slug: 'videokr-the-product-film',
+      title: 'Videokr — the product film',
       description: '',
       source_type: 'mp4',
-      source_ref: '/media/demo/videokr-demo-16x9.mp4',
-      duration: 0,
-      thumbnail_url: '/media/demo/videokr-demo-16x9.jpg',
-      captions_url: '/demo/videokr-demo-16x9.vtt'
+      source_ref: '/media/usr_sfv3f9yfqwbgba7y/px4qe4jkakhk5dsi.mp4',
+      duration: 122,
+      thumbnail_url: '/media/usr_sfv3f9yfqwbgba7y/g94jj2it9paghtnt.jpg',
+      captions_url: '/media/usr_sfv3f9yfqwbgba7y/ko6vrmthhr5v5c4p.vtt'
     },
     share: {
-      url: 'https://streamforge.getlaunchpod.workers.dev/v/demo',
-      embed: '<iframe src="https://streamforge.getlaunchpod.workers.dev/e/demo" width="640" height="360" frameborder="0" allowfullscreen allow="autoplay; picture-in-picture"></iframe>'
+      url: 'https://streamforge.getlaunchpod.workers.dev/v/videokr-the-product-film',
+      embed: '<iframe src="https://streamforge.getlaunchpod.workers.dev/e/vid_hyksysukg4r4qmsx" width="640" height="360" frameborder="0" allowfullscreen allow="autoplay; picture-in-picture"></iframe>'
     },
     player: {
       skin: 'videokr', accent: '#ff6106', background: '#0b0908',
@@ -370,11 +370,24 @@
       title: true, bigPlayButton: false, sticky: false, borderRadius: 14
     },
     chapters: [
-      { start_seconds: 0, title: 'Cold open' },
-      { start_seconds: 18, title: 'The hunt' },
-      { start_seconds: 38, title: 'Face to face' }
+      { start_seconds: 0, title: 'The problem' },
+      { start_seconds: 12.47, title: 'Upload anything' },
+      { start_seconds: 30.18, title: 'Brand the player' },
+      { start_seconds: 47.66, title: 'Chapters & captions' },
+      { start_seconds: 57.25, title: 'Capture leads' },
+      { start_seconds: 78.29, title: 'Embed anywhere' },
+      { start_seconds: 99.99, title: 'See what works' },
+      { start_seconds: 112.87, title: 'Start free' }
     ],
-    ctas: [],
+    ctas: [
+      { kind: 'overlay', start_seconds: 100, end_seconds: 122, headline: 'Start free',
+        body: '500 plays a month, no card.', button_text: 'Create my account',
+        button_url: '/login.html?mode=signup', position: 'bottom-right', skippable: 1 },
+      { kind: 'endscreen', start_seconds: 116, end_seconds: 122,
+        headline: 'Want the numbers behind this?',
+        body: 'We will send the plays, play rate and lead figures from this film.',
+        button_text: 'Send it to me', fields: 'email', skippable: 1 }
+    ],
     variant: 'a'
   });
 

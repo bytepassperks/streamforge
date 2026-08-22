@@ -60,9 +60,14 @@
     return [library, load];
   }
 
+  function absolute(url) {
+    if (!url || /^https?:\/\//i.test(url)) return url;
+    return String(config.host || '').replace(/\/+$/, '') + '/' + String(url).replace(/^\/+/, '');
+  }
+
   function Thumb(item) {
     if (item.thumbnail_url) {
-      return el('img', { src: item.thumbnail_url, alt: '', className: 'videokr-pick__art' });
+      return el('img', { src: absolute(item.thumbnail_url), alt: '', className: 'videokr-pick__art' });
     }
     return el('span', { className: 'videokr-pick__art videokr-pick__art--empty' }, '▶');
   }

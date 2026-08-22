@@ -576,7 +576,7 @@ class Videokr_Admin {
 			$key       = ! empty( $item['slug'] ) ? $item['slug'] : $item['id'];
 			$shortcode = sprintf( '[videokr %s="%s"]', $attribute, $key );
 			$title     = ! empty( $item['title'] ) ? $item['title'] : $key;
-			$thumb     = ! empty( $item['thumbnail_url'] ) ? $item['thumbnail_url'] : '';
+			$thumb     = ! empty( $item['thumbnail_url'] ) ? self::absolute( $item['thumbnail_url'] ) : '';
 			$sub       = 'playlist' === $attribute
 				? sprintf(
 					/* translators: %d: number of videos in the playlist. */
@@ -640,6 +640,21 @@ class Videokr_Admin {
 	private static function current_tab() {
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'library'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only tab switch.
 		return in_array( $tab, self::TABS, true ) ? $tab : 'library';
+	}
+
+	/**
+	 * Videokr stores uploaded posters as host-relative paths, which a WordPress
+	 * page cannot resolve on its own.
+	 *
+	 * @param string $url Absolute or host-relative url.
+	 * @return string
+	 */
+	private static function absolute( $url ) {
+		$url = (string) $url;
+		if ( '' === $url || preg_match( '#^https?://#i', $url ) ) {
+			return $url;
+		}
+		return Videokr_Settings::host() . '/' . ltrim( $url, '/' );
 	}
 
 	/**
