@@ -17,6 +17,7 @@ class Videokr_Admin {
 
 	const SLUG  = 'videokr';
 	const NONCE = 'videokr_admin';
+	const TABS  = array( 'library', 'insights', 'settings' );
 
 	/**
 	 * Hooks the menu, assets and form handler.
@@ -122,13 +123,16 @@ class Videokr_Admin {
 	 */
 	public static function handle_refresh() {
 		self::guard();
+		/* A refresh belongs to the screen it was pressed on, so the redirect
+		   returns there instead of dropping the reader on the library. */
+		$from = isset( $_POST['videokr_tab'] ) ? sanitize_key( wp_unslash( $_POST['videokr_tab'] ) ) : '';
 		Videokr_Api::flush_cache();
 		$account = Videokr_Api::account( true );
 		if ( is_wp_error( $account ) ) {
-			self::redirect( 'error', $account->get_error_message() );
+			self::redirect( 'error', $account->get_error_message(), $from );
 		}
 		Videokr_Settings::save_connection( Videokr_Settings::api_key(), Videokr_Settings::host(), self::summary( $account ) );
-		self::redirect( 'ok', __( 'Library refreshed.', 'videokr' ) );
+		self::redirect( 'ok', __( 'Refreshed from Videokr.', 'videokr' ), $from );
 	}
 
 	/**
@@ -140,7 +144,7 @@ class Videokr_Admin {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to manage Videokr.', 'videokr' ) );
 		}
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'library'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only tab switch.
+		$tab = self::current_tab();
 		if ( ! Videokr_Settings::is_connected() ) {
 			$tab = 'settings';
 		}
@@ -150,6 +154,8 @@ class Videokr_Admin {
 		self::notice();
 		if ( 'settings' === $tab ) {
 			self::settings_tab();
+		} elseif ( 'insights' === $tab ) {
+			self::insights_tab();
 		} else {
 			self::library_tab();
 		}
@@ -195,6 +201,7 @@ class Videokr_Admin {
 			<?php
 			$tabs = array(
 				'library'  => __( 'Library', 'videokr' ),
+				'insights' => __( 'Insights', 'videokr' ),
 				'settings' => __( 'Settings', 'videokr' ),
 			);
 			foreach ( $tabs as $slug => $label ) {
@@ -323,6 +330,7 @@ class Videokr_Admin {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<?php wp_nonce_field( self::NONCE ); ?>
 				<input type="hidden" name="action" value="videokr_refresh">
+				<input type="hidden" name="videokr_tab" value="library">
 				<button class="videokr-btn videokr-btn--ghost" type="submit"><?php esc_html_e( 'Refresh', 'videokr' ); ?></button>
 			</form>
 		</div>
@@ -331,6 +339,196 @@ class Videokr_Admin {
 		if ( ! is_wp_error( $playlists ) ) {
 			self::cards( isset( $playlists['playlists'] ) ? $playlists['playlists'] : array(), 'playlist', __( 'Playlists', 'videokr' ), __( 'No playlists yet.', 'videokr' ) );
 		}
+	}
+
+	/**
+	 * Usage, totals, plays over the last 30 days, best videos and recent leads —
+	 * the reporting a site owner wants without leaving WordPress. Deeper
+	 * analysis (retention, per-video breakdowns) stays in Videokr.
+	 *
+	 * @return void
+	 */
+	private static function insights_tab() {
+		$insights = Videokr_Api::insights();
+		if ( is_wp_error( $insights ) ) {
+			self::error_pane( $insights->get_error_message() );
+			return;
+		}
+
+		$usage     = isset( $insights['usage'] ) && is_array( $insights['usage'] ) ? $insights['usage'] : array();
+		$totals    = isset( $insights['totals'] ) && is_array( $insights['totals'] ) ? $insights['totals'] : array();
+		$daily     = isset( $insights['daily'] ) && is_array( $insights['daily'] ) ? $insights['daily'] : array();
+		$top       = isset( $insights['top'] ) && is_array( $insights['top'] ) ? $insights['top'] : array();
+		$plays     = isset( $usage['plays'] ) ? (int) $usage['plays'] : 0;
+		$allowance = isset( $usage['allowance'] ) ? (int) $usage['allowance'] : 0;
+		?>
+		<div class="videokr-toolbar">
+			<p class="videokr-muted videokr-tiny"><?php esc_html_e( 'Plays are counted by Videokr wherever the video is embedded, not only on this site.', 'videokr' ); ?></p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<?php wp_nonce_field( self::NONCE ); ?>
+				<input type="hidden" name="action" value="videokr_refresh">
+				<input type="hidden" name="videokr_tab" value="insights">
+				<button class="videokr-btn videokr-btn--ghost" type="submit"><?php esc_html_e( 'Refresh', 'videokr' ); ?></button>
+			</form>
+		</div>
+
+		<section class="videokr-card videokr-usage">
+			<h2><?php esc_html_e( 'This month', 'videokr' ); ?></h2>
+			<p class="videokr-usage__figure">
+				<strong><?php echo esc_html( number_format_i18n( $plays ) ); ?></strong>
+				<span class="videokr-muted">
+					<?php
+					if ( $allowance > 0 ) {
+						printf(
+							/* translators: %s: monthly play allowance. */
+							esc_html__( 'of %s plays', 'videokr' ),
+							esc_html( number_format_i18n( $allowance ) )
+						);
+					} else {
+						esc_html_e( 'plays · no monthly limit on this plan', 'videokr' );
+					}
+					?>
+				</span>
+			</p>
+			<?php if ( $allowance > 0 ) : ?>
+				<?php $percent = min( 100, (int) round( ( $plays / max( 1, $allowance ) ) * 100 ) ); ?>
+				<div class="videokr-meter" role="img" aria-label="<?php echo esc_attr( sprintf( /* translators: %d: percentage of the allowance used. */ __( '%d%% of the monthly allowance used', 'videokr' ), $percent ) ); ?>">
+					<span style="width:<?php echo esc_attr( $percent ); ?>%"></span>
+				</div>
+			<?php endif; ?>
+			<?php if ( ! empty( $usage['blocked'] ) ) : ?>
+				<p class="videokr-notice videokr-notice--error"><?php esc_html_e( 'This account has reached its monthly play limit — embeds are paused until the allowance resets or the plan is upgraded.', 'videokr' ); ?></p>
+			<?php endif; ?>
+		</section>
+
+		<h2 class="videokr-heading"><?php esc_html_e( 'All time', 'videokr' ); ?></h2>
+		<ul class="videokr-stats">
+			<?php
+			$stats = array(
+				'videos'      => __( 'Videos', 'videokr' ),
+				'impressions' => __( 'Impressions', 'videokr' ),
+				'plays'       => __( 'Plays', 'videokr' ),
+				'completions' => __( 'Completions', 'videokr' ),
+				'cta_clicks'  => __( 'CTA clicks', 'videokr' ),
+				'leads'       => __( 'Leads', 'videokr' ),
+			);
+			foreach ( $stats as $field => $label ) {
+				printf(
+					'<li class="videokr-card videokr-stat"><strong>%1$s</strong><span class="videokr-muted videokr-tiny">%2$s</span></li>',
+					esc_html( number_format_i18n( isset( $totals[ $field ] ) ? (int) $totals[ $field ] : 0 ) ),
+					esc_html( $label )
+				);
+			}
+			?>
+		</ul>
+
+		<h2 class="videokr-heading"><?php esc_html_e( 'Plays, last 30 days', 'videokr' ); ?></h2>
+		<?php if ( empty( $daily ) ) : ?>
+			<div class="videokr-empty"><?php esc_html_e( 'No plays recorded yet.', 'videokr' ); ?></div>
+		<?php else : ?>
+			<section class="videokr-card">
+				<?php
+				$peak = 1;
+				foreach ( $daily as $row ) {
+					$peak = max( $peak, (int) ( isset( $row['plays'] ) ? $row['plays'] : 0 ) );
+				}
+				?>
+				<ul class="videokr-chart">
+					<?php foreach ( $daily as $row ) : ?>
+						<?php
+						$day   = isset( $row['day'] ) ? (string) $row['day'] : '';
+						$count = (int) ( isset( $row['plays'] ) ? $row['plays'] : 0 );
+						$label = sprintf(
+							/* translators: 1: play count, 2: date. */
+							_n( '%1$s play on %2$s', '%1$s plays on %2$s', $count, 'videokr' ),
+							number_format_i18n( $count ),
+							$day
+						);
+						?>
+						<li title="<?php echo esc_attr( $label ); ?>">
+							<span class="videokr-chart__bar" style="height:<?php echo esc_attr( max( 4, (int) round( ( $count / $peak ) * 100 ) ) ); ?>%"></span>
+							<span class="screen-reader-text"><?php echo esc_html( $label ); ?></span>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+				<p class="videokr-muted videokr-tiny">
+					<?php
+					printf(
+						/* translators: %s: highest daily play count. */
+						esc_html__( 'Peak %s plays in a day', 'videokr' ),
+						esc_html( number_format_i18n( $peak ) )
+					);
+					?>
+				</p>
+			</section>
+		<?php endif; ?>
+
+		<h2 class="videokr-heading"><?php esc_html_e( 'Most played', 'videokr' ); ?></h2>
+		<?php if ( empty( $top ) ) : ?>
+			<div class="videokr-empty"><?php esc_html_e( 'Nothing to rank yet.', 'videokr' ); ?></div>
+		<?php else : ?>
+			<table class="videokr-table">
+				<thead>
+					<tr>
+						<th scope="col"><?php esc_html_e( 'Video', 'videokr' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Plays', 'videokr' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Completions', 'videokr' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $top as $video ) : ?>
+						<tr>
+							<td><?php echo esc_html( isset( $video['title'] ) ? $video['title'] : '' ); ?></td>
+							<td><?php echo esc_html( number_format_i18n( (int) ( isset( $video['plays'] ) ? $video['plays'] : 0 ) ) ); ?></td>
+							<td><?php echo esc_html( number_format_i18n( (int) ( isset( $video['completions'] ) ? $video['completions'] : 0 ) ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
+
+		<?php
+		$leads = Videokr_Api::leads();
+		echo '<h2 class="videokr-heading">' . esc_html__( 'Recent leads', 'videokr' ) . '</h2>';
+		if ( is_wp_error( $leads ) ) {
+			echo '<div class="videokr-empty videokr-empty--error">' . esc_html( $leads->get_error_message() ) . '</div>';
+			return;
+		}
+		$rows = isset( $leads['leads'] ) && is_array( $leads['leads'] ) ? $leads['leads'] : array();
+		if ( empty( $rows ) ) {
+			echo '<div class="videokr-empty">' . esc_html__( 'No form submissions yet — add a Form section to a video in Videokr.', 'videokr' ) . '</div>';
+			return;
+		}
+		?>
+		<table class="videokr-table">
+			<thead>
+				<tr>
+					<th scope="col"><?php esc_html_e( 'Email', 'videokr' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Name', 'videokr' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Video', 'videokr' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'When', 'videokr' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $rows as $lead ) : ?>
+					<tr>
+						<td><?php echo esc_html( isset( $lead['email'] ) ? $lead['email'] : '' ); ?></td>
+						<td><?php echo esc_html( isset( $lead['name'] ) ? $lead['name'] : '' ); ?></td>
+						<td><?php echo esc_html( isset( $lead['video_title'] ) ? $lead['video_title'] : '' ); ?></td>
+						<td>
+							<?php
+							echo esc_html(
+								isset( $lead['created_at'] )
+									? date_i18n( get_option( 'date_format' ) . ' H:i', (int) $lead['created_at'] + (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS ) )
+									: ''
+							);
+							?>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php
 	}
 
 	/**
@@ -400,6 +598,7 @@ class Videokr_Admin {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<?php wp_nonce_field( self::NONCE ); ?>
 				<input type="hidden" name="action" value="videokr_refresh">
+				<input type="hidden" name="videokr_tab" value="<?php echo esc_attr( self::current_tab() ); ?>">
 				<button class="videokr-btn" type="submit"><?php esc_html_e( 'Try again', 'videokr' ); ?></button>
 			</form>
 		</div>
@@ -407,6 +606,16 @@ class Videokr_Admin {
 	}
 
 	/* -------------------------------------------------------------- helpers --- */
+
+	/**
+	 * The requested tab, restricted to the tabs that exist.
+	 *
+	 * @return string
+	 */
+	private static function current_tab() {
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'library'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only tab switch.
+		return in_array( $tab, self::TABS, true ) ? $tab : 'library';
+	}
 
 	/**
 	 * Seconds as `m:ss`.
@@ -457,14 +666,18 @@ class Videokr_Admin {
 	 *
 	 * @param string $status  `ok` or `error`.
 	 * @param string $message Notice text.
+	 * @param string $tab     Tab to return to; defaults by status.
 	 * @return void
 	 */
-	private static function redirect( $status, $message ) {
+	private static function redirect( $status, $message, $tab = '' ) {
+		if ( ! in_array( $tab, self::TABS, true ) ) {
+			$tab = 'error' === $status ? 'settings' : 'library';
+		}
 		wp_safe_redirect(
 			add_query_arg(
 				array(
 					'page'            => self::SLUG,
-					'tab'             => 'error' === $status ? 'settings' : 'library',
+					'tab'             => $tab,
 					'videokr_status'  => $status,
 					'videokr_message' => $message,
 				),

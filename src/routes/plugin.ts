@@ -8,6 +8,7 @@ import { Hono } from 'hono';
 import type { Env, User } from '../lib/types';
 import { userForApiKey } from '../lib/apikeys';
 import { planFor, playUsage } from '../lib/billing';
+import { now } from '../lib/util';
 
 type Vars = { user: User };
 
@@ -30,6 +31,38 @@ interface LibraryPlaylist {
   layout: string;
   created_at: number;
   item_count: number;
+}
+
+interface InsightTotals {
+  videos: number;
+  impressions: number;
+  plays: number;
+  completions: number;
+  cta_clicks: number;
+  leads: number;
+}
+
+interface DailyPlays {
+  day: string;
+  plays: number;
+}
+
+interface TopVideo {
+  id: string;
+  slug: string;
+  title: string;
+  thumbnail_url: string;
+  plays: number;
+  completions: number;
+}
+
+interface PluginLead {
+  email: string;
+  name: string;
+  phone: string;
+  position: number;
+  created_at: number;
+  video_title: string;
 }
 
 export const plugin = new Hono<{ Bindings: Env; Variables: Vars }>();
@@ -87,6 +120,69 @@ plugin.get('/videos', async (c) => {
     (video) => !search || video.title.toLowerCase().includes(search) || video.slug.includes(search),
   );
   return c.json({ videos, base_url: c.env.PUBLIC_BASE_URL });
+});
+
+/**
+ * Everything the plugin's Insights screen draws: lifetime totals, the last 30
+ * days of plays, the account's best videos and its play allowance. Kept as one
+ * response so WordPress makes a single cached request per page load.
+ */
+plugin.get('/insights', async (c) => {
+  const user = c.get('user');
+  const plan = planFor(user);
+  const usage = await playUsage(c.env, user);
+  const totals = await c.env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM videos WHERE user_id = ?) AS videos,
+       (SELECT COUNT(*) FROM events e JOIN videos v ON v.id = e.video_id
+          WHERE v.user_id = ? AND e.kind = 'load') AS impressions,
+       (SELECT COUNT(*) FROM events e JOIN videos v ON v.id = e.video_id
+          WHERE v.user_id = ? AND e.kind = 'play') AS plays,
+       (SELECT COUNT(*) FROM events e JOIN videos v ON v.id = e.video_id
+          WHERE v.user_id = ? AND e.kind = 'complete') AS completions,
+       (SELECT COUNT(*) FROM events e JOIN videos v ON v.id = e.video_id
+          WHERE v.user_id = ? AND e.kind = 'cta_click') AS cta_clicks,
+       (SELECT COUNT(*) FROM leads WHERE user_id = ?) AS leads`,
+  )
+    .bind(user.id, user.id, user.id, user.id, user.id, user.id)
+    .first<InsightTotals>();
+  const daily = await c.env.DB.prepare(
+    `SELECT date(e.created_at, 'unixepoch') AS day, COUNT(*) AS plays
+       FROM events e JOIN videos v ON v.id = e.video_id
+      WHERE v.user_id = ? AND e.kind = 'play' AND e.created_at >= ?
+      GROUP BY day ORDER BY day`,
+  )
+    .bind(user.id, now() - 30 * 86400)
+    .all<DailyPlays>();
+  const top = await c.env.DB.prepare(
+    `SELECT v.id, v.slug, v.title, v.thumbnail_url,
+            SUM(CASE WHEN e.kind = 'play' THEN 1 ELSE 0 END) AS plays,
+            SUM(CASE WHEN e.kind = 'complete' THEN 1 ELSE 0 END) AS completions
+       FROM videos v LEFT JOIN events e ON e.video_id = v.id
+      WHERE v.user_id = ?
+      GROUP BY v.id ORDER BY plays DESC, v.created_at DESC LIMIT 10`,
+  )
+    .bind(user.id)
+    .all<TopVideo>();
+  return c.json({
+    account: { email: user.email, plan: user.plan, plan_name: plan.name },
+    usage: { plays: usage.plays, allowance: usage.allowance, blocked: usage.blocked },
+    totals: totals ?? null,
+    daily: daily.results ?? [],
+    top: top.results ?? [],
+  });
+});
+
+/** Form submissions, so a site owner sees their leads without leaving WordPress. */
+plugin.get('/leads', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT l.email, l.name, l.phone, l.position, l.created_at, v.title AS video_title
+       FROM leads l JOIN videos v ON v.id = l.video_id
+      WHERE l.user_id = ? ORDER BY l.created_at DESC LIMIT 100`,
+  )
+    .bind(c.get('user').id)
+    .all<PluginLead>();
+  return c.json({ leads: results ?? [] });
 });
 
 plugin.get('/playlists', async (c) => {

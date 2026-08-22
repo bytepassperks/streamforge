@@ -61,6 +61,26 @@ class Videokr_Api {
 	}
 
 	/**
+	 * Usage, lifetime totals, the last 30 days of plays and the best videos.
+	 *
+	 * @param bool $fresh Skip the cache.
+	 * @return array|WP_Error
+	 */
+	public static function insights( $fresh = false ) {
+		return self::cached( '/insights', array(), $fresh );
+	}
+
+	/**
+	 * Recent form submissions across the account's videos.
+	 *
+	 * @param bool $fresh Skip the cache.
+	 * @return array|WP_Error
+	 */
+	public static function leads( $fresh = false ) {
+		return self::cached( '/leads', array(), $fresh );
+	}
+
+	/**
 	 * Drops every cached response. Called on reconnect, manual refresh and
 	 * deactivation.
 	 *
