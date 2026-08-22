@@ -163,6 +163,16 @@
             <input id="cv-upload" type="file" accept="video/mp4,video/webm">
           </div>
 
+          <div class="file-row">
+            <span class="ico ico-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18l5-5 4 4 3-3 4 4"/></svg></span>
+            <label for="cv-thumb"><b>Choose a video Thumbnail</b></label>
+            <span class="cap cap-img">PNG, JPG or WebP · max 5 MB</span>
+            <span class="box" id="cv-thumb-state" aria-hidden="true"></span>
+            <span class="filepick-name" id="cv-thumb-name"></span>
+            <input id="cv-thumb" type="file" accept="image/png,image/jpeg,image/webp">
+          </div>
+          <p class="tiny muted" style="margin:6px 0 0">Optional — leave it and we grab a frame from the video for you.</p>
+
           <div class="form-error" id="cv-error"></div>
 
           <div class="composer-foot">

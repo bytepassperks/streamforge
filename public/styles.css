@@ -381,6 +381,14 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
 }
 .final { text-align: center; }
 .footer { padding: 30px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.social { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.social a {
+  display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted); background: var(--surface);
+  transition: color .16s var(--ease), border-color .16s var(--ease);
+}
+.social a:hover { color: var(--accent); border-color: var(--accent); }
+.social svg { width: 17px; height: 17px; }
 
 @media (max-width: 900px) {
   .hero-grid, .price-grid { grid-template-columns: 1fr; }
@@ -455,10 +463,6 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
    labels never shifts sideways when you change view */
 .nav-item.active { background: var(--accent-soft); color: var(--text); font-weight: 800; }
 .nav-item.active .ico { background: #ffd9c5; color: var(--accent); }
-.nav-item.active::before {
-  content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  width: 3px; height: 20px; border-radius: 0 3px 3px 0; background: var(--accent);
-}
 .nav-item .tag {
   margin-left: auto; padding: 2px 9px; border-radius: 8px; background: var(--accent-pill);
   color: var(--accent-ink); font-size: 12px; font-weight: 700; font-family: var(--sans);
@@ -505,7 +509,6 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
 .side-collapsed .side-more span, .side-collapsed .dev-card div, .side-collapsed .side-plan div,
 .side-collapsed .side-plan .caret { display: none; }
 .side-collapsed .nav-item, .side-collapsed .side-more { justify-content: center; padding-left: 0; padding-right: 0; }
-.side-collapsed .nav-item.active::before { display: none; }
 .side-collapsed .side-head, .side-collapsed .side-plan { justify-content: center; }
 .side-collapsed .dev-card { justify-content: center; }
 
@@ -609,13 +612,15 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
   display: flex; align-items: center; justify-content: space-between; gap: var(--s2);
   margin-bottom: var(--s4); flex-wrap: wrap;
 }
+/* Roomy enough that a label never sits in the rounded corner of the group,
+   where the curve reads as if the text were clipped. */
 .seg-tabs {
   display: inline-flex; align-items: center; background: var(--panel-2); border: 1px solid var(--line);
-  border-radius: var(--radius-sm); padding: 3px; flex: none;
+  border-radius: 16px; padding: 5px; flex: none;
 }
 .seg-tabs button {
   border: 0; background: transparent; cursor: pointer; font-family: inherit; font-size: 14px;
-  font-weight: 700; color: var(--muted); padding: 0 16px; min-height: 32px; border-radius: 9px;
+  font-weight: 700; color: var(--muted); padding: 0 18px; min-height: 34px; border-radius: 11px;
   position: relative; white-space: nowrap; transition: color .16s var(--ease), background .16s var(--ease);
 }
 .seg-tabs button:hover:not(.active) { color: var(--text-2); }
@@ -631,14 +636,14 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
 /* The title box was a 300px slab of grey; it now sizes to the work in it. */
 .composer-field {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
-  padding: 13px 16px 44px; position: relative; min-height: 92px;
+  padding: 16px 20px 46px; position: relative; min-height: 92px;
   transition: border-color .16s var(--ease), background .16s var(--ease);
 }
 .composer-field:focus-within { border-color: var(--accent-pill); background: var(--surface); }
 /* Only the title panel parks buttons in its bottom-right corner; the others were
    holding a strip of empty grey where those buttons would have been. */
 .composer-panel[data-panel="project"] .composer-field,
-.composer-panel[data-panel="source"] .composer-field { padding-bottom: 14px; min-height: 0; }
+.composer-panel[data-panel="source"] .composer-field { padding-bottom: 16px; min-height: 0; }
 .composer-field textarea, .composer-field input, .composer-field select {
   width: 100%; background: transparent; border: 0; padding: 0; font-size: 17px; color: var(--text);
   resize: none; min-height: 0;
@@ -677,6 +682,9 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
   background: var(--green-soft); color: #15683f; border-radius: var(--radius-pill); padding: 2px 10px;
   font-size: 12px; font-weight: 700; white-space: nowrap;
 }
+/* The image cap sits beside the video one, so it must not read as the same limit. */
+.file-row .cap-img { background: var(--accent-pill); color: var(--accent-ink); }
+.file-row .ico.ico-img { background: #ffe3db; color: var(--accent); }
 .file-row .box { display: none; }
 .file-row .box.on {
   width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface);
@@ -1017,7 +1025,6 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   }
   .side-nav::-webkit-scrollbar { display: none; }
   .nav-item { font-size: 14px; padding: 7px 12px 7px 8px; width: auto; flex: none; scroll-snap-align: start; }
-  .nav-item.active::before { display: none; }
   .nav-item .ico { width: 28px; height: 28px; }
   .nav-item .ico svg { width: 16px; height: 16px; }
   .nav-item .tag { display: none; }
