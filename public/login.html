@@ -38,8 +38,12 @@
                placeholder="At least 8 characters" required>
       </div>
       <div class="form-error" id="auth-error"></div>
+      <div class="tiny" id="auth-note" style="margin-bottom:10px"></div>
       <button class="btn" id="auth-submit" type="submit" style="width:100%">Sign in</button>
     </form>
+    <p class="tiny" id="forgot-row" style="margin-top:14px">
+      <a href="#" id="forgot">Forgot your password?</a>
+    </p>
   </div>
 </div>
 
@@ -54,6 +58,9 @@
   var submit = document.getElementById('auth-submit');
   var error = document.getElementById('auth-error');
   var form = document.getElementById('auth-form');
+  var note = document.getElementById('auth-note');
+  var forgotRow = document.getElementById('forgot-row');
+  var passwordField = document.getElementById('password').parentNode;
 
   function render() {
     tabs.forEach(function (tab) { tab.classList.toggle('active', tab.dataset.mode === mode); });
@@ -62,24 +69,47 @@
     sub.textContent = mode === 'signup'
       ? 'Free forever — no card. Upgrade to lifetime whenever you want.'
       : 'Sign in to your workspace to manage videos and embeds.';
-    submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+    if (mode === 'forgot') {
+      title.textContent = 'Reset your password';
+      sub.textContent = 'Give us your email and we will send a link to set a new password.';
+      submit.textContent = 'Send the reset link';
+    } else {
+      submit.textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+    }
+    passwordField.classList.toggle('hidden', mode === 'forgot');
+    document.getElementById('password').required = mode !== 'forgot';
+    forgotRow.classList.toggle('hidden', mode !== 'login');
     document.getElementById('password').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
     error.textContent = '';
+    note.textContent = '';
   }
 
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () { mode = tab.dataset.mode; render(); });
   });
 
+  document.getElementById('forgot').addEventListener('click', function (event) {
+    event.preventDefault();
+    mode = 'forgot';
+    render();
+  });
+
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     error.textContent = '';
+    note.textContent = '';
     var payload = {
       email: document.getElementById('email').value.trim(),
       password: document.getElementById('password').value
     };
     if (mode === 'signup') payload.name = document.getElementById('name').value.trim();
-    if (!payload.email || !payload.password) {
+    if (mode === 'forgot') {
+      delete payload.password;
+      if (!payload.email) {
+        error.textContent = 'Your email is required.';
+        return;
+      }
+    } else if (!payload.email || !payload.password) {
       error.textContent = 'Email and password are required.';
       return;
     }
@@ -94,6 +124,12 @@
         submit.disabled = false;
         if (!result.ok) {
           error.textContent = result.body.error || 'Something went wrong.';
+          return;
+        }
+        if (mode === 'forgot') {
+          /* The answer is the same for an unknown address, so nobody can probe
+             for accounts from this form. */
+          note.textContent = 'If that email has an account, the reset link is on its way. It expires in an hour.';
           return;
         }
         location.href = '/app.html';

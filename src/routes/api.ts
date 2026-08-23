@@ -18,6 +18,8 @@ import type { Cycle } from '../lib/billing';
 import { admin } from './admin';
 import { deliverTestWebhook } from '../lib/webhooks';
 import { generateApiKey, hashApiKey, keyPrefix } from '../lib/apikeys';
+import { sendMail } from '../lib/email';
+import { RESET_TTL_SECONDS, claimReset, generateResetToken, hashResetToken, resetUrl } from '../lib/resets';
 import {
   defaultPlayerConfig,
   mergePlayerConfig,
@@ -31,7 +33,14 @@ type Vars = { user: User };
 
 export const api = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-const OPEN_PATHS = new Set(['/auth/signup', '/auth/login', '/auth/me', '/auth/logout']);
+const OPEN_PATHS = new Set([
+  '/auth/signup',
+  '/auth/login',
+  '/auth/me',
+  '/auth/logout',
+  '/auth/forgot',
+  '/auth/reset',
+]);
 
 api.use('*', async (c, next) => {
   const path = c.req.path.replace(/^\/api/, '');
@@ -107,6 +116,65 @@ api.get('/auth/me', (c) => {
   return user ? c.json({ user, public_base: publicBase }) : c.json({ user: null }, 200);
 });
 
+/**
+ * Both reset endpoints answer the same way whether or not the address exists,
+ * so the form cannot be used to discover who has an account.
+ */
+api.post('/auth/forgot', async (c) => {
+  const { email } = await c.req.json<{ email?: string }>();
+  const cleanEmail = (email ?? '').trim().toLowerCase();
+  const row = await c.env.DB.prepare('SELECT id, name FROM users WHERE email = ? AND suspended = 0')
+    .bind(cleanEmail)
+    .first<{ id: string; name: string }>();
+  if (row) {
+    const token = generateResetToken();
+    const created = now();
+    await c.env.DB.batch([
+      // Any link sent earlier stops working the moment a new one is asked for.
+      c.env.DB.prepare('UPDATE password_resets SET used_at = ? WHERE user_id = ? AND used_at = 0').bind(
+        created,
+        row.id,
+      ),
+      c.env.DB.prepare(
+        'INSERT INTO password_resets (id, user_id, token_hash, created_at, expires_at) VALUES (?, ?, ?, ?, ?)',
+      ).bind(newId('rst'), row.id, await hashResetToken(token), created, created + RESET_TTL_SECONDS),
+    ]);
+    const base = (c.env.PUBLIC_BASE_URL || new URL(c.req.url).origin).replace(/\/$/, '');
+    c.executionCtx.waitUntil(
+      sendMail(c.env, {
+        to: cleanEmail,
+        subject: 'Reset your Videokr password',
+        text: [
+          `Hi${row.name ? ` ${row.name}` : ''},`,
+          'Use this link to set a new Videokr password. It works once and expires in an hour:',
+          resetUrl(base, token),
+          'If you did not ask for this, ignore the email — your current password still works.',
+        ].join('\n\n'),
+      }),
+    );
+  }
+  return c.json({ ok: true });
+});
+
+api.post('/auth/reset', async (c) => {
+  const { token, password } = await c.req.json<{ token?: string; password?: string }>();
+  if (!password || password.length < 8) return c.json({ error: 'password must be at least 8 characters' }, 400);
+  const userId = await claimReset(c.env, (token ?? '').trim());
+  if (!userId) return c.json({ error: 'this reset link has expired — request a new one' }, 400);
+  const salt = randomSalt();
+  await c.env.DB.batch([
+    c.env.DB.prepare('UPDATE users SET password_hash = ?, password_salt = ? WHERE id = ?').bind(
+      await hashPassword(password, salt),
+      salt,
+      userId,
+    ),
+    // A reset is also how a locked-out owner evicts whoever is holding a session.
+    c.env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId),
+  ]);
+  await createSession(c, userId);
+  return c.json({ ok: true });
+});
+
 api.patch('/auth/profile', async (c) => {
   const user = c.get('user');
   const body = await c.req.json<{
@@ -114,6 +182,7 @@ api.patch('/auth/profile', async (c) => {
     email?: string;
     current_password?: string;
     password?: string;
+    lead_emails?: boolean;
   }>();
   const row = await c.env.DB.prepare('SELECT password_hash, password_salt FROM users WHERE id = ?')
     .bind(user.id)
@@ -152,7 +221,13 @@ api.patch('/auth/profile', async (c) => {
       .run();
   }
 
-  const updated = await c.env.DB.prepare('SELECT id, email, name, plan, role FROM users WHERE id = ?')
+  if (typeof body.lead_emails === 'boolean') {
+    await c.env.DB.prepare('UPDATE users SET lead_emails = ? WHERE id = ?')
+      .bind(body.lead_emails ? 1 : 0, user.id)
+      .run();
+  }
+
+  const updated = await c.env.DB.prepare('SELECT id, email, name, plan, role, lead_emails FROM users WHERE id = ?')
     .bind(user.id)
     .first();
   return c.json({ user: updated });

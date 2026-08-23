@@ -12,6 +12,8 @@ export interface Env {
   DODO_AGENCY_ANNUAL_PRODUCT_ID?: string;
   DODO_PAYMENTS_API_KEY?: string;
   DODO_WEBHOOK_SECRET?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
 }
 
 export interface User {
@@ -22,6 +24,7 @@ export interface User {
   role: string;
   unlimited: number;
   suspended: number;
+  lead_emails: number;
   subscription_id: string;
   plan_renews_at: number;
   created_at: number;

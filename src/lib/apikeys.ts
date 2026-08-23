@@ -45,7 +45,7 @@ export async function userForApiKey(env: Env, key: string): Promise<User | null>
   const hash = await hashApiKey(key);
   const row = await env.DB.prepare(
     `SELECT k.id AS key_id, u.id, u.email, u.name, u.plan, u.role, u.unlimited, u.suspended,
-            u.subscription_id, u.plan_renews_at, u.created_at
+            u.lead_emails, u.subscription_id, u.plan_renews_at, u.created_at
        FROM api_keys k JOIN users u ON u.id = k.user_id
       WHERE k.key_hash = ? AND k.revoked_at = 0`,
   )
@@ -62,6 +62,7 @@ export async function userForApiKey(env: Env, key: string): Promise<User | null>
     role: row.role,
     unlimited: row.unlimited,
     suspended: row.suspended,
+    lead_emails: row.lead_emails,
     subscription_id: row.subscription_id,
     plan_renews_at: row.plan_renews_at,
     created_at: row.created_at,

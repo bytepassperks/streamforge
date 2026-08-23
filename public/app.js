@@ -2307,13 +2307,18 @@
     $('ac-email').value = state.user.email || '';
     $('ac-password').value = '';
     $('ac-current').value = '';
+    $('ac-lead-emails').checked = Number(state.user.lead_emails) !== 0;
     $('ac-state').textContent = '';
   }
 
   $('ac-save').addEventListener('click', function () {
     var button = $('ac-save');
     var status = $('ac-state');
-    var patch = { name: $('ac-name').value.trim(), email: $('ac-email').value.trim() };
+    var patch = {
+      name: $('ac-name').value.trim(),
+      email: $('ac-email').value.trim(),
+      lead_emails: $('ac-lead-emails').checked
+    };
     if ($('ac-password').value) patch.password = $('ac-password').value;
     if ($('ac-current').value) patch.current_password = $('ac-current').value;
     button.disabled = true;
