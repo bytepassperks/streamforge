@@ -2,7 +2,13 @@
 (function () {
   'use strict';
 
-  var state = { user: null, projects: [], videos: [], playlists: [], video: null, config: null };
+  var state = { user: null, projects: [], videos: [], playlists: [], video: null, config: null, publicBase: '' };
+
+  /* Every link a customer copies out of the dashboard has to point at the
+     canonical public host, which the server knows and this page may not. */
+  function shareBase() {
+    return state.publicBase || location.origin;
+  }
   var SVG_NS = 'http://www.w3.org/2000/svg';
 
   /* ------------------------------------------------------------- helpers -- */
@@ -99,15 +105,39 @@
      broken video. A frame out of the film itself is a better first poster, and
      the browser can take it: the file (or our own /media url) is already
      readable here, so nothing has to be decoded server-side. */
-  var POSTER_AT = 0.1; // a tenth in, so we skip fades to black on the first frame
+  // Films open on black, and a black poster reads as a missing thumbnail, so
+  // several points in the film are tried and the first bright frame wins.
+  var POSTER_AT = [0.1, 0.25, 0.45, 0.7];
   var POSTER_MAX_WIDTH = 1280;
+  var POSTER_MIN_LUMA = 34; // out of 255, measured over the whole frame
+
+  function frameLuma(paper, canvas) {
+    // A coarse sample is enough to tell a black frame from a picture, and it
+    // keeps the read off the main thread's critical path on large frames.
+    var pixels;
+    try {
+      pixels = paper.getImageData(0, 0, canvas.width, canvas.height).data;
+    } catch (err) {
+      return POSTER_MIN_LUMA; // tainted canvas: treated as good enough to try
+    }
+    var total = 0;
+    var seen = 0;
+    for (var i = 0; i < pixels.length; i += 160) {
+      total += 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+      seen += 1;
+    }
+    return seen ? total / seen : 0;
+  }
 
   function grabFrame(src) {
     return new Promise(function (resolve, reject) {
       var video = document.createElement('video');
       var settled = false;
+      var attempt = 0;
+      var best = null;
       var timer = window.setTimeout(function () {
-        finish(null, 'reading the video took too long');
+        if (best) finish(best);
+        else finish(null, 'reading the video took too long');
       }, 20000);
 
       function finish(shot, reason) {
@@ -120,12 +150,20 @@
         else reject(new Error(reason));
       }
 
+      function seekTo(index) {
+        var length = isFinite(video.duration) ? video.duration : 0;
+        if (!length) {
+          video.currentTime = 0.1;
+          return;
+        }
+        video.currentTime = Math.min(length * POSTER_AT[index], length - 0.05);
+      }
+
       video.muted = true;
       video.preload = 'auto';
       video.crossOrigin = 'anonymous';
       video.addEventListener('loadeddata', function () {
-        var length = isFinite(video.duration) ? video.duration : 0;
-        video.currentTime = length ? Math.min(length * POSTER_AT, 10) : 0.1;
+        seekTo(0);
       });
       video.addEventListener('seeked', function () {
         var width = video.videoWidth;
@@ -144,6 +182,8 @@
           return;
         }
         paper.drawImage(video, 0, 0, canvas.width, canvas.height);
+        var luma = frameLuma(paper, canvas);
+        var length = isFinite(video.duration) ? video.duration : 0;
         // A cross-origin frame taints the canvas, which throws here rather than
         // silently handing back a blank poster.
         try {
@@ -153,10 +193,14 @@
                 finish(null, 'the frame could not be saved');
                 return;
               }
-              finish({
-                blob: blob,
-                duration: isFinite(video.duration) ? Math.round(video.duration) : 0,
-              });
+              var shot = { blob: blob, duration: length ? Math.round(length) : 0, luma: luma };
+              if (!best || shot.luma > best.luma) best = shot;
+              attempt += 1;
+              if (best.luma >= POSTER_MIN_LUMA || attempt >= POSTER_AT.length || !length) {
+                finish(best);
+                return;
+              }
+              seekTo(attempt);
             },
             'image/jpeg',
             0.82,
@@ -606,7 +650,7 @@
       var copy = text('button', 'btn btn-ghost btn-sm', 'Copy link');
       copy.type = 'button';
       copy.addEventListener('click', function () {
-        navigator.clipboard.writeText(location.origin + '/v/' + video.slug).then(function () {
+        navigator.clipboard.writeText(shareBase() + '/v/' + video.slug).then(function () {
           toast('Link copied');
         });
       });
@@ -965,7 +1009,7 @@
   }
 
   function renderSnippets(video) {
-    var base = location.origin;
+    var base = shareBase();
     $('snip-script').textContent =
       '<script src="' + base + '/embed.js" data-video="' + video.id + '" async></' + 'script>';
     $('snip-iframe').textContent =
@@ -1633,7 +1677,7 @@
       var head = text('div', 'row spread');
       var left = document.createElement('div');
       left.appendChild(text('h3', null, playlist.title));
-      var link = text('a', 'tiny muted', location.origin + '/pl/' + playlist.slug);
+      var link = text('a', 'tiny muted', shareBase() + '/pl/' + playlist.slug);
       link.href = '/pl/' + playlist.slug;
       link.target = '_blank';
       link.rel = 'noopener';
@@ -1727,7 +1771,7 @@
       var snippet = text('pre', 'snippet');
       snippet.style.marginTop = '12px';
       snippet.textContent =
-        '<script src="' + location.origin + '/embed.js" data-playlist="' + playlist.slug + '" async></' + 'script>';
+        '<script src="' + shareBase() + '/embed.js" data-playlist="' + playlist.slug + '" async></' + 'script>';
       card.appendChild(text('p', 'tiny muted', 'Embed this playlist on any site:'));
       card.appendChild(snippet);
 
@@ -2301,6 +2345,7 @@
         return;
       }
       state.user = result.user;
+      state.publicBase = String(result.public_base || '').replace(/\/$/, '');
       var label = result.user.name || result.user.email;
       $('who').textContent = label;
       $('user-initial').textContent = label.slice(0, 1).toUpperCase();

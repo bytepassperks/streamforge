@@ -101,7 +101,10 @@ api.post('/auth/logout', async (c) => {
 
 api.get('/auth/me', (c) => {
   const user = c.get('user');
-  return user ? c.json({ user }) : c.json({ user: null }, 200);
+  // Embed and share snippets have to carry the canonical public host, not the
+  // host the dashboard happens to be open on (a preview url, an ip, localhost).
+  const publicBase = (c.env.PUBLIC_BASE_URL || new URL(c.req.url).origin).replace(/\/$/, '');
+  return user ? c.json({ user, public_base: publicBase }) : c.json({ user: null }, 200);
 });
 
 api.patch('/auth/profile', async (c) => {

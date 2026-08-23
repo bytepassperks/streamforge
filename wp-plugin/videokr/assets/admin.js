@@ -43,6 +43,26 @@
     copy(button.getAttribute('data-copy') || '', button);
   });
 
+  /* A poster that 404s (deleted media, a blocked host) would otherwise leave a
+     silent hole in the list, so it falls back to the play placeholder. */
+  document.addEventListener(
+    'error',
+    function (event) {
+      var image = event.target;
+      if (!image || image.tagName !== 'IMG') return;
+      var base = ['videokr-item__art', 'videokr-rank__art'].filter(function (name) {
+        return image.classList.contains(name);
+      })[0];
+      if (!base) return;
+      var slot = document.createElement('span');
+      slot.className = base + ' ' + base + '--empty';
+      slot.setAttribute('aria-hidden', 'true');
+      slot.textContent = '\u25B6';
+      if (image.parentNode) image.parentNode.replaceChild(slot, image);
+    },
+    true,
+  );
+
   var filter = document.getElementById('videokr-filter');
   if (filter) {
     filter.addEventListener('input', function () {

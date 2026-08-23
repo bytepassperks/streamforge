@@ -17,6 +17,7 @@ interface LibraryVideo {
   slug: string;
   title: string;
   source_type: string;
+  source_ref: string;
   thumbnail_url: string;
   visibility: string;
   duration: number;
@@ -31,6 +32,9 @@ interface LibraryPlaylist {
   layout: string;
   created_at: number;
   item_count: number;
+  source_type: string | null;
+  source_ref: string | null;
+  thumbnail_url: string | null;
 }
 
 interface InsightTotals {
@@ -51,6 +55,8 @@ interface TopVideo {
   id: string;
   slug: string;
   title: string;
+  source_type: string;
+  source_ref: string;
   thumbnail_url: string;
   plays: number;
   completions: number;
@@ -66,6 +72,24 @@ interface PluginLead {
 }
 
 export const plugin = new Hono<{ Bindings: Env; Variables: Vars }>();
+
+/* Media is served host-relative, so an integration must resolve posters against
+   the host it is actually talking to: a staging or local Worker serves media the
+   configured public host does not have. */
+function originFor(url: string, configured: string | undefined): string {
+  return new URL(url).origin || (configured ?? '');
+}
+
+/* Videos created before linked sources got a poster at creation still have an
+   empty thumbnail, which would read as a broken row in WordPress: YouTube's own
+   still is derivable from the source reference. */
+function withPoster(video: { source_type: string; source_ref: string; thumbnail_url: string }): string {
+  if (video.thumbnail_url) return video.thumbnail_url;
+  if (video.source_type === 'youtube' && video.source_ref) {
+    return `https://i.ytimg.com/vi/${video.source_ref}/hqdefault.jpg`;
+  }
+  return '';
+}
 
 function bearer(header: string | undefined): string {
   if (!header) return '';
@@ -102,24 +126,25 @@ plugin.get('/account', async (c) => {
   return c.json({
     account: { email: user.email, name: user.name, plan: user.plan, plan_name: plan.name },
     usage: { plays: usage.plays, allowance: usage.allowance, blocked: usage.blocked },
-    /* The origin the key was presented to, so an integration echoes back the
-       host it is actually talking to rather than a configured default. */
-    base_url: new URL(c.req.url).origin,
+    base_url: originFor(c.req.url, c.env.PUBLIC_BASE_URL),
   });
 });
 
 plugin.get('/videos', async (c) => {
   const search = (c.req.query('search') ?? '').trim().toLowerCase();
   const { results } = await c.env.DB.prepare(
-    `SELECT id, slug, title, source_type, thumbnail_url, visibility, duration, created_at
+    `SELECT id, slug, title, source_type, source_ref, thumbnail_url, visibility, duration, created_at
        FROM videos WHERE user_id = ? ORDER BY created_at DESC`,
   )
     .bind(c.get('user').id)
     .all<LibraryVideo>();
-  const videos = (results ?? []).filter(
-    (video) => !search || video.title.toLowerCase().includes(search) || video.slug.includes(search),
-  );
-  return c.json({ videos, base_url: c.env.PUBLIC_BASE_URL });
+  const videos = (results ?? [])
+    .filter(
+      (video) =>
+        !search || video.title.toLowerCase().includes(search) || video.slug.includes(search),
+    )
+    .map((video) => ({ ...video, thumbnail_url: withPoster(video) }));
+  return c.json({ videos, base_url: originFor(c.req.url, c.env.PUBLIC_BASE_URL) });
 });
 
 /**
@@ -155,7 +180,7 @@ plugin.get('/insights', async (c) => {
     .bind(user.id, now() - 30 * 86400)
     .all<DailyPlays>();
   const top = await c.env.DB.prepare(
-    `SELECT v.id, v.slug, v.title, v.thumbnail_url,
+    `SELECT v.id, v.slug, v.title, v.source_type, v.source_ref, v.thumbnail_url,
             SUM(CASE WHEN e.kind = 'play' THEN 1 ELSE 0 END) AS plays,
             SUM(CASE WHEN e.kind = 'complete' THEN 1 ELSE 0 END) AS completions
        FROM videos v LEFT JOIN events e ON e.video_id = v.id
@@ -169,7 +194,8 @@ plugin.get('/insights', async (c) => {
     usage: { plays: usage.plays, allowance: usage.allowance, blocked: usage.blocked },
     totals: totals ?? null,
     daily: daily.results ?? [],
-    top: top.results ?? [],
+    top: (top.results ?? []).map((video) => ({ ...video, thumbnail_url: withPoster(video) })),
+    base_url: originFor(c.req.url, c.env.PUBLIC_BASE_URL),
   });
 });
 
@@ -187,11 +213,27 @@ plugin.get('/leads', async (c) => {
 
 plugin.get('/playlists', async (c) => {
   const { results } = await c.env.DB.prepare(
+    /* A playlist has no artwork of its own, so it borrows the poster of the
+       video it opens on; without that every playlist card reads as broken. */
     `SELECT p.id, p.slug, p.title, p.visibility, p.layout, p.created_at,
-            (SELECT COUNT(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS item_count
+            (SELECT COUNT(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS item_count,
+            (SELECT v.source_type FROM playlist_items i JOIN videos v ON v.id = i.video_id
+               WHERE i.playlist_id = p.id ORDER BY i.position LIMIT 1) AS source_type,
+            (SELECT v.source_ref FROM playlist_items i JOIN videos v ON v.id = i.video_id
+               WHERE i.playlist_id = p.id ORDER BY i.position LIMIT 1) AS source_ref,
+            (SELECT v.thumbnail_url FROM playlist_items i JOIN videos v ON v.id = i.video_id
+               WHERE i.playlist_id = p.id ORDER BY i.position LIMIT 1) AS thumbnail_url
        FROM playlists p WHERE p.user_id = ? ORDER BY p.created_at DESC`,
   )
     .bind(c.get('user').id)
     .all<LibraryPlaylist>();
-  return c.json({ playlists: results ?? [], base_url: c.env.PUBLIC_BASE_URL });
+  const playlists = (results ?? []).map((list) => ({
+    ...list,
+    thumbnail_url: withPoster({
+      source_type: list.source_type ?? '',
+      source_ref: list.source_ref ?? '',
+      thumbnail_url: list.thumbnail_url ?? '',
+    }),
+  }));
+  return c.json({ playlists, base_url: originFor(c.req.url, c.env.PUBLIC_BASE_URL) });
 });

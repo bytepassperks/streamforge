@@ -415,6 +415,25 @@
 .videokr-table tbody tr + tr th,
 .videokr-table tbody tr + tr td { border-top: 1px dashed var(--vk-line-dash); }
 
+.videokr-rank { display: flex; align-items: center; gap: 12px; }
+
+.videokr-rank__art {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 41px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--vk-panel);
+}
+
+.videokr-rank__art--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--vk-line-dash);
+  color: #93a1b3;
+}
+
 @media (max-width: 782px) {
   .videokr-wrap { margin-right: 10px; }
   .videokr-logo { font-size: 28px; }

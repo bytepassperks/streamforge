@@ -502,8 +502,18 @@ class Videokr_Admin {
 				</thead>
 				<tbody>
 					<?php foreach ( $top as $video ) : ?>
+						<?php $art = ! empty( $video['thumbnail_url'] ) ? self::absolute( $video['thumbnail_url'] ) : ''; ?>
 						<tr>
-							<td><?php echo esc_html( isset( $video['title'] ) ? $video['title'] : '' ); ?></td>
+							<td>
+								<span class="videokr-rank">
+									<?php if ( $art ) : ?>
+										<img class="videokr-rank__art" src="<?php echo esc_url( $art ); ?>" alt="">
+									<?php else : ?>
+										<span class="videokr-rank__art videokr-rank__art--empty" aria-hidden="true">&#9654;</span>
+									<?php endif; ?>
+									<span><?php echo esc_html( isset( $video['title'] ) ? $video['title'] : '' ); ?></span>
+								</span>
+							</td>
 							<td><?php echo esc_html( number_format_i18n( (int) ( isset( $video['plays'] ) ? $video['plays'] : 0 ) ) ); ?></td>
 							<td><?php echo esc_html( number_format_i18n( (int) ( isset( $video['completions'] ) ? $video['completions'] : 0 ) ) ); ?></td>
 						</tr>
