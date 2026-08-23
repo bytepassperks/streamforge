@@ -1200,6 +1200,8 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   display: flex; align-items: baseline; gap: 5px;
 }
 .plan-price span { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: 0; }
+/* The list price a promo replaced: quiet enough that the price you pay wins. */
+.plan-price s { font-size: 18px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
 .plan-card.is-current { border-color: var(--accent-pill); background: var(--accent-soft); }
 /* the pill sits where the other cards keep their buttons, so the row lines up */
 .plan-card.is-current .pill { align-self: flex-start; margin-top: auto; }
@@ -1208,7 +1210,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   border-color: var(--forest); background: var(--forest); color: #f4eee2;
 }
 .plan-card-lt h3, .plan-card-lt .plan-price { color: #fff; }
-.plan-card-lt .muted, .plan-card-lt .plan-price span { color: rgba(244, 238, 226, .72); }
+.plan-card-lt .muted, .plan-card-lt .plan-price span, .plan-card-lt .plan-price s { color: rgba(244, 238, 226, .72); }
 .plan-card-lt .btn { align-self: flex-start; margin-top: auto; }
 .plan-card-lt .btn:disabled {
   background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .22);
