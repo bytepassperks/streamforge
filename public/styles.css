@@ -158,7 +158,7 @@ a.btn.is-disabled { pointer-events: none; }
 /* a long label would otherwise run past a narrow grid column, since buttons don't wrap */
 .btn-wrap { white-space: normal; max-width: 100%; text-align: center; padding-top: 10px; padding-bottom: 10px; }
 
-/* Amber "Get $10" style reward pill. */
+/* Amber reward pill: the top-bar lifetime offer. */
 .btn-gift {
   background: linear-gradient(103deg, var(--amber) 0%, var(--amber-lit) 46%, var(--amber) 100%);
   color: var(--text); border: 0; font-family: var(--serif); font-weight: 400; font-size: 17px;
