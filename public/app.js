@@ -2061,6 +2061,16 @@
     }
   }
 
+  /* The top-bar pill quotes the live lifetime price and disappears once the
+     account already owns lifetime, so it never advertises what it cannot sell. */
+  function offerPill(billing) {
+    var pill = $('top-offer');
+    if (!pill) return;
+    pill.classList.toggle('hidden', Boolean(billing.lifetime));
+    if (billing.lifetime || !billing.offer) return;
+    $('top-offer-label').textContent = 'Get lifetime — $' + billing.offer.usd;
+  }
+
   function thousands(value) {
     return Number(value || 0).toLocaleString('en-US');
   }
@@ -2193,6 +2203,7 @@
     api('/billing')
       .then(function (billing) {
         planChip(billing);
+        offerPill(billing);
         var host = $('billing-body');
         host.textContent = '';
 
@@ -2354,7 +2365,19 @@
       var label = result.user.name || result.user.email;
       $('who').textContent = label;
       $('user-initial').textContent = label.slice(0, 1).toUpperCase();
-      planChip({ lifetime: result.user.plan === 'lifetime' || Number(result.user.unlimited) === 1 });
+      var lifetime = result.user.plan === 'lifetime' || Number(result.user.unlimited) === 1;
+      planChip({ lifetime: lifetime });
+      offerPill({ lifetime: lifetime });
+      if (!lifetime) {
+        fetch('/api/public/offer')
+          .then(function (response) {
+            return response.ok ? response.json() : null;
+          })
+          .then(function (data) {
+            if (data && data.offer) offerPill({ offer: data.offer });
+          })
+          .catch(function () {});
+      }
       if (result.user.role === 'admin') $('admin-link').classList.remove('hidden');
       var params = new URLSearchParams(location.search);
       if (params.get('purchase')) {
