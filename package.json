@@ -11,10 +11,11 @@
     "seed:local": "node scripts/seed.mjs",
     "seed:remote": "node scripts/seed.mjs --remote",
     "wp:zip": "node scripts/wp-zip.mjs",
-    "deploy": "npm run wp:zip && wrangler deploy",
+    "deploy": "npm run assets:stamp && npm run wp:zip && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "assets:stamp": "node scripts/asset-stamp.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "4.20250726.0",

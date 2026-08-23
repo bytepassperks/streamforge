@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../lib/types';
 import { escapeHtml } from '../lib/util';
+import { stamp } from '../lib/assets';
 import { plainText, renderMarkdown } from '../lib/markdown';
 import {
   SECTIONS,
@@ -84,7 +85,7 @@ ${meta.markdown ? `<link rel="alternate" type="text/markdown" href="${meta.markd
 <meta name="twitter:description" content="${escapeHtml(meta.description)}">
 ${meta.published ? `<meta property="article:published_time" content="${meta.published}">` : ''}
 ${meta.updated ? `<meta property="article:modified_time" content="${meta.updated}">` : ''}
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="${stamp('/styles.css')}">
 ${FONTS}
 ${meta.ld}
 </head>

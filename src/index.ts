@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from './lib/types';
+import { isStamped, stampHtml } from './lib/assets';
 import { closePeriod, previousPeriod } from './lib/overage';
 import { canonicalRedirect } from './lib/util';
 import { api } from './routes/api';
@@ -40,7 +41,13 @@ app.get('/healthz', (c) => c.json({ ok: true, service: 'videokr' }));
 // Anything not handled above falls through to the static assets bundle.
 app.all('*', async (c) => {
   const response = await c.env.ASSETS.fetch(c.req.raw);
-  return withAssetHeaders(c.req.path, response);
+  const path = c.req.path;
+  const isHtml = path === '/' || path.endsWith('.html');
+  if (isHtml && response.ok && response.headers.get('content-type')?.includes('text/html')) {
+    const html = stampHtml(await response.text());
+    return withAssetHeaders(path, new Response(html, { status: response.status, headers: response.headers }), c.req.query('v'));
+  }
+  return withAssetHeaders(path, response, c.req.query('v'));
 });
 
 /** Signed-in surfaces are behind a session, so an indexed copy is only ever noise. */
@@ -48,16 +55,20 @@ const UNINDEXED_ASSETS = new Set(['/app.html', '/admin.html', '/login.html', '/r
 /** Immutable in practice: brand art, the player runtime and the fonts it draws in. */
 const LONG_CACHE = /^\/(brand|fonts|player)\//;
 
-function withAssetHeaders(path: string, response: Response): Response {
+function withAssetHeaders(path: string, response: Response, version?: string): Response {
   const headers = new Headers(response.headers);
   if (UNINDEXED_ASSETS.has(path)) {
     headers.set('x-robots-tag', 'noindex, nofollow');
     headers.set('cache-control', 'private, no-store');
+  } else if (isStamped(path, version)) {
+    // The URL carries this exact file's content hash, so it can be kept for a
+    // year: a change to the file changes the URL every page asks for.
+    headers.set('cache-control', 'public, max-age=31536000, immutable');
   } else if (LONG_CACHE.test(path)) {
     headers.set('cache-control', 'public, max-age=604800, stale-while-revalidate=86400');
   } else if (path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.webmanifest')) {
-    // Unhashed filenames, so a long TTL would leave returning visitors on last
-    // week's stylesheet after a deploy. Short TTL, long stale window.
+    // Reached without a stamp — a hand-typed URL or an old page out of someone's
+    // cache. Short TTL so it self-heals rather than pinning last week's file.
     headers.set('cache-control', 'public, max-age=600, stale-while-revalidate=604800');
   } else if (path === '/' || path.endsWith('.html')) {
     headers.set('cache-control', 'public, max-age=0, must-revalidate');
