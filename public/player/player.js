@@ -842,6 +842,7 @@
     this._bindKeys();
     this._bindPointer();
     this._bindTips();
+    this._watchShort();
 
     return this.adapter.load().then(function () {
       self.track('load');
@@ -1816,6 +1817,23 @@
    * sliced by the picture's edge. The label cannot be measured from CSS, so the
    * shift back inside is measured here and handed to the stylesheet as a variable.
    */
+  /**
+   * Container queries here can only ask about width, yet the overlay cards are
+   * limited by height: in a short embed the control bar covers the card's last
+   * control. The height is therefore measured and published as a class.
+   */
+  Player.prototype._watchShort = function () {
+    var self = this;
+    var apply = function () {
+      var height = self.root.clientHeight;
+      if (!height) return;
+      self.root.classList.toggle('sf-short', height < 300);
+    };
+    apply();
+    if (window.ResizeObserver) new window.ResizeObserver(apply).observe(this.root);
+    else window.addEventListener('resize', apply);
+  };
+
   Player.prototype._bindTips = function () {
     var self = this;
     var EDGE = 6;
