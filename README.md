@@ -46,7 +46,7 @@ npm test
 4. `npm run db:migrate:remote && npm run deploy`.
 5. Optional: `SEED_EMAIL=... SEED_PASSWORD=... npm run seed:remote` for a demo account.
 
-This repo is deployed at <https://streamforge.getlaunchpod.workers.dev>.
+This repo is deployed at <https://videokr.com>.
 
 ## Note on YouTube sources
 

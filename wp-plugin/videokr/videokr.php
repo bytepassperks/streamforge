@@ -3,7 +3,7 @@
  * Plugin Name:       Videokr
  * Plugin URI:        https://videokr.com/
  * Description:       Embed your Videokr-hosted videos and playlists in WordPress with a shortcode or block — your branded player, your analytics, no third-party player chrome.
- * Version:           1.1.4
+ * Version:           1.1.5
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Videokr
@@ -17,13 +17,13 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'VIDEOKR_VERSION', '1.1.4' );
+define( 'VIDEOKR_VERSION', '1.1.5' );
 define( 'VIDEOKR_FILE', __FILE__ );
 define( 'VIDEOKR_DIR', plugin_dir_path( __FILE__ ) );
 define( 'VIDEOKR_URL', plugin_dir_url( __FILE__ ) );
 
 /** Default host, overridable so a self-signed staging Worker can be pointed at. */
-define( 'VIDEOKR_DEFAULT_HOST', 'https://streamforge.getlaunchpod.workers.dev' );
+define( 'VIDEOKR_DEFAULT_HOST', 'https://videokr.com' );
 
 require_once VIDEOKR_DIR . 'includes/class-videokr-settings.php';
 require_once VIDEOKR_DIR . 'includes/class-videokr-api.php';

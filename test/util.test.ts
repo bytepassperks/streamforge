@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canonicalRedirect,
   defaultPlayerConfig,
   deviceFromUserAgent,
   escapeHtml,
@@ -177,5 +178,25 @@ describe('newId', () => {
     expect(a.startsWith('vid_')).toBe(true);
     expect(a).not.toBe(b);
     expect(newId()).toHaveLength(16);
+  });
+});
+
+describe('canonicalRedirect', () => {
+  const base = 'https://videokr.com';
+
+  it('sends the workers.dev name and www to the domain, keeping path and query', () => {
+    expect(canonicalRedirect('https://streamforge.getlaunchpod.workers.dev/e/vid_a?autoplay=1', base))
+      .toBe('https://videokr.com/e/vid_a?autoplay=1');
+    expect(canonicalRedirect('https://www.videokr.com/v/film', base)).toBe('https://videokr.com/v/film');
+  });
+
+  it('leaves the canonical host, localhost and unknown hosts alone', () => {
+    expect(canonicalRedirect('https://videokr.com/app.html', base)).toBe('');
+    expect(canonicalRedirect('http://localhost:8787/app.html', base)).toBe('');
+    expect(canonicalRedirect('https://videokr.com.evil.test/', base)).toBe('');
+  });
+
+  it('does not redirect when no base url is configured', () => {
+    expect(canonicalRedirect('https://streamforge.getlaunchpod.workers.dev/', '')).toBe('');
   });
 });
