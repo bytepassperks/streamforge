@@ -14,6 +14,16 @@ import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
 import { sendMail } from '../lib/email';
 import {
+  SITE,
+  absoluteUrl,
+  baseUrl,
+  breadcrumbLd,
+  graphLd,
+  organizationLd,
+  videoObjectLd,
+  webSiteLd,
+} from '../lib/seo';
+import {
   countPlay,
   isLifetime,
   offerForSeats,
@@ -559,13 +569,14 @@ pub.get('/media/*', async (c) => {
   return new Response(object.body, { headers });
 });
 
-function playerShell(payloadJson: string, title: string, extraBody = ''): string {
+function playerShell(payloadJson: string, title: string, extraBody = '', canonical = ''): string {
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
+${canonical ? `<link rel="canonical" href="${canonical}">` : ''}
 <link rel="stylesheet" href="/player/player.css">
 <style>html,body{margin:0;height:100%;background:transparent}</style>
 </head>
@@ -582,7 +593,10 @@ ${extraBody}
 /** iframe target for embeds. */
 pub.get('/e/:key', async (c) => {
   const video = await loadVideoBySlugOrId(c.env, c.req.param('key'));
-  if (!video) return c.html('<p style="font:14px sans-serif">Video not found.</p>', 404);
+  if (!video) return c.html(notFoundPage('Video'), 404);
+  /* The frame must stay crawlable so video indexing can fetch the player, but the
+     page that should rank is /v/<slug>, never the bare iframe. */
+  c.header('x-robots-tag', 'noindex, indexifembedded');
 
   const host = embedderHostname(c);
   if (video.allowed_domains && host && !hostnameAllowed(host, video.allowed_domains)) {
@@ -598,81 +612,141 @@ pub.get('/e/:key', async (c) => {
       locked: true,
       video: { id: video.id, slug: video.slug, title: video.title, thumbnail_url: video.thumbnail_url },
     });
-    return c.html(playerShell(payload, video.title));
+    return c.html(playerShell(payload, video.title, '', `${baseUrl(c.env)}/v/${video.slug}`));
   }
   const variant: 'a' | 'b' = video.thumbnail_url_b && Math.random() < 0.5 ? 'b' : 'a';
   const payload = await buildEmbedPayload(c.env, video, variant);
   payload.player = applyEmbedQuery(c.req.url, payload.player);
-  return c.html(playerShell(JSON.stringify(payload), video.title));
+  return c.html(playerShell(JSON.stringify(payload), video.title, '', `${baseUrl(c.env)}/v/${video.slug}`));
 });
 
 /** Public, SEO-friendly video page. */
 pub.get('/v/:slug', async (c) => {
   const video = await loadVideoBySlugOrId(c.env, c.req.param('slug'));
-  if (!video) return c.html('<p style="font:14px sans-serif">Video not found.</p>', 404);
+  if (!video) return c.html(notFoundPage('Video'), 404);
+  const [chapters, plays] = await Promise.all([chaptersFor(c.env, video.id), playCount(c.env, video.id)]);
+  const extras: PageExtras = { chapters, plays };
   if (video.visibility === 'password' && video.password_hash) {
     const payload = JSON.stringify({
       locked: true,
       video: { id: video.id, slug: video.slug, title: video.title, thumbnail_url: video.thumbnail_url },
     });
-    return c.html(pageShell(video, payload, c.env));
+    return c.html(pageShell(video, payload, c.env, { chapters: [], plays: 0 }));
   }
   const payload = await buildEmbedPayload(c.env, video, 'a');
-  return c.html(pageShell(video, JSON.stringify(payload), c.env));
+  return c.html(pageShell(video, JSON.stringify(payload), c.env, extras));
 });
 
 /* The type and mark the rest of the product is drawn in. Without them a public page
-   falls back to a browser serif and a bare word, reading as a different product. */
-const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600;700;800&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="icon" href="/brand/mark-32.png" sizes="32x32">`;
+   falls back to a browser serif and a bare word, reading as a different product.
+   Self-hosted so a public page costs no third-party connection and cannot shift
+   its layout waiting on someone else's CDN. */
+const FONTS = `<link rel="preload" href="/fonts/figtree-400-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/kalam-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="icon" href="/brand/mark-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/brand/mark-180.png">
+<meta name="theme-color" content="#fdfbfc">`;
 
 const PAGE_HEAD =
-  '<header class="sf-page-head"><a class="sf-brand" href="/"><img src="/brand/logo-ink.png" alt="Videokr"></a></header>';
+  '<header class="sf-page-head"><a class="sf-brand" href="/"><img src="/brand/logo-ink-330.webp" alt="Videokr" width="102" height="28"></a></header>';
 
-function pageShell(video: Video, payloadJson: string, env: Env): string {
-  const base = env.PUBLIC_BASE_URL.replace(/\/$/, '');
-  const jsonLd = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'VideoObject',
-    name: video.title,
-    description: video.description,
-    thumbnailUrl: video.thumbnail_url || undefined,
-    uploadDate: new Date(video.created_at * 1000).toISOString(),
-    duration: video.duration ? `PT${Math.round(video.duration)}S` : undefined,
-    embedUrl: `${base}/e/${video.slug}`,
-  });
+/** Every public page links home in words a crawler can read. */
+const PAGE_FOOT = `<footer class="sf-page-foot">
+  <p>Hosted on <a href="/">Videokr</a> — brandable video hosting with lead capture and retention analytics.
+     <a href="/#pricing">See plans</a>.</p>
+</footer>`;
+
+function metaDescription(video: Video): string {
+  const text = video.description
+    ? video.description
+    : `Watch “${video.title}” on Videokr — hosted, ad-free video with chapters, captions and no suggested videos.`;
+  return escapeHtml(text.replace(/\s+/g, ' ').trim()).slice(0, 300);
+}
+
+interface PageExtras {
+  chapters: Pick<Chapter, 'start_seconds' | 'title'>[];
+  plays: number;
+}
+
+function pageShell(video: Video, payloadJson: string, env: Env, extras: PageExtras): string {
+  const base = baseUrl(env);
+  const canonical = `${base}/v/${video.slug}`;
+  const thumbnail = video.thumbnail_url ? absoluteUrl(base, video.thumbnail_url) : `${base}/brand/hero-dark.png`;
+  /* Only a genuinely public video belongs in an index; an unlisted or
+     password-locked page is shared by link and stays out of search. */
+  const indexable = video.visibility === 'public';
+  const description = metaDescription(video);
+  const ld = graphLd([
+    organizationLd(base),
+    webSiteLd(base),
+    videoObjectLd(base, { video, chapters: extras.chapters, plays: extras.plays }),
+    breadcrumbLd(base, [
+      { name: 'Videokr', url: '/' },
+      { name: video.title, url: `/v/${video.slug}` },
+    ]),
+  ]);
+  const chapterList = extras.chapters.length
+    ? `<section class="sf-page-chapters"><h2>Chapters</h2><ol>${extras.chapters
+        .map((chapter) => {
+          const seconds = Math.round(chapter.start_seconds);
+          const stamp = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+          return `<li><a href="?t=${seconds}" data-seek="${seconds}"><span>${stamp}</span> ${escapeHtml(
+            chapter.title,
+          )}</a></li>`;
+        })
+        .join('')}</ol></section>`
+    : '';
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(video.title)}</title>
-<meta name="description" content="${escapeHtml(video.description).slice(0, 300)}">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${escapeHtml(video.title)} — Videokr</title>
+<meta name="description" content="${description}">
+<link rel="canonical" href="${canonical}">
+<meta name="robots" content="${
+    indexable ? 'index, follow, max-image-preview:large, max-video-preview:-1, max-snippet:-1' : 'noindex, follow'
+  }">
+<link rel="alternate" type="text/markdown" href="${canonical}.md" title="${escapeHtml(video.title)} in Markdown">
 <meta property="og:type" content="video.other">
+<meta property="og:site_name" content="${SITE.name}">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="${canonical}">
 <meta property="og:title" content="${escapeHtml(video.title)}">
-<meta property="og:description" content="${escapeHtml(video.description).slice(0, 300)}">
-${video.thumbnail_url ? `<meta property="og:image" content="${escapeHtml(video.thumbnail_url)}">` : ''}
+<meta property="og:description" content="${description}">
+<meta property="og:image" content="${escapeHtml(thumbnail)}">
+<meta property="og:image:alt" content="${escapeHtml(video.title)}">
 <meta property="og:video" content="${base}/e/${escapeHtml(video.slug)}">
+<meta property="og:video:secure_url" content="${base}/e/${escapeHtml(video.slug)}">
+<meta property="og:video:type" content="text/html">
+<meta property="og:video:width" content="1280">
+<meta property="og:video:height" content="720">
+${video.duration ? `<meta property="video:duration" content="${Math.round(video.duration)}">` : ''}
+<meta property="video:release_date" content="${new Date(video.created_at * 1000).toISOString()}">
 <meta name="twitter:card" content="player">
 <meta name="twitter:title" content="${escapeHtml(video.title)}">
-<meta name="twitter:description" content="${escapeHtml(video.description).slice(0, 200)}">
-${video.thumbnail_url ? `<meta name="twitter:image" content="${escapeHtml(video.thumbnail_url)}">` : ''}
+<meta name="twitter:description" content="${description.slice(0, 200)}">
+<meta name="twitter:image" content="${escapeHtml(thumbnail)}">
 <meta name="twitter:player" content="${base}/e/${escapeHtml(video.slug)}">
 <meta name="twitter:player:width" content="1280">
 <meta name="twitter:player:height" content="720">
 <link rel="stylesheet" href="/player/player.css">
 <link rel="stylesheet" href="/styles.css">
 ${FONTS}
-<script type="application/ld+json">${jsonLd}</script>
+${ld}
 </head>
 <body class="sf-page">
+<a class="sf-skip" href="#sf-main">Skip to the video</a>
 ${PAGE_HEAD}
-<main class="sf-page-main">
+<main class="sf-page-main" id="sf-main">
+  <nav class="sf-crumbs" aria-label="Breadcrumb"><a href="/">Videokr</a> <span aria-hidden="true">/</span> <span>${escapeHtml(
+    video.title,
+  )}</span></nav>
   <div class="sf-page-player"><div id="sf-player" class="sf-fill"></div></div>
   <h1>${escapeHtml(video.title)}</h1>
   ${video.description ? `<p class="sf-page-desc">${escapeHtml(video.description)}</p>` : ''}
+  ${chapterList}
   ${
     video.transcript
       ? `<section class="sf-transcript"><h2>Transcript</h2>
@@ -681,11 +755,52 @@ ${PAGE_HEAD}
       : ''
   }
 </main>
+${PAGE_FOOT}
 <script>window.__SF_EMBED__ = ${payloadJson};</script>
-<script src="/player/player.js"></script>
-<script src="/page.js"></script>
+<script src="/player/player.js" defer></script>
+<script src="/page.js" defer></script>
 </body>
 </html>`;
+}
+
+/** A missing page still has to look like the product and stay out of the index. */
+function notFoundPage(kind: 'Video' | 'Playlist'): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${kind} not found — Videokr</title>
+<meta name="robots" content="noindex, follow">
+<link rel="stylesheet" href="/styles.css">
+${FONTS}
+</head>
+<body class="sf-page">
+${PAGE_HEAD}
+<main class="sf-page-main sf-page-missing">
+  <h1>This ${kind.toLowerCase()} isn’t here.</h1>
+  <p class="sf-page-desc">The link may be wrong, or the owner may have removed it or made it private.</p>
+  <p><a class="btn" href="/">Go to Videokr</a></p>
+</main>
+${PAGE_FOOT}
+</body>
+</html>`;
+}
+
+async function playCount(env: Env, videoId: string): Promise<number> {
+  const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE video_id = ? AND kind = 'play'")
+    .bind(videoId)
+    .first<{ n: number }>();
+  return Number(row?.n ?? 0);
+}
+
+async function chaptersFor(env: Env, videoId: string): Promise<Pick<Chapter, 'start_seconds' | 'title'>[]> {
+  const { results } = await env.DB.prepare(
+    'SELECT start_seconds, title FROM chapters WHERE video_id = ? ORDER BY start_seconds',
+  )
+    .bind(videoId)
+    .all<Pick<Chapter, 'start_seconds' | 'title'>>();
+  return results ?? [];
 }
 
 /** Public playlist page: a collection of videos on one page. */
@@ -695,14 +810,18 @@ async function loadPlaylist(env: Env, key: string): Promise<Playlist | null> {
     .first<Playlist>();
 }
 
-async function playlistData(env: Env, playlist: Playlist): Promise<string> {
+async function playlistVideos(env: Env, playlist: Playlist): Promise<Video[]> {
   const { results } = await env.DB.prepare(
     `SELECT v.* FROM playlist_items i JOIN videos v ON v.id = i.video_id
       WHERE i.playlist_id = ? ORDER BY i.position`,
   )
     .bind(playlist.id)
     .all<Video>();
-  const payloads = await Promise.all((results ?? []).map((v) => buildEmbedPayload(env, v, 'a')));
+  return results ?? [];
+}
+
+async function playlistData(env: Env, playlist: Playlist, videos: Video[]): Promise<string> {
+  const payloads = await Promise.all(videos.map((v) => buildEmbedPayload(env, v, 'a')));
   return JSON.stringify({
     playlist: {
       title: playlist.title,
@@ -719,9 +838,9 @@ function playlistLocked(playlist: Playlist, error: boolean): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>${escapeHtml(playlist.title)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, follow">
+<title>${escapeHtml(playlist.title)} — Videokr</title>
 <link rel="stylesheet" href="/styles.css">
 ${FONTS}
 </head>
@@ -740,29 +859,87 @@ ${PAGE_HEAD}
 </html>`;
 }
 
-function playlistShell(playlist: Playlist, data: string, chrome: boolean): string {
+function playlistShell(
+  playlist: Playlist,
+  data: string,
+  chrome: boolean,
+  env: Env,
+  videos: Video[],
+): string {
+  const base = baseUrl(env);
+  const canonical = `${base}/pl/${playlist.slug}`;
+  const indexable = chrome && playlist.visibility === 'public';
+  const description = escapeHtml(
+    playlist.description ||
+      `${videos.length} video${videos.length === 1 ? '' : 's'} in “${playlist.title}”, hosted on Videokr.`,
+  ).slice(0, 300);
+  const poster = videos.find((video) => video.thumbnail_url);
+  const ld = graphLd([
+    organizationLd(base),
+    webSiteLd(base),
+    {
+      '@type': 'ItemList',
+      '@id': `${canonical}#playlist`,
+      name: playlist.title,
+      description: playlist.description || undefined,
+      url: canonical,
+      numberOfItems: videos.length,
+      itemListOrder: 'https://schema.org/ItemListOrderAscending',
+      itemListElement: videos.map((video, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${base}/v/${video.slug}`,
+        name: video.title,
+      })),
+    },
+    breadcrumbLd(base, [
+      { name: 'Videokr', url: '/' },
+      { name: playlist.title, url: `/pl/${playlist.slug}` },
+    ]),
+  ]);
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(playlist.title)}</title>
-<meta name="description" content="${escapeHtml(playlist.description).slice(0, 300)}">
-${playlist.visibility === 'public' ? '' : '<meta name="robots" content="noindex">'}
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${escapeHtml(playlist.title)} — Videokr</title>
+<meta name="description" content="${description}">
+<link rel="canonical" href="${canonical}">
+<meta name="robots" content="${
+    indexable ? 'index, follow, max-image-preview:large, max-video-preview:-1' : 'noindex, follow'
+  }">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${SITE.name}">
+<meta property="og:url" content="${canonical}">
+<meta property="og:title" content="${escapeHtml(playlist.title)}">
+<meta property="og:description" content="${description}">
+<meta property="og:image" content="${
+    poster ? escapeHtml(absoluteUrl(base, poster.thumbnail_url)) : `${base}/brand/hero-dark.png`
+  }">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/player/player.css">
 <link rel="stylesheet" href="/styles.css">
 ${FONTS}
+${chrome ? ld : ''}
 </head>
 <body class="sf-page${chrome ? '' : ' sf-page-bare'}">
 ${chrome ? PAGE_HEAD : ''}
+${chrome ? `<h1 class="sf-playlist-title">${escapeHtml(playlist.title)}</h1>` : ''}
+${chrome && playlist.description ? `<p class="sf-playlist-desc">${escapeHtml(playlist.description)}</p>` : ''}
 <main class="sf-playlist" data-layout="${escapeHtml(playlist.layout)}">
   <div class="sf-playlist-stage"><div id="sf-player" class="sf-fill"></div></div>
   <aside class="sf-playlist-list" id="sf-playlist-list"></aside>
 </main>
-${chrome ? `<h1 class="sf-playlist-title">${escapeHtml(playlist.title)}</h1>` : ''}
+${
+  chrome
+    ? `<nav class="sf-playlist-index" aria-label="Videos in this playlist"><h2>In this playlist</h2><ol>${videos
+        .map((video) => `<li><a href="/v/${escapeHtml(video.slug)}">${escapeHtml(video.title)}</a></li>`)
+        .join('')}</ol></nav>${PAGE_FOOT}`
+    : ''
+}
 <script>window.__SF_PLAYLIST__ = ${data};</script>
-<script src="/player/player.js"></script>
-<script src="/playlist.js"></script>
+<script src="/player/player.js" defer></script>
+<script src="/playlist.js" defer></script>
 </body>
 </html>`;
 }
@@ -776,7 +953,7 @@ async function playlistUnlocked(playlist: Playlist, token: string): Promise<bool
 
 pub.post('/pl/:slug/unlock', async (c) => {
   const playlist = await loadPlaylist(c.env, c.req.param('slug'));
-  if (!playlist) return c.html('<p style="font:14px sans-serif">Playlist not found.</p>', 404);
+  if (!playlist) return c.html(notFoundPage('Playlist'), 404);
   if (playlist.visibility !== 'password' || !playlist.password_hash) {
     return c.redirect(`/pl/${playlist.slug}`, 302);
   }
@@ -790,19 +967,24 @@ pub.post('/pl/:slug/unlock', async (c) => {
 
 pub.get('/pl/:slug', async (c) => {
   const playlist = await loadPlaylist(c.env, c.req.param('slug'));
-  if (!playlist) return c.html('<p style="font:14px sans-serif">Playlist not found.</p>', 404);
+  if (!playlist) return c.html(notFoundPage('Playlist'), 404);
   if (!(await playlistUnlocked(playlist, c.req.query('token') ?? ''))) {
     return c.html(playlistLocked(playlist, false), 401);
   }
-  return c.html(playlistShell(playlist, await playlistData(c.env, playlist), true));
+  const videos = await playlistVideos(c.env, playlist);
+  const data = await playlistData(c.env, playlist, videos);
+  return c.html(playlistShell(playlist, data, true, c.env, videos));
 });
 
 /** iframe target for playlist embeds. */
 pub.get('/ep/:slug', async (c) => {
   const playlist = await loadPlaylist(c.env, c.req.param('slug'));
-  if (!playlist) return c.html('<p style="font:14px sans-serif">Playlist not found.</p>', 404);
+  if (!playlist) return c.html(notFoundPage('Playlist'), 404);
   if (!(await playlistUnlocked(playlist, c.req.query('token') ?? ''))) {
     return c.html(playlistLocked(playlist, false), 401);
   }
-  return c.html(playlistShell(playlist, await playlistData(c.env, playlist), false));
+  c.header('x-robots-tag', 'noindex, indexifembedded');
+  const videos = await playlistVideos(c.env, playlist);
+  const data = await playlistData(c.env, playlist, videos);
+  return c.html(playlistShell(playlist, data, false, c.env, videos));
 });
