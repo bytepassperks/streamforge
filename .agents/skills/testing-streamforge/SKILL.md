@@ -154,9 +154,10 @@ Picking test sources:
 - HLS: `https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8` plays in the sandbox and exposes
   6 quality entries (Auto/184p/288p/480p/720p/1080p) via hls.js loaded from jsDelivr, so the
   quality menu needs outbound CDN access. The quality button label is the current selection.
-- Short, always-available clip for end-screen/related tests: the same-origin hosted
-  `/media/demo/videokr-demo-16x9.mp4` (external `test-videos.co.uk` MP4s still fail in the
-  sandbox browser with media `error.code 4`).
+- Short, always-available clip for end-screen/related tests: upload one through the **New
+  video** modal and reuse the returned same-origin `/media/<user>/<id>.mp4` (external
+  `test-videos.co.uk` MP4s still fail in the sandbox browser with media `error.code 4`).
+  Delete such uploads afterwards so production keeps no test media.
 - Duration must often be typed manually in the editor for non-HTML sources, otherwise the
   queue/progress UI shows the stored value rather than the real one.
 
@@ -337,8 +338,8 @@ Two fixtures work, both same-origin (`HtmlAdapter` sets `crossorigin="anonymous"
 `captionsUrl` exists, so a cross-origin .vtt without CORS silently yields no track and the CC
 button is hidden entirely):
 
-1. Landing page demo (`/#demo`) is preconfigured with `/demo/videokr-demo-16x9.vtt` (cues at
-   0:01/0:08/0:18/0:38) and chapters at 0s/18s/38s — fastest fixture, needs no setup.
+1. Landing page demo (`/#demo`) is the hosted product film, which already carries captions
+   and eight chapters — fastest read-only fixture, needs no setup.
 2. Own video: the editor Details tab has only a **"Captions .vtt url" text field**, no file
    picker. Upload the .vtt through the **New video** modal's file input (`POST /api/uploads`
    accepts `text/vtt`, and falls back to the `.vtt` extension), copy the returned
