@@ -4,7 +4,7 @@ Tags: video, video player, playlist, embed, video hosting
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,6 +57,13 @@ Yes — a play is a play wherever the embed lives, and usage is shown in Videokr
 Yes, by passing a valid access token with the `token` attribute. Without it the embed asks for the password.
 
 == Changelog ==
+
+= 1.1.3 =
+* Most played on the Insights tab now shows each video's thumbnail.
+* Videos linked from YouTube that were created before posters were saved automatically now show YouTube's still instead of an empty slot.
+
+= 1.1.2 =
+* Library and block pickers fall back to the play placeholder when a poster cannot be loaded, instead of showing an empty slot.
 
 = 1.1.1 =
 * Plays chart now draws the whole 30-day axis, so quiet days are visible instead of the chart collapsing to a single bar, with dates and a window total.

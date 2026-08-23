@@ -67,7 +67,17 @@
 
   function Thumb(item) {
     if (item.thumbnail_url) {
-      return el('img', { src: absolute(item.thumbnail_url), alt: '', className: 'videokr-pick__art' });
+      return el('img', {
+        src: absolute(item.thumbnail_url),
+        alt: '',
+        className: 'videokr-pick__art',
+        // A poster that fails to load falls back to the empty play slot rather
+        // than leaving a hole in the picker.
+        onError: function (event) {
+          event.target.removeAttribute('src');
+          event.target.className = 'videokr-pick__art videokr-pick__art--empty';
+        },
+      });
     }
     return el('span', { className: 'videokr-pick__art videokr-pick__art--empty' }, '▶');
   }
