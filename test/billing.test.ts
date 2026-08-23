@@ -11,8 +11,8 @@ import {
 
 describe('offerForSeats', () => {
   it('walks the launch ladder as real seats sell', () => {
-    expect(offerForSeats(0)).toMatchObject({ usd: 69, seats_total: 100, seats_left: 100, next_usd: 99 });
-    expect(offerForSeats(13)).toMatchObject({ usd: 69, seats_left: 87, seats_sold: 13 });
+    expect(offerForSeats(0)).toMatchObject({ usd: 79, seats_total: 100, seats_left: 100, next_usd: 99 });
+    expect(offerForSeats(13)).toMatchObject({ usd: 79, seats_left: 87, seats_sold: 13 });
     expect(offerForSeats(100)).toMatchObject({ usd: 99, seats_total: 400, seats_left: 400, next_usd: 149 });
     expect(offerForSeats(250)).toMatchObject({ usd: 99, seats_left: 250 });
   });
@@ -32,14 +32,14 @@ describe('offerForSeats', () => {
     const promo = lifetimeDiscount(env);
     expect(promo).toEqual({ code: 'VIDEOKR10', usd: 10, inr: 850 });
     expect(offerForSeats(0, promo)).toMatchObject({
-      usd: 69,
-      net_usd: 59,
-      inr: 5999,
-      net_inr: 5149,
+      usd: 79,
+      net_usd: 69,
+      inr: 6849,
+      net_inr: 5999,
       discount_usd: 10,
       discount_code: 'VIDEOKR10',
     });
-    expect(offerForSeats(0)).toMatchObject({ net_usd: 69, net_inr: 5999, discount_usd: 0, discount_code: null });
+    expect(offerForSeats(0)).toMatchObject({ net_usd: 79, net_inr: 6849, discount_usd: 0, discount_code: null });
   });
 
   it('ignores a promo with no code or a zero amount, so nothing is quoted for free', () => {

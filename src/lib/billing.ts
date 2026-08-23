@@ -2,7 +2,7 @@ import type { Env, User } from './types';
 
 /** Launch ladder. Seats are counted from real paid purchases, never invented. */
 export const LIFETIME_TIERS = [
-  { seats: 100, usd: 69, inr: 5999 },
+  { seats: 100, usd: 79, inr: 6849 },
   { seats: 400, usd: 99, inr: 8499 },
   { seats: 0, usd: 149, inr: 12999 },
 ];
