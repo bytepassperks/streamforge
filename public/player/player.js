@@ -1292,6 +1292,17 @@
 
   Player.prototype._evaluateCtas = function (t, duration) {
     var self = this;
+    // Seeking back out of the tail takes the end screen (or the related grid
+    // that stands in for it) with it, otherwise it hangs over the picture for
+    // the rest of the session.
+    if (duration > 0 && t < duration - 1.5) {
+      var ended = this.ctaLayer.querySelector('[data-sf="endscreen"]');
+      if (ended) ended.remove();
+      if (this.relatedNode) {
+        this.relatedNode.remove();
+        this.relatedNode = null;
+      }
+    }
     this.ctas.forEach(function (cta) {
       if (cta.kind === 'endscreen') return;
       var start = cta.start_seconds || 0;
