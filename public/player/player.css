@@ -310,6 +310,9 @@
   position: absolute; inset: 0; pointer-events: auto; z-index: 7;
   display: grid; place-items: center; background: rgba(6,8,12,.88); backdrop-filter: blur(4px);
 }
+/* The end screen and the related grid are suggestions, not gates: they sit under
+   the control bar so a viewer can scrub back out of them with the mouse. */
+.sf-end-layer { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 .sf-gate-card, .sf-endscreen-card, .sf-lock-card {
   width: min(420px, 88%); background: #12141c; border: 1px solid rgba(255,255,255,.12);
   border-radius: 14px; padding: 22px; text-align: center;

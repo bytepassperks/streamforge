@@ -783,6 +783,11 @@
     this.ctaLayer = el('div', 'sf-cta-layer');
     this.overlay.appendChild(this.ctaLayer);
 
+    // End-of-playback surfaces live below the control bar so a viewer can scrub
+    // back out of them; a gate, which is meant to block, stays in the cta layer.
+    this.endLayer = el('div', 'sf-end-layer');
+    this.overlay.appendChild(this.endLayer);
+
     this.controls = this._buildControls();
     this.overlay.appendChild(this.controls);
     this._buildSideRail();
@@ -1296,7 +1301,7 @@
     // that stands in for it) with it, otherwise it hangs over the picture for
     // the rest of the session.
     if (duration > 0 && t < duration - 1.5) {
-      var ended = this.ctaLayer.querySelector('[data-sf="endscreen"]');
+      var ended = this.endLayer.querySelector('[data-sf="endscreen"]');
       if (ended) ended.remove();
       if (this.relatedNode) {
         this.relatedNode.remove();
@@ -1582,7 +1587,7 @@
       self.adapter.play();
     });
     node.appendChild(again);
-    this.ctaLayer.appendChild(node);
+    this.endLayer.appendChild(node);
     this.relatedNode = node;
   };
 
@@ -1631,7 +1636,7 @@
     });
     card.appendChild(again);
     node.appendChild(card);
-    this.ctaLayer.appendChild(node);
+    this.endLayer.appendChild(node);
   };
 
   /* ------------------------------------------------------------ controls -- */
