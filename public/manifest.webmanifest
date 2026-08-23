@@ -1,0 +1,20 @@
+{
+  "name": "Videokr — hosted video for your own site",
+  "short_name": "Videokr",
+  "description": "Host your video, brand the player, capture emails inside it, embed it anywhere and read second-by-second retention.",
+  "id": "/",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fdfbfc",
+  "theme_color": "#fdfbfc",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "video"],
+  "icons": [
+    { "src": "/brand/mark-64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "/brand/mark-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/brand/mark-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/brand/mark-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

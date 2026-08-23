@@ -1803,7 +1803,7 @@
       }, 2500);
     };
     this.root.addEventListener('mousemove', show);
-    this.root.addEventListener('touchstart', show);
+    this.root.addEventListener('touchstart', show, { passive: true });
     /* A cursor resting on a control sends no further mousemove, so without this the bar
        fades out underneath it and the next click falls through to the picture. The rail
        counts too: it is where the viewer's second click lands after a wake click. */

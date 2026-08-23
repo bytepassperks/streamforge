@@ -16,14 +16,19 @@
   --text: #14201e;
   --text-2: #37474a;
   --muted: #64748b;
-  --muted-2: #93a1b3;
+  --muted-2: #667487;
   --accent: #ff6106;
-  --accent-ink: #fd571d;
+  /* Filled buttons carry white label text, which needs 4.5:1 against the fill —
+     the brighter --accent only reaches 3:1, so buttons use this deeper ember. */
+  --accent-btn: #cc4103;
+  /* Text-weight ember. Dark enough to clear 4.5:1 on paper and on the soft
+     accent pill, where the brighter --accent only reached 3:1. */
+  --accent-ink: #c03c06;
   --accent-soft: #fff6ed;
   --accent-pill: #ffe3db;
   --amber: #ffbe50;
   --amber-lit: #fff6a7;
-  --green: #128d57;
+  --green: #0e7a4a;
   --green-soft: #e1f6e7;
   --mint: #c8e9d4;
   --forest: #124236;
@@ -50,9 +55,9 @@
   --shadow-sm: 0 1px 2px rgba(20, 32, 30, .05);
   --shadow: 0 8px 24px rgba(20, 32, 30, .07);
   --shadow-lg: 0 24px 60px rgba(20, 32, 30, .12);
-  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
-  --sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --hand: "Kalam", "Segoe Script", cursive;
+  --serif: "Instrument Serif", "Instrument Serif Fallback", Georgia, "Times New Roman", serif;
+  --sans: "Figtree", "Figtree Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --hand: "Kalam", "Kalam Fallback", "Segoe Script", cursive;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -98,10 +103,10 @@ code, pre { font-family: var(--mono); }
 
 .eyebrow {
   font-family: var(--mono); font-size: 11px; letter-spacing: .18em;
-  text-transform: uppercase; color: var(--accent); font-weight: 600;
+  text-transform: uppercase; color: var(--accent-ink); font-weight: 600;
 }
 .hand { font-family: var(--hand); font-weight: 700; font-size: 1.3em; line-height: 1.1; color: var(--green); }
-.ital { font-family: var(--serif); font-style: italic; color: var(--accent); font-weight: 400; }
+.ital { font-family: var(--serif); font-style: italic; color: var(--accent-ink); font-weight: 400; }
 
 /* Handwritten display line, as on the composer: "Add New Video With Videokr". */
 .hand-head {
@@ -119,14 +124,14 @@ code, pre { font-family: var(--mono); }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 0 20px; min-height: 40px; border-radius: var(--radius-pill); border: 1px solid transparent;
-  background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; line-height: 1.2;
+  background: var(--accent-btn); color: #fff; font-size: 14px; font-weight: 700; line-height: 1.2;
   font-family: inherit; cursor: pointer; text-decoration: none; white-space: nowrap;
   box-shadow: var(--shadow-sm);
   transition: transform .16s var(--ease), box-shadow .16s var(--ease), background .16s var(--ease),
     border-color .16s var(--ease), color .16s var(--ease);
 }
 .btn svg { width: 18px; height: 18px; flex: none; }
-.btn:hover { background: #f05500; box-shadow: 0 6px 16px rgba(255, 97, 6, .28); transform: translateY(-1px); }
+.btn:hover { background: #b93a02; box-shadow: 0 6px 16px rgba(255, 97, 6, .28); transform: translateY(-1px); }
 .btn:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
 .btn:focus-visible { outline: 0; box-shadow: var(--ring); }
 .btn:disabled, .btn.is-disabled {
@@ -291,6 +296,25 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
 .hero-demo { margin: 40px auto 0; width: min(920px, 92vw); }
 .hero-demo .sf-player { box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); overflow: hidden; }
 
+/* Stand-in for the film until the player runtime is fetched. It reserves the exact
+   16:9 box the player will fill, so mounting it shifts nothing. */
+.demo-poster {
+  display: block; position: relative; width: 100%; aspect-ratio: 16 / 9; padding: 0; border: 0;
+  border-radius: var(--radius-lg); overflow: hidden; cursor: pointer; background: #0b0908;
+  box-shadow: var(--shadow-lg);
+}
+.demo-poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.demo-poster-play {
+  position: absolute; inset: 0; margin: auto; width: 76px; height: 76px; border-radius: 50%;
+  background: rgba(11, 9, 8, .62); border: 2px solid rgba(255, 255, 255, .9);
+}
+.demo-poster-play::after {
+  content: ''; position: absolute; inset: 0; margin: auto; width: 0; height: 0;
+  border-left: 22px solid #fff; border-top: 13px solid transparent; border-bottom: 13px solid transparent;
+  transform: translateX(3px);
+}
+.demo-poster:hover .demo-poster-play { background: rgba(255, 97, 6, .9); }
+
 .marquee {
   margin-top: 46px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
   background: var(--accent-soft); overflow: hidden; padding: 12px 0;
@@ -339,7 +363,8 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
 
 .compare table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
 .compare th, .compare td { text-align: left; padding: 13px 12px; border-bottom: 1px solid var(--line); }
-.compare th { color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+/* 11px uppercase needs the darker ink to clear 4.5:1 over the tinted "us" column */
+.compare th { color: var(--text-2); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
 .compare td:not(:first-child), .compare th:not(:first-child) { text-align: center; }
 .compare .col-us { background: var(--accent-soft); }
 .yes { color: var(--green); font-weight: 800; }
@@ -366,7 +391,7 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
 .seats { height: 7px; border-radius: 99px; background: var(--panel); overflow: hidden; margin: 14px 0 6px; }
 .seats i { display: block; height: 100%; background: var(--accent); }
 .ladder { display: flex; gap: 8px; font-size: 11px; color: var(--muted); flex-wrap: wrap; margin: 0; font-weight: 600; }
-.ladder b { color: var(--accent); }
+.ladder b { color: var(--accent-ink); }
 
 .faq { border-bottom: 1px solid var(--line); padding: 16px 0; }
 .faq summary { cursor: pointer; font-weight: 700; font-size: 16px; list-style: none; }
@@ -394,6 +419,14 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
   .hero-grid, .price-grid { grid-template-columns: 1fr; }
   .hero-note { display: none; }
   .nav-links { display: none; }
+}
+
+/* The narrowest phones (320px) could not hold the wordmark plus both nav
+   buttons, and the price button pushed a horizontal scrollbar onto the page. */
+@media (max-width: 400px) {
+  .nav-inner { gap: 8px; }
+  .brand img { height: 24px; }
+  .nav-inner .btn-sm { padding: 0 11px; font-size: 12.5px; }
 }
 
 /* -------------------------------------------------------------- auth page -- */
@@ -1197,7 +1230,39 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .sf-transcript input { max-width: 340px; margin-bottom: 12px; }
 .sf-transcript pre { white-space: pre-wrap; font-size: 14px; color: var(--muted); font-family: inherit; }
 
-.sf-playlist { width: min(1160px, 92vw); margin: 26px auto 10px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+/* Skip link: visible only once focused, so keyboard users can jump the header. */
+.sf-skip {
+  position: absolute; left: -9999px; top: 8px; z-index: 60; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  font-weight: 700; text-decoration: none;
+}
+.sf-skip:focus { left: 12px; }
+
+.sf-crumbs { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+.sf-crumbs a { color: var(--muted); }
+.sf-crumbs span[aria-hidden] { margin: 0 6px; }
+
+.sf-page-chapters { margin-top: 26px; }
+.sf-page-chapters h2 { font-size: 17px; margin-bottom: 8px; }
+.sf-page-chapters ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sf-page-chapters a {
+  display: flex; gap: 10px; align-items: baseline; padding: 7px 10px; border-radius: var(--radius-sm);
+  text-decoration: none; color: inherit; font-size: 14px; min-height: 40px; align-content: center;
+}
+.sf-page-chapters a:hover { background: var(--panel); }
+.sf-page-chapters a span { font-variant-numeric: tabular-nums; color: var(--accent-ink); font-weight: 700; }
+
+.sf-page-missing { text-align: center; padding-top: 40px; }
+
+.sf-page-foot { border-top: 1px solid var(--line); background: var(--surface); padding: 20px 0 30px; }
+.sf-page-foot p { width: min(1000px, 92vw); margin: 0 auto; font-size: 13px; color: var(--muted); }
+
+.sf-playlist-desc { width: min(1160px, 92vw); margin: 0 auto; color: var(--muted); font-size: 14px; }
+.sf-playlist-index { width: min(1160px, 92vw); margin: 10px auto 40px; }
+.sf-playlist-index h2 { font-size: 17px; margin-bottom: 8px; }
+.sf-playlist-index ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+
+.sf-playlist { width: min(1160px, 92vw); margin: 18px auto 10px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
 .sf-playlist[data-layout="grid"] { grid-template-columns: 1fr; }
 .sf-playlist-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
 .sf-pl-item {
@@ -1210,7 +1275,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .sf-pl-meta { display: grid; gap: 2px; }
 .sf-pl-item-title { font-size: 14px; font-weight: 700; }
 .sf-pl-item-dur { font-size: 12px; color: var(--muted); }
-.sf-playlist-title { width: min(1160px, 92vw); margin: 0 auto 50px; font-family: var(--hand); font-weight: 700; font-size: 30px; }
+.sf-playlist-title { width: min(1160px, 92vw); margin: 26px auto 4px; font-family: var(--hand); font-weight: 700; font-size: 30px; }
 @media (max-width: 860px) { .sf-playlist { grid-template-columns: 1fr; } }
 
 /* Embedded playlist: no site chrome, the host page supplies the frame. */
