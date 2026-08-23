@@ -3,6 +3,7 @@ import type { Env } from './lib/types';
 import { closePeriod, previousPeriod } from './lib/overage';
 import { canonicalRedirect } from './lib/util';
 import { api } from './routes/api';
+import { content } from './routes/content';
 import { plugin } from './routes/plugin';
 import { pub } from './routes/public';
 import { seo } from './routes/seo';
@@ -21,6 +22,10 @@ app.use('*', async (c, next) => {
 
 // Crawler-facing resources are cheap and must never be shadowed by an asset.
 app.route('/', seo);
+
+// Docs, guides, comparisons and the blog: server-rendered from the content
+// library, so they cannot be shadowed by a static asset of the same name.
+app.route('/', content);
 
 // Public viewer routes are registered first: they own a few /api/* paths
 // (embed config, tracking, lead capture) that must stay session-free.
@@ -51,7 +56,9 @@ function withAssetHeaders(path: string, response: Response): Response {
   } else if (LONG_CACHE.test(path)) {
     headers.set('cache-control', 'public, max-age=604800, stale-while-revalidate=86400');
   } else if (path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.webmanifest')) {
-    headers.set('cache-control', 'public, max-age=86400, stale-while-revalidate=604800');
+    // Unhashed filenames, so a long TTL would leave returning visitors on last
+    // week's stylesheet after a deploy. Short TTL, long stale window.
+    headers.set('cache-control', 'public, max-age=600, stale-while-revalidate=604800');
   } else if (path === '/' || path.endsWith('.html')) {
     headers.set('cache-control', 'public, max-age=0, must-revalidate');
   }

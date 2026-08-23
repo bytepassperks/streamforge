@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env, Playlist, Video } from '../lib/types';
 import { SITE, baseUrl, absoluteUrl, isoDate } from '../lib/seo';
+import { contentIndexLines, contentUrls } from './content';
 
 export const seo = new Hono<{ Bindings: Env }>();
 
@@ -194,6 +195,7 @@ seo.get('/sitemap.xml', async (c) => {
     : new Date().toISOString();
   const maps = [
     { loc: `${base}/sitemap-pages.xml`, lastmod: new Date().toISOString() },
+    { loc: `${base}/sitemap-content.xml`, lastmod: newestContent() },
     { loc: `${base}/sitemap-videos.xml`, lastmod: newest },
     { loc: `${base}/sitemap-playlists.xml`, lastmod: newest },
   ];
@@ -212,6 +214,29 @@ seo.get('/sitemap-pages.xml', (c) => {
   return sitemapXml(
     c,
     urlSet([{ loc: `${base}/`, changefreq: 'weekly', priority: '1.0', lastmod: new Date().toISOString() }]),
+  );
+});
+
+/** Docs, guides, comparisons and blog posts, straight from the content library. */
+function newestContent(): string {
+  return contentUrls('https://example.invalid').reduce(
+    (newest, entry) => (entry.lastmod > newest ? entry.lastmod : newest),
+    new Date(0).toISOString(),
+  );
+}
+
+seo.get('/sitemap-content.xml', (c) => {
+  const base = baseUrl(c.env);
+  return sitemapXml(
+    c,
+    urlSet(
+      contentUrls(base).map((entry) => ({
+        loc: entry.loc,
+        lastmod: entry.lastmod,
+        changefreq: 'monthly',
+        priority: entry.priority,
+      })),
+    ),
   );
 });
 
@@ -296,6 +321,10 @@ ${PLANS.map((plan) => `- ${plan}`).join('\n')}
 ## Product facts
 
 ${FACTS.map((fact) => `- ${fact}`).join('\n')}
+
+## Library
+
+${contentIndexLines(base).join('\n')}
 
 ## Pages
 
@@ -383,6 +412,10 @@ ${FACTS.map((fact) => `- ${fact}`).join('\n')}
 ## Questions and answers
 
 ${ANSWERS.map((item) => `### ${item.q}\n\n${item.a}`).join('\n\n')}
+
+## Documentation, guides, comparisons and blog
+
+${contentIndexLines(base).join('\n')}
 
 ## Links
 
