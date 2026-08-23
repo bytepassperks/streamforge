@@ -501,7 +501,17 @@
     if (!tracks || !tracks.length) return false;
     var on = tracks[0].mode === 'showing';
     tracks[0].mode = on ? 'hidden' : 'showing';
-    if (!on) liftCues(tracks[0]);
+    if (!on) {
+      liftCues(tracks[0]);
+      // Cues can still be parsing when captions are switched on, so every new
+      // batch is lifted as it arrives.
+      if (!this._cuesWired) {
+        this._cuesWired = true;
+        tracks[0].addEventListener('cuechange', function () {
+          liftCues(tracks[0]);
+        });
+      }
+    }
     return !on;
   };
 
@@ -511,7 +521,11 @@
     var cues = track.cues;
     if (!cues) return;
     for (var i = 0; i < cues.length; i += 1) {
-      if (cues[i].snapToLines !== false) cues[i].line = -3;
+      if (cues[i].snapToLines === false) continue;
+      // A wrapped cue is painted downward from its line, so a two-line cue on the
+      // third line from the bottom still ends under the bar: lift it by its height.
+      var rows = String(cues[i].text).split('\n').length;
+      cues[i].line = -(2 + rows);
     }
   }
   /* An adaptive stream offers its renditions. A plain file has only the one it was
@@ -1302,11 +1316,15 @@
     // the rest of the session.
     if (duration > 0 && t < duration - 1.5) {
       var ended = this.endLayer.querySelector('[data-sf="endscreen"]');
+      var leaving = !!ended || !!this.relatedNode;
       if (ended) ended.remove();
       if (this.relatedNode) {
         this.relatedNode.remove();
         this.relatedNode = null;
       }
+      // Scrubbing back into the film is a request to watch it, and playback ends
+      // paused, so the picture would otherwise sit frozen on the seeked frame.
+      if (leaving && this.adapter.paused()) this.adapter.play();
     }
     this.ctas.forEach(function (cta) {
       if (cta.kind === 'endscreen') return;
