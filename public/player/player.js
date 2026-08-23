@@ -725,6 +725,7 @@
     this.variant = payload.variant || 'a';
     this.viewId = viewId();
     this._seen = {};
+    this._dismissed = {};
     this._gateShown = false;
     this._lastProgressBucket = -1;
     this._started = false;
@@ -1297,6 +1298,7 @@
       var end = cta.end_seconds && cta.end_seconds > start ? cta.end_seconds : duration || start + 15;
       var active = t >= start && t <= end;
       var node = self.ctaLayer.querySelector('[data-cta="' + cta.id + '"]');
+      if (self._dismissed[cta.id]) return;
       if (active && !node) {
         if (cta.kind === 'gate') {
           if (self._gateShown) return;
@@ -1339,6 +1341,9 @@
       var close = el('button', 'sf-cta-close', '&times;');
       close.setAttribute('aria-label', 'Dismiss');
       close.addEventListener('click', function () {
+        // Dismissing has to stick: the CTA tick would otherwise re-add the
+        // card on the next timeupdate.
+        self._dismissed[cta.id] = true;
         node.remove();
       });
       node.appendChild(close);
@@ -1346,14 +1351,11 @@
     return node;
   };
 
-  Player.prototype._renderGate = function (cta, position) {
+  /* The lead form is shared by the mid-roll gate and the end screen, so an
+     end screen carrying `fields` asks for the email instead of quietly
+     dropping it. `done` runs once the lead is saved. */
+  Player.prototype._leadForm = function (cta, position, done) {
     var self = this;
-    var node = el('div', 'sf-gate');
-    node.setAttribute('data-cta', cta.id);
-    node.setAttribute('data-sf', 'gate');
-    var card = el('div', 'sf-gate-card');
-    card.appendChild(el('h3', null, null)).textContent = cta.headline || 'Continue watching';
-    if (cta.body) card.appendChild(el('p', null, null)).textContent = cta.body;
     var form = document.createElement('form');
     form.className = 'sf-gate-form';
     var fields = (cta.fields || 'email').split(',').map(function (f) {
@@ -1406,8 +1408,7 @@
             error.textContent = result.body.error || 'Could not save that, please retry.';
             return;
           }
-          node.remove();
-          self.adapter.play();
+          done();
         })
         .catch(function () {
           submit.disabled = false;
@@ -1415,7 +1416,23 @@
         });
     });
 
-    card.appendChild(form);
+    return form;
+  };
+
+  Player.prototype._renderGate = function (cta, position) {
+    var self = this;
+    var node = el('div', 'sf-gate');
+    node.setAttribute('data-cta', cta.id);
+    node.setAttribute('data-sf', 'gate');
+    var card = el('div', 'sf-gate-card');
+    card.appendChild(el('h3', null, null)).textContent = cta.headline || 'Continue watching';
+    if (cta.body) card.appendChild(el('p', null, null)).textContent = cta.body;
+    card.appendChild(
+      this._leadForm(cta, position, function () {
+        node.remove();
+        self.adapter.play();
+      }),
+    );
     if (cta.skippable) {
       var skip = el('button', 'sf-gate-skip', 'Skip for now');
       skip.setAttribute('data-sf', 'gate-skip');
@@ -1583,6 +1600,17 @@
         self.track('cta_click', self.adapter.duration(), self.adapter.duration(), end.id);
       });
       card.appendChild(link);
+    }
+    if (end.fields) {
+      var thanks = el('div', 'sf-gate-error');
+      card.appendChild(
+        this._leadForm(end, this.adapter.duration(), function () {
+          var form = card.querySelector('.sf-gate-form');
+          if (form) form.remove();
+          thanks.textContent = 'Sent — check your inbox.';
+        }),
+      );
+      card.appendChild(thanks);
     }
     var again = el('button', 'sf-endscreen-replay', 'Watch again');
     again.addEventListener('click', function () {
