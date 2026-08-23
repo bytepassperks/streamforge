@@ -11,6 +11,10 @@ export interface Env {
   DODO_AGENCY_PRODUCT_ID?: string;
   DODO_AGENCY_ANNUAL_PRODUCT_ID?: string;
   DODO_PAYMENTS_API_KEY?: string;
+  /** Promo code held at Dodo, pre-applied to the lifetime cart. */
+  LIFETIME_DISCOUNT_CODE?: string;
+  LIFETIME_DISCOUNT_USD?: string;
+  LIFETIME_DISCOUNT_INR?: string;
   DODO_WEBHOOK_SECRET?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;

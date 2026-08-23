@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { LIFETIME_TIERS, isAdmin, isLifetime, offerForSeats, verifyDodoSignature } from '../src/lib/billing';
+import type { Env } from '../src/lib/types';
+import {
+  LIFETIME_TIERS,
+  isAdmin,
+  isLifetime,
+  lifetimeDiscount,
+  offerForSeats,
+  verifyDodoSignature,
+} from '../src/lib/billing';
 
 describe('offerForSeats', () => {
   it('walks the launch ladder as real seats sell', () => {
@@ -13,6 +21,31 @@ describe('offerForSeats', () => {
     const last = LIFETIME_TIERS[LIFETIME_TIERS.length - 1];
     expect(offerForSeats(500)).toMatchObject({ usd: last.usd, inr: last.inr, seats_total: 0, next_usd: null });
     expect(offerForSeats(9999)).toMatchObject({ usd: last.usd, seats_left: 0 });
+  });
+
+  it('quotes the net price when a promo is configured, and the list price when not', () => {
+    const env = {
+      LIFETIME_DISCOUNT_CODE: 'VIDEOKR10',
+      LIFETIME_DISCOUNT_USD: '10',
+      LIFETIME_DISCOUNT_INR: '850',
+    } as Env;
+    const promo = lifetimeDiscount(env);
+    expect(promo).toEqual({ code: 'VIDEOKR10', usd: 10, inr: 850 });
+    expect(offerForSeats(0, promo)).toMatchObject({
+      usd: 69,
+      net_usd: 59,
+      inr: 5999,
+      net_inr: 5149,
+      discount_usd: 10,
+      discount_code: 'VIDEOKR10',
+    });
+    expect(offerForSeats(0)).toMatchObject({ net_usd: 69, net_inr: 5999, discount_usd: 0, discount_code: null });
+  });
+
+  it('ignores a promo with no code or a zero amount, so nothing is quoted for free', () => {
+    expect(lifetimeDiscount({ LIFETIME_DISCOUNT_USD: '10' } as Env)).toBeNull();
+    expect(lifetimeDiscount({ LIFETIME_DISCOUNT_CODE: 'X', LIFETIME_DISCOUNT_USD: '0' } as Env)).toBeNull();
+    expect(lifetimeDiscount({} as Env)).toBeNull();
   });
 });
 

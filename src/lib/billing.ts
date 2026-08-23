@@ -163,6 +163,24 @@ export async function countPlay(
   return true;
 }
 
+export interface LifetimeDiscount {
+  code: string;
+  usd: number;
+  inr: number;
+}
+
+/**
+ * The live promo on the lifetime licence, mirroring a real discount code held at
+ * the payment provider: the amounts here are only what we quote, the deduction
+ * itself happens because `createCheckout` sends the code with the cart.
+ */
+export function lifetimeDiscount(env: Env): LifetimeDiscount | null {
+  const code = (env.LIFETIME_DISCOUNT_CODE ?? '').trim();
+  const usd = Number(env.LIFETIME_DISCOUNT_USD ?? 0);
+  if (!code || !Number.isFinite(usd) || usd <= 0) return null;
+  return { code, usd, inr: Number(env.LIFETIME_DISCOUNT_INR ?? 0) };
+}
+
 export interface LifetimeOffer {
   seats_sold: number;
   seats_total: number;
@@ -170,6 +188,12 @@ export interface LifetimeOffer {
   usd: number;
   inr: number;
   next_usd: number | null;
+  /** The promo code applied at checkout, or null when nothing is running. */
+  discount_code: string | null;
+  discount_usd: number;
+  /** What the customer actually pays: list price less the promo. */
+  net_usd: number;
+  net_inr: number;
 }
 
 export async function seatsSold(env: Env): Promise<number> {
@@ -179,25 +203,46 @@ export async function seatsSold(env: Env): Promise<number> {
   return row?.n ?? 0;
 }
 
-export function offerForSeats(sold: number): LifetimeOffer {
+function withDiscount(
+  offer: Omit<LifetimeOffer, 'discount_code' | 'discount_usd' | 'net_usd' | 'net_inr'>,
+  discount: LifetimeDiscount | null,
+): LifetimeOffer {
+  const off = discount ? Math.min(discount.usd, offer.usd) : 0;
+  const offInr = discount ? Math.min(discount.inr, offer.inr) : 0;
+  return {
+    ...offer,
+    discount_code: discount && off > 0 ? discount.code : null,
+    discount_usd: off,
+    net_usd: offer.usd - off,
+    net_inr: offer.inr - offInr,
+  };
+}
+
+export function offerForSeats(sold: number, discount: LifetimeDiscount | null = null): LifetimeOffer {
   let cursor = sold;
   for (let i = 0; i < LIFETIME_TIERS.length; i += 1) {
     const tier = LIFETIME_TIERS[i];
     const next = LIFETIME_TIERS[i + 1];
     if (tier.seats === 0 || cursor < tier.seats) {
-      return {
-        seats_sold: sold,
-        seats_total: tier.seats,
-        seats_left: tier.seats === 0 ? 0 : tier.seats - cursor,
-        usd: tier.usd,
-        inr: tier.inr,
-        next_usd: next ? next.usd : null,
-      };
+      return withDiscount(
+        {
+          seats_sold: sold,
+          seats_total: tier.seats,
+          seats_left: tier.seats === 0 ? 0 : tier.seats - cursor,
+          usd: tier.usd,
+          inr: tier.inr,
+          next_usd: next ? next.usd : null,
+        },
+        discount,
+      );
     }
     cursor -= tier.seats;
   }
   const last = LIFETIME_TIERS[LIFETIME_TIERS.length - 1];
-  return { seats_sold: sold, seats_total: 0, seats_left: 0, usd: last.usd, inr: last.inr, next_usd: null };
+  return withDiscount(
+    { seats_sold: sold, seats_total: 0, seats_left: 0, usd: last.usd, inr: last.inr, next_usd: null },
+    discount,
+  );
 }
 
 export function isAdmin(user: Pick<User, 'role'>): boolean {
@@ -264,6 +309,7 @@ export async function createCheckout(
   cycle: Cycle = 'monthly',
 ): Promise<{ ok: true; url: string } | { ok: false; error: string; status: number }> {
   const productId = productIdFor(env, plan, cycle);
+  const discount = lifetimeDiscount(env);
   if (!env.DODO_PAYMENTS_API_KEY || !productId) {
     return { ok: false, error: `checkout for ${plan} is not configured yet`, status: 503 };
   }
@@ -280,6 +326,9 @@ export async function createCheckout(
         customer: { email: user.email, name: user.name || user.email },
         return_url: returnUrl,
         metadata: { user_id: user.id, plan, cycle },
+        /* Pre-applied, so the price we advertise is the price on the payment
+           page: nobody has to know the code exists to get the discount. */
+        ...(plan === 'lifetime' && discount ? { discount_codes: [discount.code] } : {}),
       }),
     });
   } catch {

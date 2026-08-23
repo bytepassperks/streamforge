@@ -8,6 +8,7 @@ import {
   isAdmin,
   isLifetime,
   isPaid,
+  lifetimeDiscount,
   offerForSeats,
   planFor,
   playUsage,
@@ -824,7 +825,7 @@ api.delete('/keys/:id', async (c) => {
 
 api.get('/billing', async (c) => {
   const user = c.get('user');
-  const offer = offerForSeats(await seatsSold(c.env));
+  const offer = offerForSeats(await seatsSold(c.env), lifetimeDiscount(c.env));
   const videos = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM videos WHERE user_id = ?')
     .bind(user.id)
     .first<{ n: number }>();
@@ -890,7 +891,7 @@ api.post('/billing/checkout', async (c) => {
     `INSERT INTO purchases (id, user_id, provider, provider_ref, status, amount_cents, currency, created_at, updated_at)
      VALUES (?, ?, 'dodo', ?, 'pending', ?, 'USD', ?, ?)`,
   )
-    .bind(id, user.id, id, offerForSeats(await seatsSold(c.env)).usd * 100, ts, ts)
+    .bind(id, user.id, id, offerForSeats(await seatsSold(c.env), lifetimeDiscount(c.env)).net_usd * 100, ts, ts)
     .run();
   return c.json({ url: result.url });
 });
