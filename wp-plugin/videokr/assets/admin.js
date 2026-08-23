@@ -50,7 +50,7 @@
     function (event) {
       var image = event.target;
       if (!image || image.tagName !== 'IMG') return;
-      var base = ['videokr-item__art', 'videokr-rank__art'].filter(function (name) {
+      var base = ['videokr-item__art', 'videokr-rank__art', 'videokr-pick__art'].filter(function (name) {
         return image.classList.contains(name);
       })[0];
       if (!base) return;
@@ -63,8 +63,9 @@
     true,
   );
 
-  var filter = document.getElementById('videokr-filter');
-  if (filter) {
+  function wireFilter() {
+    var filter = document.getElementById('videokr-filter');
+    if (!filter) return;
     filter.addEventListener('input', function () {
       var needle = filter.value.trim().toLowerCase();
       var items = document.querySelectorAll('.videokr-item');
@@ -73,5 +74,13 @@
         item.style.display = !needle || title.indexOf(needle) > -1 ? '' : 'none';
       });
     });
+  }
+
+  // This file runs in the head so image errors are caught, so the markup it
+  // touches is not there yet.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireFilter);
+  } else {
+    wireFilter();
   }
 })(window.videokrAdmin || { copied: 'Copied', copy: 'Copy shortcode' });

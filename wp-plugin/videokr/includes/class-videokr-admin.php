@@ -66,7 +66,9 @@ class Videokr_Admin {
 			null // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google Fonts is versioned by its own URL.
 		);
 		wp_enqueue_style( 'videokr-admin', VIDEOKR_URL . 'assets/admin.css', array( 'videokr-fonts' ), VIDEOKR_VERSION );
-		wp_enqueue_script( 'videokr-admin', VIDEOKR_URL . 'assets/admin.js', array(), VIDEOKR_VERSION, true );
+		// Loaded in the head on purpose: the broken-poster fallback listens for
+		// image errors, which fire while the page is still parsing.
+		wp_enqueue_script( 'videokr-admin', VIDEOKR_URL . 'assets/admin.js', array(), VIDEOKR_VERSION, false );
 		wp_localize_script(
 			'videokr-admin',
 			'videokrAdmin',
