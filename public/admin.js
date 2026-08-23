@@ -122,6 +122,11 @@
 
   /* -------------------------------------------------------------- overview -- */
 
+  /** Rupees read as lakhs here the same way they do on the public price. */
+  function rupees(amount) {
+    return '₹' + Number(amount).toLocaleString('en-IN');
+  }
+
   function loadOverview() {
     return api('/admin/overview').then(function (data) {
       var stats = [
@@ -156,8 +161,8 @@
             (data.offer.seats_sold + 1) +
             ' sells at $' +
             data.offer.usd +
-            ' / ₹' +
-            data.offer.inr +
+            ' / ' +
+            rupees(data.offer.inr) +
             '. ' +
             (data.offer.seats_left ? data.offer.seats_left + ' seats left at this price' : 'anchor price reached') +
             (data.offer.next_usd ? ', then $' + data.offer.next_usd + '.' : '.'),
@@ -173,8 +178,8 @@
               data.offer.discount_usd +
               ' off at the payment provider, so buyers pay $' +
               data.offer.net_usd +
-              ' / ₹' +
-              data.offer.net_inr +
+              ' / ' +
+              rupees(data.offer.net_inr) +
               '. Provider prices are reconciled with these numbers nightly.',
           ),
         );
