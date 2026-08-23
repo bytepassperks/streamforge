@@ -56,7 +56,9 @@ function withAssetHeaders(path: string, response: Response): Response {
   } else if (LONG_CACHE.test(path)) {
     headers.set('cache-control', 'public, max-age=604800, stale-while-revalidate=86400');
   } else if (path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.webmanifest')) {
-    headers.set('cache-control', 'public, max-age=86400, stale-while-revalidate=604800');
+    // Unhashed filenames, so a long TTL would leave returning visitors on last
+    // week's stylesheet after a deploy. Short TTL, long stale window.
+    headers.set('cache-control', 'public, max-age=600, stale-while-revalidate=604800');
   } else if (path === '/' || path.endsWith('.html')) {
     headers.set('cache-control', 'public, max-age=0, must-revalidate');
   }
