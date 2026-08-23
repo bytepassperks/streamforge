@@ -9,6 +9,7 @@ import {
   now,
   retentionBucket,
 } from '../lib/util';
+import { stamp } from '../lib/assets';
 import { verifyPassword } from '../lib/auth';
 import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
@@ -577,14 +578,14 @@ function playerShell(payloadJson: string, title: string, extraBody = '', canonic
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
 ${canonical ? `<link rel="canonical" href="${canonical}">` : ''}
-<link rel="stylesheet" href="/player/player.css">
+<link rel="stylesheet" href="${stamp('/player/player.css')}">
 <style>html,body{margin:0;height:100%;background:transparent}</style>
 </head>
 <body>
 <div id="sf-player" class="sf-fill"></div>
 ${extraBody}
 <script>window.__SF_EMBED__ = ${payloadJson};</script>
-<script src="/player/player.js"></script>
+<script src="${stamp('/player/player.js')}"></script>
 <script>Videokr.mount(document.getElementById('sf-player'), window.__SF_EMBED__);</script>
 </body>
 </html>`;
@@ -731,8 +732,8 @@ ${video.duration ? `<meta property="video:duration" content="${Math.round(video.
 <meta name="twitter:player" content="${base}/e/${escapeHtml(video.slug)}">
 <meta name="twitter:player:width" content="1280">
 <meta name="twitter:player:height" content="720">
-<link rel="stylesheet" href="/player/player.css">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="${stamp('/player/player.css')}">
+<link rel="stylesheet" href="${stamp('/styles.css')}">
 ${FONTS}
 ${ld}
 </head>
@@ -757,8 +758,8 @@ ${PAGE_HEAD}
 </main>
 ${PAGE_FOOT}
 <script>window.__SF_EMBED__ = ${payloadJson};</script>
-<script src="/player/player.js" defer></script>
-<script src="/page.js" defer></script>
+<script src="${stamp('/player/player.js')}" defer></script>
+<script src="${stamp('/page.js')}" defer></script>
 </body>
 </html>`;
 }
@@ -772,7 +773,7 @@ function notFoundPage(kind: 'Video' | 'Playlist'): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${kind} not found — Videokr</title>
 <meta name="robots" content="noindex, follow">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="${stamp('/styles.css')}">
 ${FONTS}
 </head>
 <body class="sf-page">
@@ -841,7 +842,7 @@ function playlistLocked(playlist: Playlist, error: boolean): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, follow">
 <title>${escapeHtml(playlist.title)} — Videokr</title>
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="${stamp('/styles.css')}">
 ${FONTS}
 </head>
 <body class="sf-page">
@@ -917,8 +918,8 @@ function playlistShell(
     poster ? escapeHtml(absoluteUrl(base, poster.thumbnail_url)) : `${base}/brand/hero-dark.png`
   }">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="stylesheet" href="/player/player.css">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="${stamp('/player/player.css')}">
+<link rel="stylesheet" href="${stamp('/styles.css')}">
 ${FONTS}
 ${chrome ? ld : ''}
 </head>
@@ -938,8 +939,8 @@ ${
     : ''
 }
 <script>window.__SF_PLAYLIST__ = ${data};</script>
-<script src="/player/player.js" defer></script>
-<script src="/playlist.js" defer></script>
+<script src="${stamp('/player/player.js')}" defer></script>
+<script src="${stamp('/playlist.js')}" defer></script>
 </body>
 </html>`;
 }
