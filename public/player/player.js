@@ -1350,6 +1350,11 @@
         node.remove();
       }
     });
+    // The title bar shares the top edge with a top-right card, so it needs to
+    // know one is on screen (see .sf-cta-top-right in the stylesheet).
+    if (this.root.classList) {
+      this.root.classList.toggle('sf-cta-top-right', !!this.ctaLayer.querySelector('.sf-cta.sf-pos-top-right'));
+    }
   };
 
   Player.prototype._renderCta = function (cta) {

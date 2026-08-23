@@ -27,7 +27,7 @@ export const content = new Hono<{ Bindings: Env }>();
 const SECTION_IDS = SECTIONS.map((entry) => entry.id).join('|');
 
 const FONTS = `<link rel="preload" href="/fonts/figtree-400-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="${stamp('/fonts/fonts.css')}">
 <link rel="icon" href="/brand/mark-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/brand/mark-180.png">
 <meta name="theme-color" content="#fdfbfc">`;
