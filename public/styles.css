@@ -1361,8 +1361,8 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .sf-lib-main { max-width: 820px; }
 .sf-lib-main h1 { max-width: 22em; }
 .sf-answer {
-  font-size: 17px; line-height: 1.6; color: var(--text-2);
-  border-left: 3px solid var(--accent-pill); padding-left: 14px; margin: 14px 0 6px;
+  font-size: 18.5px; font-weight: 500; line-height: 1.62; color: var(--text);
+  border-left: 3px solid var(--accent); padding-left: 14px; margin: 14px 0 6px;
 }
 .sf-byline { font-size: 13px; color: var(--muted); margin: 0 0 22px; }
 
@@ -1395,9 +1395,9 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm);
   padding: 12px 16px; margin: 18px 0 6px;
 }
-.sf-toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 6px; }
-.sf-toc ol { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
-.sf-toc a { font-size: 14px; color: var(--text-2); }
+.sf-toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-2); margin: 0 0 6px; }
+.sf-toc ol { margin: 0; padding-left: 18px; display: grid; }
+.sf-toc a { display: inline-block; padding: 8px 0; font-size: 14px; line-height: 1.2; color: var(--text-2); }
 
 .sf-card-grid { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 12px; }
 @media (min-width: 720px) { .sf-card-grid { grid-template-columns: 1fr 1fr; } }
@@ -1415,7 +1415,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px;
   margin-bottom: 8px; background: var(--surface);
 }
-.sf-faq summary { font-weight: 700; cursor: pointer; font-size: 15px; }
+.sf-faq summary { font-weight: 700; cursor: pointer; font-size: 15px; padding: 5px 0; }
 .sf-faq p { margin: 8px 0 0; font-size: 15px; color: var(--text-2); }
 
 .sf-lib-cta {
@@ -1425,7 +1425,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .sf-lib-cta h2 { font-size: 18px; margin: 0 0 6px; }
 .sf-lib-cta p { font-size: 15px; color: var(--text-2); margin: 0 0 10px; }
 .sf-lib-cta p:last-child { margin: 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.sf-quiet-link { font-size: 14px; color: var(--muted-2); }
+.sf-quiet-link { font-size: 14px; color: var(--text-2); }
 
 .sf-related { margin-top: 30px; }
 .sf-related h2 { font-size: 17px; margin-bottom: 10px; }
@@ -1446,7 +1446,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 @media (max-width: 560px) {
   .sf-lib-head { flex-wrap: wrap; gap: 8px; }
   .sf-lib-nav { order: 3; width: 100%; margin-right: 0; }
-  .sf-answer { font-size: 16px; }
+  .sf-answer { font-size: 17px; }
 }
 
 /* Library teaser on the landing page. */
