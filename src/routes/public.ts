@@ -579,6 +579,7 @@ function playerShell(payloadJson: string, title: string, extraBody = '', canonic
 <title>${escapeHtml(title)}</title>
 ${canonical ? `<link rel="canonical" href="${canonical}">` : ''}
 <link rel="stylesheet" href="${stamp('/player/player.css')}">
+<link rel="icon" href="/brand/mark-32.png" sizes="32x32">
 <style>html,body{margin:0;height:100%;background:transparent}</style>
 </head>
 <body>
@@ -644,7 +645,7 @@ pub.get('/v/:slug', async (c) => {
    its layout waiting on someone else's CDN. */
 const FONTS = `<link rel="preload" href="/fonts/figtree-400-800-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/kalam-700-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="${stamp('/fonts/fonts.css')}">
 <link rel="icon" href="/brand/mark-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/brand/mark-180.png">
 <meta name="theme-color" content="#fdfbfc">`;

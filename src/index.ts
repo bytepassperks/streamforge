@@ -21,6 +21,17 @@ app.use('*', async (c, next) => {
   return c.redirect(target, method === 'GET' || method === 'HEAD' ? 301 : 308);
 });
 
+/* Server-rendered HTML (a video page, an embed frame, a guide) is regenerated on
+   every request and carries stamped assets, so it must be revalidated rather
+   than left to whatever default an intermediary picks. */
+app.use('*', async (c, next) => {
+  await next();
+  const type = c.res.headers.get('content-type');
+  if (type?.includes('text/html') && !c.res.headers.get('cache-control')) {
+    c.res.headers.set('cache-control', 'public, max-age=0, must-revalidate');
+  }
+});
+
 // Crawler-facing resources are cheap and must never be shadowed by an asset.
 app.route('/', seo);
 
@@ -38,26 +49,47 @@ app.route('/api', api);
 
 app.get('/healthz', (c) => c.json({ ok: true, service: 'videokr' }));
 
+/* Browsers ask for this path on any page that does not name an icon — an embed
+   in someone else's iframe, a bare error page — and a 404 for it is a failed
+   request in every one of their consoles. */
+app.get('/favicon.ico', async (c) => {
+  const icon = new URL(c.req.url);
+  icon.pathname = '/brand/mark-32.png';
+  icon.search = '';
+  const response = await c.env.ASSETS.fetch(new Request(icon.toString(), { headers: c.req.raw.headers }));
+  const headers = new Headers(response.headers);
+  headers.set('cache-control', 'public, max-age=604800, stale-while-revalidate=86400');
+  return new Response(response.body, { status: response.status, headers });
+});
+
 // Anything not handled above falls through to the static assets bundle.
 app.all('*', async (c) => {
   const response = await c.env.ASSETS.fetch(c.req.raw);
   const path = c.req.path;
-  const isHtml = path === '/' || path.endsWith('.html');
-  if (isHtml && response.ok && response.headers.get('content-type')?.includes('text/html')) {
+  /* Content type, not the path: the assets layer redirects `/login.html` to the
+     extensionless `/login`, so an HTML page arrives here with no extension to
+     match on, and it still needs its stamps and its headers. */
+  const isHtml = Boolean(response.headers.get('content-type')?.includes('text/html'));
+  if (isHtml && response.ok) {
     const html = stampHtml(await response.text());
-    return withAssetHeaders(path, new Response(html, { status: response.status, headers: response.headers }), c.req.query('v'));
+    return withAssetHeaders(path, new Response(html, { status: response.status, headers: response.headers }), c.req.query('v'), true);
   }
-  return withAssetHeaders(path, response, c.req.query('v'));
+  return withAssetHeaders(path, response, c.req.query('v'), isHtml);
 });
 
 /** Signed-in surfaces are behind a session, so an indexed copy is only ever noise. */
-const UNINDEXED_ASSETS = new Set(['/app.html', '/admin.html', '/login.html', '/reset.html']);
+const UNINDEXED_ASSETS = new Set(['/app', '/admin', '/login', '/reset']);
+
+/** `/login.html` and `/login` are the same page; both must stay out of an index. */
+function isUnindexed(path: string): boolean {
+  return UNINDEXED_ASSETS.has(path.replace(/\.html$/, ''));
+}
 /** Immutable in practice: brand art, the player runtime and the fonts it draws in. */
 const LONG_CACHE = /^\/(brand|fonts|player)\//;
 
-function withAssetHeaders(path: string, response: Response, version?: string): Response {
+function withAssetHeaders(path: string, response: Response, version?: string, isHtml = false): Response {
   const headers = new Headers(response.headers);
-  if (UNINDEXED_ASSETS.has(path)) {
+  if (isUnindexed(path)) {
     headers.set('x-robots-tag', 'noindex, nofollow');
     headers.set('cache-control', 'private, no-store');
   } else if (isStamped(path, version)) {
@@ -70,7 +102,7 @@ function withAssetHeaders(path: string, response: Response, version?: string): R
     // Reached without a stamp — a hand-typed URL or an old page out of someone's
     // cache. Short TTL so it self-heals rather than pinning last week's file.
     headers.set('cache-control', 'public, max-age=600, stale-while-revalidate=604800');
-  } else if (path === '/' || path.endsWith('.html')) {
+  } else if (isHtml || path === '/' || path.endsWith('.html')) {
     headers.set('cache-control', 'public, max-age=0, must-revalidate');
   }
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });

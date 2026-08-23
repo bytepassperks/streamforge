@@ -74,6 +74,18 @@
   opacity: 0; transition: opacity .2s ease; pointer-events: none;
 }
 .sf-player.sf-active .sf-titlebar, .sf-player:not(.sf-playing) .sf-titlebar { opacity: 1; }
+/* A card parked top-right shares the top edge with the title, so the title
+   yields: it keeps only the room left of the card, and once the player is too
+   narrow for both it steps out of the way entirely. The title is repeated on
+   the page around the player; a timed offer is not. */
+.sf-player.sf-cta-top-right .sf-titlebar {
+  padding-right: calc(28px + 56px * var(--sf-ui, 1) + 320px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@container (max-width: 900px) {
+  .sf-player.sf-cta-top-right.sf-active .sf-titlebar,
+  .sf-player.sf-cta-top-right:not(.sf-playing) .sf-titlebar { opacity: 0; }
+}
 
 .sf-logo { position: absolute; z-index: 4; opacity: .9; transform: scale(var(--sf-ui, 1)); }
 .sf-pos-top-right { transform-origin: 100% 0; }

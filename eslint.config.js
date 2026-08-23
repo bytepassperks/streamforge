@@ -61,6 +61,7 @@ export default [
   },
   {
     files: ['scripts/**/*.mjs'],
-    languageOptions: { sourceType: 'module' },
+    // Build scripts are modules and use top-level await.
+    languageOptions: { sourceType: 'module', ecmaVersion: 2022 },
   },
 ];

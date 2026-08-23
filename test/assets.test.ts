@@ -47,6 +47,14 @@ describe('asset stamps', () => {
     expect(html).toContain('href="/docs"');
   });
 
+  it('leaves no unstamped stylesheet or script in a server-rendered page', () => {
+    for (const file of ['src/routes/content.ts', 'src/routes/public.ts']) {
+      const source = readFileSync(join(root, file), 'utf8');
+      const unstamped = [...source.matchAll(/(?:href|src)="(\/[^"$]+\.(?:css|js))"/g)].map((m) => m[1]);
+      expect(unstamped, `${file} renders unstamped assets`).toEqual([]);
+    }
+  });
+
   it('stamps every stylesheet and script the shipped pages load', () => {
     for (const file of ['index.html', 'app.html', 'admin.html', 'login.html', 'reset.html']) {
       const stamped = stampHtml(readFileSync(join(root, 'public', file), 'utf8'));
