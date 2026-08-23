@@ -673,9 +673,18 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
 .composer-field {
   background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
   padding: 16px 20px 46px; position: relative; min-height: 92px;
-  transition: border-color .16s var(--ease), background .16s var(--ease);
+  transition: border-color .16s var(--ease), background .16s var(--ease), box-shadow .16s var(--ease);
 }
-.composer-field:focus-within { border-color: var(--accent-pill); background: var(--surface); }
+/* The box itself is the control here, so it carries the focus ring. Left to the
+   global input rule, the ring was painted around the bare text node instead —
+   a rounded orange outline hugging the words with no padding, sitting inside the
+   field and cutting across its own buttons. */
+.composer-field:focus-within {
+  border-color: var(--accent-pill); background: var(--surface); box-shadow: var(--ring);
+}
+.composer-field textarea:focus, .composer-field input:focus, .composer-field select:focus {
+  box-shadow: none; border-radius: 0;
+}
 /* Only the title panel parks buttons in its bottom-right corner; the others were
    holding a strip of empty grey where those buttons would have been. */
 .composer-panel[data-panel="project"] .composer-field,
