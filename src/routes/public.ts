@@ -12,6 +12,7 @@ import {
 import { verifyPassword } from '../lib/auth';
 import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
+import { sendMail } from '../lib/email';
 import {
   countPlay,
   isLifetime,
@@ -422,10 +423,54 @@ pub.post('/api/track', async (c) => {
   return c.json({ ok: true, capped });
 });
 
+const LEAD_EMAIL_HOURLY_CAP = 30;
+
+/**
+ * Emails the owner a captured lead. A lead is worthless if it sits unseen in a
+ * dashboard nobody opened, so this is on by default and turned off per account
+ * in Settings; failures stay silent because the viewer already got their 201.
+ */
+async function notifyOwnerOfLead(
+  env: Env,
+  video: { id: string; title: string; slug: string; user_id: string },
+  lead: { email: string; name: string; phone: string; referrer: string },
+): Promise<void> {
+  const owner = await env.DB.prepare('SELECT email, name, lead_emails FROM users WHERE id = ?')
+    .bind(video.user_id)
+    .first<{ email: string; name: string; lead_emails: number }>();
+  if (!owner || Number(owner.lead_emails) === 0) return;
+  // A public form must never turn into an outbound relay: past a burst in the
+  // last hour the leads still land in the dashboard, the mail simply stops.
+  const burst = await env.DB.prepare('SELECT COUNT(*) AS n FROM leads WHERE user_id = ? AND created_at > ?')
+    .bind(video.user_id, now() - 3600)
+    .first<{ n: number }>();
+  if (Number(burst?.n ?? 0) > LEAD_EMAIL_HOURLY_CAP) return;
+  const base = env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  const details = [
+    `Email: ${lead.email}`,
+    lead.name ? `Name: ${lead.name}` : '',
+    lead.phone ? `Phone: ${lead.phone}` : '',
+    lead.referrer ? `Watched on: ${lead.referrer}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  await sendMail(env, {
+    to: owner.email,
+    subject: `New lead from ${video.title || 'your video'}`,
+    replyTo: lead.email,
+    text: [
+      `Someone filled in the form on "${video.title || video.slug}".`,
+      details,
+      `Every lead for this video: ${base}/app.html#leads`,
+      'Reply straight to this email to reach them. Turn these off in Settings whenever you like.',
+    ].join('\n\n'),
+  });
+}
+
 pub.post('/api/leads/:videoId', async (c) => {
-  const video = await c.env.DB.prepare('SELECT id, user_id FROM videos WHERE id = ?')
+  const video = await c.env.DB.prepare('SELECT id, title, slug, user_id FROM videos WHERE id = ?')
     .bind(c.req.param('videoId'))
-    .first<{ id: string; user_id: string }>();
+    .first<{ id: string; title: string; slug: string; user_id: string }>();
   if (!video) return c.json({ error: 'not found' }, 404);
   const body = await c.req.json<{
     email?: string;
@@ -476,6 +521,14 @@ pub.post('/api/leads/:videoId', async (c) => {
   ]);
   c.executionCtx.waitUntil(
     dispatchWebhooks(c.env, video.user_id, 'lead', { lead_id: id, video_id: video.id, email, referrer }),
+  );
+  c.executionCtx.waitUntil(
+    notifyOwnerOfLead(c.env, video, {
+      email,
+      name: (body.name ?? '').trim(),
+      phone: (body.phone ?? '').trim(),
+      referrer,
+    }),
   );
   return c.json({ ok: true }, 201);
 });

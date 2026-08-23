@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set a new password — Videokr</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/brand/mark-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/brand/mark-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600;700;800&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="hills hills--full" data-hills></div>
+<div class="auth-shell">
+  <div class="auth-card">
+    <a class="brand" href="/" style="margin-bottom:18px"><img src="/brand/logo-ink.png" alt="Videokr"></a>
+    <h1>Set a new password</h1>
+    <p class="muted tiny" id="reset-sub">Pick something at least 8 characters long. This link works once.</p>
+
+    <form id="reset-form" novalidate>
+      <div class="field">
+        <label for="password">New password</label>
+        <input id="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" required>
+      </div>
+      <div class="field">
+        <label for="confirm">Repeat it</label>
+        <input id="confirm" type="password" autocomplete="new-password" placeholder="Same again" required>
+      </div>
+      <div class="form-error" id="reset-error"></div>
+      <button class="btn" id="reset-submit" type="submit" style="width:100%">Save password</button>
+    </form>
+    <p class="tiny" style="margin-top:14px"><a href="/login.html">Back to sign in</a></p>
+  </div>
+</div>
+
+<script src="/hills.js"></script>
+<script>
+(function () {
+  var token = new URLSearchParams(location.search).get('token') || '';
+  var form = document.getElementById('reset-form');
+  var submit = document.getElementById('reset-submit');
+  var error = document.getElementById('reset-error');
+
+  if (!token) {
+    form.classList.add('hidden');
+    document.getElementById('reset-sub').textContent =
+      'This link is missing its token. Ask for a new one from the sign-in page.';
+    return;
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    error.textContent = '';
+    var password = document.getElementById('password').value;
+    if (password.length < 8) {
+      error.textContent = 'Use at least 8 characters.';
+      return;
+    }
+    if (password !== document.getElementById('confirm').value) {
+      error.textContent = 'The two passwords do not match.';
+      return;
+    }
+    submit.disabled = true;
+    fetch('/api/auth/reset', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token: token, password: password })
+    })
+      .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+      .then(function (result) {
+        submit.disabled = false;
+        if (!result.ok) {
+          error.textContent = result.body.error || 'Could not set that password.';
+          return;
+        }
+        /* The reset signs you straight in, so there is nothing left to type. */
+        location.href = '/app.html';
+      })
+      .catch(function () {
+        submit.disabled = false;
+        error.textContent = 'Network error, please retry.';
+      });
+  });
+})();
+</script>
+</body>
+</html>
