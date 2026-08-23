@@ -294,6 +294,12 @@
   backdrop-filter: blur(6px); box-shadow: 0 12px 32px rgba(0,0,0,.45);
 }
 .sf-cta.sf-cta-banner { left: 0; right: 0; bottom: 56px; max-width: none; border-radius: 0; text-align: center; }
+/* The corner rail (captions, pip, share) lives in the top-right, so a card parked
+   there is inset past it: a timed offer must not take the controls with it. */
+.sf-cta.sf-pos-top-right {
+  right: calc(12px + 56px * var(--sf-ui, 1));
+  max-width: min(320px, calc(100% - 24px - 56px * var(--sf-ui, 1)));
+}
 .sf-cta-headline { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
 .sf-cta-body { font-size: 13px; opacity: .85; margin-bottom: 10px; }
 .sf-cta-btn {
