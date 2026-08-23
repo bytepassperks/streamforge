@@ -225,9 +225,8 @@ demo (`/#demo`, direct MP4). Console errors on both pages: none.
 | End of video | pauses, clears the playing state, masks and rewinds the source frame |
 | Source chrome | **fixed again this pass** — verified frame-by-frame on a linked source across start, first 4 s of playback, hover during playback, mid-drag, after-drag, keyboard pause, hover while paused, seek-while-paused and resume: masked in every non-playing state, no source title, channel, logo, "More videos" or native control bar |
 
-Landing demo: direct MP4 at `/media/demo/videokr-demo-16x9.mp4` with a real 16:9 poster
-(`videokr-demo-16x9.jpg`) — the original clip was letterboxed, so it was cropped
-(`crop=1280:544:0:88`) and rescaled to true 16:9 rather than stretched.
+Landing demo: the hosted product film (`vid_hyksysukg4r4qmsx`), mounted from its own R2 media
+with captions and chapters, so the landing page plays the same asset the public page serves.
 
 Still unproven in the player: a real multi-rendition HLS quality switch, the Vimeo adapter's
 controls and captions (no Vimeo test video exists in the account), and mobile (~390px) plus
