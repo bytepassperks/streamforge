@@ -365,6 +365,17 @@
   cursor: pointer; text-decoration: underline;
 }
 .sf-gate-error { color: #ff8a8a; font-size: 12px; min-height: 16px; }
+/* A small embed is barely taller than these cards, so they are tightened to fit
+   rather than left scrolling for their own submit button. */
+@container (max-width: 420px) {
+  .sf-gate-card, .sf-endscreen-card, .sf-lock-card { padding: 12px; }
+  .sf-gate-card h3, .sf-endscreen-card h3, .sf-lock-card h3 { font-size: 15px; }
+  .sf-gate-card p, .sf-endscreen-card p, .sf-lock-card p { font-size: 12px; margin-bottom: 8px; }
+  .sf-gate-form, .sf-lock-card form { gap: 6px; }
+  .sf-gate-form input, .sf-lock-card input { padding: 8px 10px; font-size: 13px; }
+  .sf-gate-submit, .sf-lock-card button[type="submit"] { padding: 9px 12px; font-size: 13px; }
+  .sf-gate-skip, .sf-endscreen-replay { margin-top: 6px; }
+}
 
 /* share sheet */
 .sf-share-sheet {
