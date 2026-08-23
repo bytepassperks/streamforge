@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from './lib/types';
 import { isStamped, stampHtml } from './lib/assets';
 import { closePeriod, previousPeriod } from './lib/overage';
+import { syncLifetimePricing } from './lib/pricing-sync';
 import { canonicalRedirect } from './lib/util';
 import { api } from './routes/api';
 import { content } from './routes/content';
@@ -114,8 +115,14 @@ export default {
    * Month close. The cron runs daily so a failed collection is retried on the
    * next run without waiting a month; both recording and collection are
    * idempotent per account and period, so extra runs cost nothing.
+   *
+   * The same run reconciles the payment provider with the price the site
+   * quotes, which also carries the seat ladder over: when the hundredth
+   * lifetime seat sells and the advertised price steps up, the provider follows
+   * without anyone editing it by hand.
    */
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(closePeriod(env, previousPeriod()));
+    ctx.waitUntil(syncLifetimePricing(env));
   },
 };

@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import type { Env, User } from '../lib/types';
 import { createSession, hashPassword, randomSalt } from '../lib/auth';
-import { FREE_LIMITS, PLANS, isAdmin, offerForSeats, periodKey, playUsage, seatsSold } from '../lib/billing';
+import { FREE_LIMITS, PLANS, isAdmin, lifetimeDiscount, offerForSeats, periodKey, playUsage, seatsSold } from '../lib/billing';
 import type { OverageRow } from '../lib/overage';
 import { closePeriod, collectOverage, previousPeriod, recordOverage } from '../lib/overage';
+import { syncLifetimePricing } from '../lib/pricing-sync';
 import { newId, now } from '../lib/util';
 
 type Vars = { user: User };
@@ -68,7 +69,7 @@ admin.get('/overview', async (c) => {
     plays_30d: plays30,
     paid_purchases: paid,
     revenue_cents: revenue,
-    offer: offerForSeats(await seatsSold(c.env)),
+    offer: offerForSeats(await seatsSold(c.env), lifetimeDiscount(c.env)),
     free_limits: FREE_LIMITS,
   });
 });
@@ -348,6 +349,21 @@ admin.post('/purchases', async (c) => {
     note: body.note ?? '',
   });
   return c.json({ purchase: { id } }, 201);
+});
+
+/* -------------------------------------------------------------- pricing ---- */
+
+/**
+ * Push the advertised lifetime price to the payment provider now, rather than
+ * waiting for the nightly run — for the minute after a price is changed and
+ * deployed, when someone may already be at the payment page.
+ */
+admin.post('/pricing/sync', async (c) => {
+  const outcome = await syncLifetimePricing(c.env);
+  if (outcome.changed.length || !outcome.ok) {
+    await audit(c.env, c.get('user'), 'pricing.sync', 'lifetime', { ...outcome });
+  }
+  return c.json(outcome, outcome.ok ? 200 : 502);
 });
 
 /* -------------------------------------------------------------- overage ---- */

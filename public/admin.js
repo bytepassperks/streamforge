@@ -163,6 +163,22 @@
             (data.offer.next_usd ? ', then $' + data.offer.next_usd + '.' : '.'),
         ),
       );
+      if (data.offer.discount_usd) {
+        offer.appendChild(
+          text(
+            'p',
+            'muted tiny',
+            data.offer.discount_code +
+              ' takes $' +
+              data.offer.discount_usd +
+              ' off at the payment provider, so buyers pay $' +
+              data.offer.net_usd +
+              ' / ₹' +
+              data.offer.net_inr +
+              '. Provider prices are reconciled with these numbers nightly.',
+          ),
+        );
+      }
       offer.appendChild(
         text(
           'p',
@@ -587,6 +603,21 @@
   $('videos-q').addEventListener('input', debounce(loadVideos));
 
   $('mu-save').addEventListener('click', saveUser);
+
+  $('sync-pricing').addEventListener('click', function () {
+    var button = $('sync-pricing');
+    button.disabled = true;
+    api('/admin/pricing/sync', { method: 'POST' })
+      .then(function (data) {
+        toast(data.changed.length ? 'Provider updated: ' + data.changed.join(', ') : 'Provider already matches these prices');
+      })
+      .catch(function (error) {
+        toast(error.message || 'Could not reach the payment provider', true);
+      })
+      .then(function () {
+        button.disabled = false;
+      });
+  });
 
   $('overage-close').addEventListener('click', function () {
     var period = $('overage-period').value.trim();
