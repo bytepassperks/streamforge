@@ -2,6 +2,9 @@ name = "streamforge"
 main = "src/index.ts"
 compatibility_date = "2025-02-24"
 compatibility_flags = ["nodejs_compat"]
+# Explicit: declaring routes otherwise takes the workers.dev name down, and old
+# embeds still point at it.
+workers_dev = true
 
 [assets]
 directory = "./public"
@@ -19,10 +22,20 @@ migrations_dir = "migrations"
 binding = "MEDIA"
 bucket_name = "streamforge-media"
 
+# The domain is bound to the Worker directly; the workers.dev name stays live and
+# redirects, so embeds published before the move keep playing.
+[[routes]]
+pattern = "videokr.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.videokr.com"
+custom_domain = true
+
 [triggers]
 # Daily so a failed overage collection retries without waiting for the next month.
 crons = ["20 3 * * *"]
 
 [vars]
 APP_NAME = "Videokr"
-PUBLIC_BASE_URL = "https://streamforge.getlaunchpod.workers.dev"
+PUBLIC_BASE_URL = "https://videokr.com"

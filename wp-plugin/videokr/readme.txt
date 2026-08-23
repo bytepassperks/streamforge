@@ -4,7 +4,7 @@ Tags: video, video player, playlist, embed, video hosting
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.1.4
+Stable tag: 1.1.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,6 +57,9 @@ Yes — a play is a play wherever the embed lives, and usage is shown in Videokr
 Yes, by passing a valid access token with the `token` attribute. Without it the embed asks for the password.
 
 == Changelog ==
+
+= 1.1.5 =
+* Videokr now lives at videokr.com, and a fresh install points there by default. Existing installs keep working: the old address redirects.
 
 = 1.1.4 =
 * A poster that cannot be loaded now becomes the play placeholder everywhere, including the Insights tab and the block picker, instead of the browser's broken-image icon.

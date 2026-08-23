@@ -213,3 +213,26 @@ export function safeExternalUrl(input: string): string {
   if (/^https?:\/\//i.test(raw) || raw.startsWith('/')) return raw;
   return '';
 }
+
+/**
+ * The address a request should be sent to when it arrives on an alias of the
+ * canonical host, or an empty string when it is already canonical. Only the
+ * workers.dev name and the `www` subdomain are treated as aliases, so a local
+ * or preview host is never redirected away.
+ */
+export function canonicalRedirect(requestUrl: string, publicBaseUrl: string): string {
+  const url = new URL(requestUrl);
+  let canonical: URL;
+  try {
+    canonical = new URL(publicBaseUrl);
+  } catch {
+    return '';
+  }
+  if (url.hostname === canonical.hostname) return '';
+  const alias = url.hostname.endsWith('.workers.dev') || url.hostname === `www.${canonical.hostname}`;
+  if (!alias) return '';
+  url.protocol = canonical.protocol;
+  url.hostname = canonical.hostname;
+  url.port = '';
+  return url.toString();
+}

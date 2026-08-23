@@ -3,7 +3,7 @@
 Repo: `bytepassperks/streamforge` · branch `devin/1787054418-streamforge-app` · PR
 https://github.com/bytepassperks/streamforge/pull/1
 
-Live: https://streamforge.getlaunchpod.workers.dev (Cloudflare Worker, free tier)
+Live: https://videokr.com (Cloudflare Worker, free tier)
 Last deployed Worker version: `2f2d0ea1-d78b-4359-a20c-8dcedaa09552`
 Last updated: 2026-08-20 (play metering + Starter/Agency plans)
 
@@ -322,10 +322,10 @@ Ordered by what blocks revenue.
    `.vtt` track and chapters). Minor known UX nit: while playing, the first click on the
    gear/PIP/share can land as play/pause because the bar is still faded.
    The ~390px layout is now verified.
-3. **Attach the custom domain** (your call — deliberately left undone). `videokr.com` was
-   in pending-delete on 2026-08-18, so it needs a backorder/drop-catch, not a normal
-   registration. After pointing DNS, update `PUBLIC_BASE_URL` in `wrangler.toml` and the
-   Dodo webhook URL.
+3. **Custom domain.** `videokr.com` is registered at Spaceship and bound to the Worker as a
+   custom domain (apex + `www`), with the zone on Cloudflare. `PUBLIC_BASE_URL` is the apex
+   and the `workers.dev` name redirects to it so pre-move embeds keep playing. The Dodo
+   webhook and return URLs must be repointed at the domain in the Dodo dashboard.
 4. **Seeded demo account.** `demo@streamforge.app` still exists in production but its
    seeded password no longer works (login returns 401) — delete the row when convenient.
 5. **Backend naming.** Worker, D1, R2 bucket, package and repo are still named
