@@ -306,7 +306,7 @@
           <li>Every feature we ship from here on</li>
           <li>Export your videos, leads and analytics any time</li>
         </ul>
-        <a class="btn btn-lg" id="lifetime-cta" href="/login.html?mode=signup&amp;intent=lifetime">Claim a lifetime seat →</a>
+        <a class="btn btn-lg btn-wrap" id="lifetime-cta" href="/login.html?mode=signup&amp;intent=lifetime">Claim a lifetime seat →</a>
         <div class="seats"><i id="seat-bar" style="width:0%"></i></div>
         <p class="ladder" id="seat-line"><span>100 seats at this price</span><span>·</span><span>then <b>$99</b></span><span>·</span><span>then <b>$149</b></span></p>
       </div>
@@ -511,7 +511,7 @@
     buy.classList.add('btn-ghost');
     var cta = el('lifetime-cta');
     cta.href = '/app.html';
-    cta.textContent = 'You own this — open your dashboard →';
+    cta.textContent = 'Open your dashboard →';
     el('seat-line').textContent = 'Your licence is active. Nothing more to pay, ever.';
     el('seat-bar').style.width = '100%';
     el('hero-badge').textContent = 'Lifetime licence active · every feature unlocked';
