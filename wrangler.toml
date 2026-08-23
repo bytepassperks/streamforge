@@ -11,6 +11,10 @@ directory = "./public"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "none"
+# The Worker sees every request, including asset paths: host canonicalisation has
+# to apply to `/` and `/app.html` too, and the assets layer would answer those
+# before the Worker ever ran.
+run_worker_first = true
 
 [[d1_databases]]
 binding = "DB"
