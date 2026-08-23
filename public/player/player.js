@@ -841,6 +841,7 @@
 
     this._bindKeys();
     this._bindPointer();
+    this._bindTips();
 
     return this.adapter.load().then(function () {
       self.track('load');
@@ -935,11 +936,26 @@
         var rect = self.progress.getBoundingClientRect();
         var ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
         var duration = self.adapter.duration();
-        self.tooltip.style.left = ratio * 100 + '%';
         var label = fmtTime(ratio * duration);
         var chapter = self._chapterAt(ratio * duration);
         self.tooltip.textContent = chapter ? label + ' · ' + chapter.title : label;
         self.tooltip.classList.add('sf-visible');
+        /* A chapter title makes this box wide, so near either end of the rail it has
+           to be pulled back inside the picture the player clips to. */
+        var stage = self.root.getBoundingClientRect();
+        var width = self.tooltip.offsetWidth;
+        var wrapBox = self.tooltip.parentNode.getBoundingClientRect();
+        var cursor = rect.left + ratio * rect.width;
+        var min = stage.left + 6 + width / 2;
+        var max = stage.right - 6 - width / 2;
+        var centre = max > min ? Math.min(max, Math.max(min, cursor)) : cursor;
+        self.tooltip.style.left = centre - wrapBox.left + 'px';
+        /* The arrow keeps pointing at the cursor even where the box was pulled in. */
+        var reach = Math.max(0, width / 2 - 9);
+        self.tooltip.style.setProperty(
+          '--sf-arrow-dx',
+          Math.round(Math.min(reach, Math.max(-reach, cursor - centre))) + 'px',
+        );
       });
       this.progress.addEventListener('mouseleave', function () {
         self.tooltip.classList.remove('sf-visible');
@@ -1792,6 +1808,39 @@
     this._rateIndex = Math.min(speeds.length - 1, Math.max(0, this._rateIndex + direction));
     this.adapter.setRate(speeds[this._rateIndex]);
     this._selectSetting(this.speedSetting, this._rateIndex);
+  };
+
+  /**
+   * Hover labels are ::after boxes on the buttons, and the player clips its own
+   * overflow, so a label wider than the room left of or right of its button gets
+   * sliced by the picture's edge. The label cannot be measured from CSS, so the
+   * shift back inside is measured here and handed to the stylesheet as a variable.
+   */
+  Player.prototype._bindTips = function () {
+    var self = this;
+    var EDGE = 6;
+    var place = function (event) {
+      var btn = event.target && event.target.closest ? event.target.closest('.sf-btn[data-tip]') : null;
+      if (!btn) return;
+      var label = window.getComputedStyle(btn, '::after');
+      var width =
+        (parseFloat(label.width) || 0) +
+        (parseFloat(label.paddingLeft) || 0) +
+        (parseFloat(label.paddingRight) || 0);
+      if (!width) return;
+      var stage = self.root.getBoundingClientRect();
+      var box = btn.getBoundingClientRect();
+      /* The rail reads leftwards from the plate; everything else is centred on it. */
+      var onRail = !!(self.rail && self.rail.contains(btn));
+      var left = onRail ? box.left - 10 - width : box.left + box.width / 2 - width / 2;
+      var shift = 0;
+      if (left < stage.left + EDGE) shift = stage.left + EDGE - left;
+      else if (left + width > stage.right - EDGE) shift = stage.right - EDGE - (left + width);
+      btn.style.setProperty('--sf-tip-dx', Math.round(shift) + 'px');
+    };
+    ['mouseenter', 'focus'].forEach(function (name) {
+      self.root.addEventListener(name, place, true);
+    });
   };
 
   Player.prototype._bindPointer = function () {
