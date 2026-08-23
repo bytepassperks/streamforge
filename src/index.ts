@@ -3,6 +3,7 @@ import type { Env } from './lib/types';
 import { closePeriod, previousPeriod } from './lib/overage';
 import { canonicalRedirect } from './lib/util';
 import { api } from './routes/api';
+import { content } from './routes/content';
 import { plugin } from './routes/plugin';
 import { pub } from './routes/public';
 import { seo } from './routes/seo';
@@ -21,6 +22,10 @@ app.use('*', async (c, next) => {
 
 // Crawler-facing resources are cheap and must never be shadowed by an asset.
 app.route('/', seo);
+
+// Docs, guides, comparisons and the blog: server-rendered from the content
+// library, so they cannot be shadowed by a static asset of the same name.
+app.route('/', content);
 
 // Public viewer routes are registered first: they own a few /api/* paths
 // (embed config, tracking, lead capture) that must stay session-free.
