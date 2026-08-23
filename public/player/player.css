@@ -19,7 +19,10 @@
   color: #fff;
 }
 .sf-fill { width: 100%; }
-.sf-player.sf-locked { display: grid; place-items: center; min-height: 320px; }
+.sf-player.sf-locked {
+  display: grid; place-items: center; min-height: 320px; padding: 10px;
+  grid-template-rows: minmax(0, 1fr);
+}
 
 .sf-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; }
 .sf-media, .sf-media iframe, .sf-media video {
@@ -159,15 +162,20 @@
 .sf-btn:hover, .sf-btn:focus-visible, .sf-btn[aria-expanded="true"] { background: var(--sf-accent); color: #fff; outline: 0; }
 .sf-btn.sf-off svg { fill-opacity: .5; }
 
-/* Hover labels, white on dark like the reference player. */
+/* Hover labels, white on dark like the reference player. The player clips its own
+   overflow, so a label that would hang past an edge is nudged back inside by
+   --sf-tip-dx, which the script measures per button. */
 .sf-btn[data-tip]::after {
   content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; margin-bottom: 10px;
   padding: 5px 7.5px; border-radius: 3px; background: rgba(255,255,255,.9); color: #4a5464;
   font-size: 13px; line-height: 1.3; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.15);
-  opacity: 0; pointer-events: none; transform: translate(-50%, 10px) scale(.8);
+  opacity: 0; pointer-events: none;
+  transform: translate(calc(-50% + var(--sf-tip-dx, 0px)), 10px) scale(.8);
   transform-origin: 50% 100%; transition: transform .2s ease .1s, opacity .2s ease .1s; z-index: 3;
 }
-.sf-btn[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.sf-btn[data-tip]:hover::after, .sf-btn[data-tip]:focus-visible::after {
+  opacity: 1; transform: translate(calc(-50% + var(--sf-tip-dx, 0px)), 0) scale(1);
+}
 .sf-btn[aria-expanded="true"][data-tip]::after { display: none; }
 
 .sf-progress-wrap { position: relative; flex: 1 1 auto; min-width: 60px; padding-left: 2.5px; }
@@ -198,7 +206,7 @@
   transition: transform .2s ease .1s, opacity .2s ease .1s; z-index: 3;
 }
 .sf-tooltip::before {
-  content: ""; position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%);
+  content: ""; position: absolute; left: calc(50% + var(--sf-arrow-dx, 0px)); bottom: -4px; transform: translateX(-50%);
   width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
   border-top: 4px solid rgba(255,255,255,.9);
 }
@@ -327,12 +335,18 @@
 .sf-gate, .sf-endscreen {
   position: absolute; inset: 0; pointer-events: auto; z-index: 7;
   display: grid; place-items: center; background: rgba(6,8,12,.88); backdrop-filter: blur(4px);
+  /* A fixed row, otherwise the track grows to the card and max-height on it means nothing. */
+  padding: 10px; grid-template-rows: minmax(0, 1fr);
 }
 /* The end screen and the related grid are suggestions, not gates: they sit under
    the control bar so a viewer can scrub back out of them with the mouse. */
 .sf-end-layer { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+/* Cards taller than a short player would lose their bottom row — the email field or
+   the submit button — to the player's own clipping, so they scroll inside it. */
 .sf-gate-card, .sf-endscreen-card, .sf-lock-card {
-  width: min(420px, 88%); background: #12141c; border: 1px solid rgba(255,255,255,.12);
+  width: min(420px, 88%); max-height: 100%; overflow: auto; overscroll-behavior: contain;
+  box-sizing: border-box;
+  background: #12141c; border: 1px solid rgba(255,255,255,.12);
   border-radius: 14px; padding: 22px; text-align: center;
 }
 .sf-gate-card h3, .sf-endscreen-card h3, .sf-lock-card h3 { margin: 0 0 6px; font-size: 18px; }
@@ -356,9 +370,13 @@
 .sf-share-sheet {
   position: absolute; inset: 0; z-index: 8; display: grid; place-items: center;
   background: rgba(6,8,12,.86); backdrop-filter: blur(4px);
+  padding: 10px; grid-template-rows: minmax(0, 1fr);
 }
+/* A short player is shorter than the card, and the player clips its overflow, so the
+   card is kept inside it and scrolls rather than losing its bottom button. */
 .sf-share-card {
-  position: relative; width: min(420px, 88%); background: #12141c;
+  position: relative; width: min(420px, 88%); max-height: 100%; overflow: auto; box-sizing: border-box;
+  background: #12141c; overscroll-behavior: contain;
   border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 20px; text-align: center;
 }
 .sf-share-card h4 { margin: 0 0 12px; font-size: 15px; }
@@ -372,6 +390,15 @@
   display: block; width: 100%; margin-top: 8px; padding: 10px 12px; border-radius: 9px;
   border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff;
   font-size: 13px; cursor: pointer;
+}
+/* A small embed has barely more height than the card needs, so it is tightened
+   rather than left to scroll for its last button. */
+@container (max-width: 420px) {
+  .sf-share-card { padding: 12px; }
+  .sf-share-card h4 { margin-bottom: 8px; }
+  .sf-share-row { gap: 6px; margin-bottom: 8px; }
+  .sf-share-target { padding: 5px 9px; font-size: 11px; }
+  .sf-share-copy { margin-top: 6px; padding: 8px 10px; font-size: 12px; }
 }
 .sf-share-close {
   position: absolute; top: 6px; right: 10px; background: transparent; border: 0;
@@ -474,6 +501,15 @@
 }
 .sf-rail .sf-btn svg { width: 20px; height: 20px; }
 .sf-rail .sf-btn:hover, .sf-rail .sf-btn:focus-visible { background: var(--sf-accent); color: #fff; }
+/* The rail sits in the corner, so a label above the top plate would be clipped by
+   the player and the ones below would cover the plate above. They read leftwards. */
+.sf-rail .sf-btn[data-tip]::after {
+  bottom: auto; top: 50%; left: auto; right: 100%; margin: 0 10px 0 0;
+  transform: translate(calc(10px + var(--sf-tip-dx, 0px)), -50%) scale(.8); transform-origin: 100% 50%;
+}
+.sf-rail .sf-btn[data-tip]:hover::after, .sf-rail .sf-btn[data-tip]:focus-visible::after {
+  transform: translate(var(--sf-tip-dx, 0px), -50%) scale(1);
+}
 .sf-rail { opacity: 0; pointer-events: none; transition: opacity .4s ease-in-out; }
 .sf-player.sf-active .sf-rail, .sf-player:not(.sf-playing) .sf-rail { opacity: 1; pointer-events: auto; }
 @container (max-width: 380px) {
