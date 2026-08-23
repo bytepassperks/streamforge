@@ -4,7 +4,7 @@ Tags: video, video player, playlist, embed, video hosting
 Requires at least: 6.0
 Tested up to: 6.6
 Requires PHP: 7.4
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -57,6 +57,10 @@ Yes — a play is a play wherever the embed lives, and usage is shown in Videokr
 Yes, by passing a valid access token with the `token` attribute. Without it the embed asks for the password.
 
 == Changelog ==
+
+= 1.1.4 =
+* A poster that cannot be loaded now becomes the play placeholder everywhere, including the Insights tab and the block picker, instead of the browser's broken-image icon.
+* The placeholder now uses the Videokr orange, so an artless video reads as intentional.
 
 = 1.1.3 =
 * Most played on the Insights tab now shows each video's thumbnail.

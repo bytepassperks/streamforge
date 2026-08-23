@@ -65,17 +65,19 @@
     return String(config.host || '').replace(/\/+$/, '') + '/' + String(url).replace(/^\/+/, '');
   }
 
-  function Thumb(item) {
-    if (item.thumbnail_url) {
+  function Thumb(props) {
+    // A poster that 404s has to become the play slot, not a src-less <img>,
+    // which the browser draws as its own broken-image glyph.
+    var brokenState = useState(false);
+    var broken = brokenState[0];
+    var setBroken = brokenState[1];
+    if (props.item.thumbnail_url && !broken) {
       return el('img', {
-        src: absolute(item.thumbnail_url),
+        src: absolute(props.item.thumbnail_url),
         alt: '',
         className: 'videokr-pick__art',
-        // A poster that fails to load falls back to the empty play slot rather
-        // than leaving a hole in the picker.
-        onError: function (event) {
-          event.target.removeAttribute('src');
-          event.target.className = 'videokr-pick__art videokr-pick__art--empty';
+        onError: function () {
+          setBroken(true);
         },
       });
     }
@@ -161,7 +163,7 @@
                     className: 'videokr-pick__item',
                     onClick: function () { props.onPick(item); }
                   },
-                  Thumb(item),
+                  el(Thumb, { key: item.id || item.slug, item: item }),
                   el(
                     'span',
                     { className: 'videokr-pick__meta' },
