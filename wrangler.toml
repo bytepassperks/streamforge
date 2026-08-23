@@ -43,3 +43,8 @@ crons = ["20 3 * * *"]
 [vars]
 APP_NAME = "Videokr"
 PUBLIC_BASE_URL = "https://videokr.com"
+# A real Dodo discount code, pre-applied to the lifetime cart. Clearing the code
+# ends the promo everywhere at once: quotes, the buy button and the checkout.
+LIFETIME_DISCOUNT_CODE = "VIDEOKR10"
+LIFETIME_DISCOUNT_USD = "10"
+LIFETIME_DISCOUNT_INR = "850"

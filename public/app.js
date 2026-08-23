@@ -2061,14 +2061,18 @@
     }
   }
 
-  /* The top-bar pill quotes the live lifetime price and disappears once the
-     account already owns lifetime, so it never advertises what it cannot sell. */
+  /* The top-bar pill quotes the live discount when one is running and the price
+     otherwise, and disappears once the account already owns lifetime, so it
+     never advertises what it cannot sell. */
   function offerPill(billing) {
     var pill = $('top-offer');
     if (!pill) return;
     pill.classList.toggle('hidden', Boolean(billing.lifetime));
     if (billing.lifetime || !billing.offer) return;
-    $('top-offer-label').textContent = 'Get lifetime — $' + billing.offer.usd;
+    var offer = billing.offer;
+    $('top-offer-label').textContent = offer.discount_usd
+      ? 'Get $' + offer.discount_usd + ' off lifetime'
+      : 'Get lifetime — $' + offer.usd;
   }
 
   function thousands(value) {
@@ -2230,14 +2234,28 @@
           );
         } else {
           card.appendChild(text('h3', null, 'Lifetime'));
-          var once = text('div', 'plan-price', '$' + billing.offer.usd);
+          var once = text('div', 'plan-price', '$' + billing.offer.net_usd);
+          if (billing.offer.discount_usd) once.appendChild(text('s', null, '$' + billing.offer.usd));
           once.appendChild(text('span', null, 'once'));
           card.appendChild(once);
+          if (billing.offer.discount_code) {
+            card.appendChild(
+              text(
+                'p',
+                'tiny',
+                '$' +
+                  billing.offer.discount_usd +
+                  ' off with ' +
+                  billing.offer.discount_code +
+                  ' — already applied at checkout, nothing to type.',
+              ),
+            );
+          }
           card.appendChild(
             text(
               'p',
               'muted tiny',
-              'Pay once, keep it forever: unlimited videos, no badge, 10,000 plays a month included for life. No refunds — the free plan is the trial.',
+              'Pay once, keep it forever: unlimited videos, no badge, 10,000 plays a month included for life. No refunds — the free plan is the trial — and a 1 year warranty.',
             ),
           );
           if (billing.offer.seats_total) {
@@ -2253,7 +2271,7 @@
               ),
             );
           }
-          var buy = text('button', 'btn btn-lg', 'Buy lifetime — $' + billing.offer.usd);
+          var buy = text('button', 'btn btn-lg', 'Buy lifetime — $' + billing.offer.net_usd);
           buy.type = 'button';
           if (!billing.checkout_ready) {
             buy.disabled = true;

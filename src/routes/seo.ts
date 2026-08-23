@@ -286,7 +286,7 @@ const PLANS = [
   'Free — $0 forever, no card: 500 plays/month, 5 videos, 2 GB storage, full player, analytics and lead capture, small Videokr badge.',
   'Starter — $29/year (or $5 month-to-month): 10,000 plays/month, unlimited videos, 25 GB storage, badge off.',
   'Agency — $29/month (or $290/year): 150,000 plays/month, unlimited videos, 250 GB storage, projects, playlists and SEO video pages.',
-  'Lifetime — $69 one payment: 10,000 plays/month forever, unlimited videos, 25 GB storage, badge off, every future feature.',
+  'Lifetime — $59 one payment (a $10 launch discount off $69, applied at checkout): 10,000 plays/month forever, unlimited videos, 25 GB storage, badge off, every future feature. Sales are final and carry a 1 year warranty.',
   'Extra plays on paid plans cost $1 per 10,000. Bandwidth is never metered on any plan.',
 ];
 
@@ -301,7 +301,7 @@ const FACTS = [
   'Integrations: HMAC-signed webhooks on play, complete, CTA click and lead; API keys for the WordPress plugin.',
   'WordPress: a free plugin on every plan adds a [videokr] shortcode, a Gutenberg block and an Insights screen; nothing is uploaded into WordPress.',
   'Videokr is a hosted service — there is no self-hosted edition, and no server for the customer to run.',
-  'All lifetime sales are final; the free tier exists so every feature can be tested before paying.',
+  'All lifetime sales are final, with a 1 year warranty; the free tier exists so every feature can be tested before paying.',
 ];
 
 seo.get('/llms.txt', (c) => {
@@ -358,7 +358,7 @@ const ANSWERS: { q: string; a: string }[] = [
   },
   {
     q: 'How much does it cost?',
-    a: 'Free is $0 forever. Starter is $29 a year or $5 month-to-month. Agency is $29 a month or $290 a year. Lifetime is one payment of $69 for 10,000 plays a month forever. Bandwidth is never billed.',
+    a: 'Free is $0 forever. Starter is $29 a year or $5 month-to-month. Agency is $29 a month or $290 a year. Lifetime is one payment of $59 — a $10 launch discount off $69, applied at checkout — for 10,000 plays a month forever. Bandwidth is never billed.',
   },
   {
     q: 'Will bandwidth or storage bill me?',

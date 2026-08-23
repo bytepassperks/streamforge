@@ -27,6 +27,7 @@ import {
 import {
   countPlay,
   isLifetime,
+  lifetimeDiscount,
   offerForSeats,
   planForProduct,
   playUsage,
@@ -50,7 +51,7 @@ pub.use('/api/embed/*', async (c, next) => {
 
 /** Seat counter for the landing page — derived from real paid purchases. */
 pub.get('/api/public/offer', async (c) => {
-  const offer = offerForSeats(await seatsSold(c.env));
+  const offer = offerForSeats(await seatsSold(c.env), lifetimeDiscount(c.env));
   c.header('cache-control', 'public, max-age=60');
   return c.json({ offer });
 });
