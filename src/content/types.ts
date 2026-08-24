@@ -1,5 +1,5 @@
-/** The four content sections. Each one is a directory in the URL space. */
-export type SectionId = 'docs' | 'guides' | 'compare' | 'blog';
+/** The content sections. Each one is a directory in the URL space. */
+export type SectionId = 'docs' | 'guides' | 'compare' | 'blog' | 'answers';
 
 export interface Faq {
   q: string;

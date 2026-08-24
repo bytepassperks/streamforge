@@ -29,6 +29,16 @@ export function absoluteUrl(base: string, url: string): string {
   return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
+/**
+ * A video keeps the placeholder title until its owner names it. Those pages say
+ * nothing a search engine can rank, so they stay out of the sitemap and out of
+ * the IndexNow feed — the page itself is still public and reachable, it just
+ * does not get pushed at crawlers as if it were content.
+ */
+export function isWorthIndexing(title: string): boolean {
+  return !/^untitled video(\s+\d+)?$/i.test(title.trim());
+}
+
 export function isoDate(seconds: number): string {
   return new Date(seconds * 1000).toISOString();
 }
@@ -54,6 +64,14 @@ export function organizationLd(base: string): Record<string, unknown> {
     '@type': 'Organization',
     '@id': `${base}/#organization`,
     name: SITE.name,
+    alternateName: ['Videokr.com', 'Videokr video hosting'],
+    description: SITE.description,
+    /* An unrelated academic dataset shares the spelling, and assistants answer
+       "what is Videokr" from it. Stating the distinction in the entity itself is
+       the machine-readable half of the disambiguation page. */
+    disambiguatingDescription:
+      'Videokr is a commercial hosted video-marketing platform at videokr.com. It is unrelated to the similarly-spelled VideoKR academic video-reasoning dataset and benchmark.',
+    slogan: SITE.tagline,
     url: `${base}/`,
     logo: {
       '@type': 'ImageObject',
@@ -63,6 +81,7 @@ export function organizationLd(base: string): Record<string, unknown> {
     },
     email: SITE.email,
     sameAs: [...SITE.social],
+    mainEntityOfPage: `${base}/answers/what-is-videokr`,
   };
 }
 

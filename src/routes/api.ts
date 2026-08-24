@@ -17,6 +17,7 @@ import {
 } from '../lib/billing';
 import type { Cycle } from '../lib/billing';
 import { announce } from '../lib/indexnow';
+import { isWorthIndexing } from '../lib/seo';
 import { admin } from './admin';
 import { deliverTestWebhook } from '../lib/webhooks';
 import { generateApiKey, hashApiKey, keyPrefix } from '../lib/apikeys';
@@ -443,7 +444,8 @@ api.patch('/videos/:id', async (c) => {
      poster just changed, is announced immediately instead of waiting for the
      nightly sweep — minutes to indexed rather than days. */
   const visibility = (updates.visibility as string | undefined) ?? (existing.visibility as string);
-  if (visibility === 'public') {
+  const title = (updates.title as string | undefined) ?? (existing.title as string);
+  if (visibility === 'public' && isWorthIndexing(title)) {
     c.executionCtx.waitUntil(announce(c.env, `/v/${existing.slug as string}`));
   }
   return c.json({ ok: true, updated: Object.keys(updates).length });
