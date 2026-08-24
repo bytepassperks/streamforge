@@ -48,6 +48,8 @@ PUBLIC_BASE_URL = "https://videokr.com"
 LIFETIME_DISCOUNT_CODE = "VIDEOKR10"
 LIFETIME_DISCOUNT_USD = "10"
 LIFETIME_DISCOUNT_INR = "850"
+# The GA4 web stream for videokr.com. A measurement ID is public by design.
+GA_MEASUREMENT_ID = "G-N103BBM2MK"
 # IndexNow: the protocol requires this exact value to be served publicly at
 # /{key}.txt, so it lives with the config rather than with the secrets.
 INDEXNOW_KEY = "3becd3beeff4d236a4c1eb3177ac86d4"
