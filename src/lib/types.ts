@@ -18,6 +18,17 @@ export interface Env {
   DODO_WEBHOOK_SECRET?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  /** GA4 measurement id ("G-…"); analytics is simply absent when unset. */
+  GA_MEASUREMENT_ID?: string;
+  /** Ownership tokens for engines that verify by meta tag rather than DNS. */
+  GOOGLE_SITE_VERIFICATION?: string;
+  BING_SITE_VERIFICATION?: string;
+  YANDEX_SITE_VERIFICATION?: string;
+  NAVER_SITE_VERIFICATION?: string;
+  SEZNAM_SITE_VERIFICATION?: string;
+  PINTEREST_SITE_VERIFICATION?: string;
+  /** Shared IndexNow key, also served publicly at `/{key}.txt`. */
+  INDEXNOW_KEY?: string;
 }
 
 export interface User {

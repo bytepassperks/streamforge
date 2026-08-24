@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env, Playlist, Video } from '../lib/types';
 import { SITE, baseUrl, absoluteUrl, isoDate } from '../lib/seo';
+import { indexNowKey } from '../lib/indexnow';
 import { contentIndexLines, contentUrls } from './content';
 
 export const seo = new Hono<{ Bindings: Env }>();
@@ -103,6 +104,19 @@ seo.get('/robots.txt', (c) => {
   ].join('\n');
   c.header('cache-control', 'public, max-age=3600');
   return c.text(body);
+});
+
+/**
+ * IndexNow proof of ownership: the engines fetch `/{key}.txt` and expect the key
+ * back as the whole body. Only the configured key answers, so the route cannot
+ * be used to discover it.
+ */
+seo.get('/:file{[A-Za-z0-9-]{8,128}\\.txt}', async (c, next) => {
+  const key = indexNowKey(c.env);
+  if (!key || c.req.param('file') !== `${key}.txt`) return next();
+  c.header('content-type', 'text/plain; charset=utf-8');
+  c.header('cache-control', 'public, max-age=86400');
+  return c.body(key);
 });
 
 /* ------------------------------------------------------------- sitemaps ---- */

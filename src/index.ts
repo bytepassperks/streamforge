@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import type { Env } from './lib/types';
+import { headTags, injectHead } from './lib/analytics';
 import { isStamped, stampHtml } from './lib/assets';
+import { siteTargets, submitChanged } from './lib/indexnow';
 import { closePeriod, previousPeriod } from './lib/overage';
 import { syncLifetimePricing } from './lib/pricing-sync';
 import { canonicalRedirect } from './lib/util';
@@ -31,6 +33,23 @@ app.use('*', async (c, next) => {
   if (type?.includes('text/html') && !c.res.headers.get('cache-control')) {
     c.res.headers.set('cache-control', 'public, max-age=0, must-revalidate');
   }
+});
+
+/* Measurement and ownership tags are added to every public HTML response from
+   one place — a page rendered here, a page read out of the static bundle, a page
+   added next month — so a surface can never quietly go unmeasured. Dashboards
+   and embeds are excluded; see lib/analytics. */
+app.use('*', async (c, next) => {
+  await next();
+  const tags = headTags(c.env, c.req.path);
+  if (!tags || !c.res.headers.get('content-type')?.includes('text/html')) return;
+  const html = injectHead(await c.res.clone().text(), tags);
+  const headers = new Headers(c.res.headers);
+  /* The body just grew, so any length or validator carried over from the asset
+     bundle would describe a page that no longer exists. */
+  headers.delete('content-length');
+  headers.delete('etag');
+  c.res = new Response(html, { status: c.res.status, statusText: c.res.statusText, headers });
 });
 
 // Crawler-facing resources are cheap and must never be shadowed by an asset.
@@ -124,5 +143,9 @@ export default {
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(closePeriod(env, previousPeriod()));
     ctx.waitUntil(syncLifetimePricing(env));
+    /* Anything published or edited since the last run is announced to the
+       IndexNow engines; unchanged URLs are skipped, which the protocol asks
+       for. */
+    ctx.waitUntil(siteTargets(env).then((targets) => submitChanged(env, targets)));
   },
 };
