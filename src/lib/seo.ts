@@ -14,6 +14,7 @@ export const SITE = {
     'https://www.facebook.com/profile.php?id=61593628350806',
     'https://www.pinterest.com/videokr/',
     'https://www.reddit.com/user/videokr/',
+    'https://www.producthunt.com/products/videokr',
   ],
 } as const;
 
