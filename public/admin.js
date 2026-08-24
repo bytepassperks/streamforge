@@ -624,6 +624,26 @@
       });
   });
 
+  $('submit-indexnow').addEventListener('click', function () {
+    var button = $('submit-indexnow');
+    button.disabled = true;
+    api('/admin/indexnow', { method: 'POST' })
+      .then(function (data) {
+        if (data.reason) return toast(data.reason, true);
+        toast(
+          data.submitted.length
+            ? 'Announced ' + data.submitted.length + ' url(s) to ' + data.results.length + ' engines'
+            : 'Nothing changed since the last announcement',
+        );
+      })
+      .catch(function (error) {
+        toast(error.message || 'Could not reach the indexing endpoints', true);
+      })
+      .then(function () {
+        button.disabled = false;
+      });
+  });
+
   $('overage-close').addEventListener('click', function () {
     var period = $('overage-period').value.trim();
     if (!confirm('Close ' + period + '? Every paid account past its allowance is billed for that month.')) return;

@@ -16,6 +16,7 @@ import {
   seatsSold,
 } from '../lib/billing';
 import type { Cycle } from '../lib/billing';
+import { announce } from '../lib/indexnow';
 import { admin } from './admin';
 import { deliverTestWebhook } from '../lib/webhooks';
 import { generateApiKey, hashApiKey, keyPrefix } from '../lib/apikeys';
@@ -438,6 +439,13 @@ api.patch('/videos/:id', async (c) => {
   await c.env.DB.prepare(`UPDATE videos SET ${setClause} WHERE id = ? AND user_id = ?`)
     .bind(...Object.values(updates), id, user.id)
     .run();
+  /* A page that just became public, or a public page whose title, chapters or
+     poster just changed, is announced immediately instead of waiting for the
+     nightly sweep — minutes to indexed rather than days. */
+  const visibility = (updates.visibility as string | undefined) ?? (existing.visibility as string);
+  if (visibility === 'public') {
+    c.executionCtx.waitUntil(announce(c.env, `/v/${existing.slug as string}`));
+  }
   return c.json({ ok: true, updated: Object.keys(updates).length });
 });
 

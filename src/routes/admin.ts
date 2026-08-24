@@ -4,6 +4,7 @@ import { createSession, hashPassword, randomSalt } from '../lib/auth';
 import { FREE_LIMITS, PLANS, isAdmin, lifetimeDiscount, offerForSeats, periodKey, playUsage, seatsSold } from '../lib/billing';
 import type { OverageRow } from '../lib/overage';
 import { closePeriod, collectOverage, previousPeriod, recordOverage } from '../lib/overage';
+import { siteTargets, submitChanged } from '../lib/indexnow';
 import { syncLifetimePricing } from '../lib/pricing-sync';
 import { newId, now } from '../lib/util';
 
@@ -364,6 +365,19 @@ admin.post('/pricing/sync', async (c) => {
     await audit(c.env, c.get('user'), 'pricing.sync', 'lifetime', { ...outcome });
   }
   return c.json(outcome, outcome.ok ? 200 : 502);
+});
+
+/**
+ * Announce every public URL to the IndexNow engines now. Pages whose modified
+ * date has not moved since their last announcement are skipped, so pressing this
+ * twice costs one request and no goodwill.
+ */
+admin.post('/indexnow', async (c) => {
+  const report = await submitChanged(c.env, await siteTargets(c.env));
+  if (report.submitted.length) {
+    await audit(c.env, c.get('user'), 'indexnow.submit', 'site', { urls: report.submitted.length });
+  }
+  return c.json(report);
 });
 
 /* -------------------------------------------------------------- overage ---- */
