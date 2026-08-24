@@ -1,3 +1,4 @@
+import { answersPages } from './answers';
 import { blogPages } from './blog';
 import { comparePages } from './compare';
 import { docsPages } from './docs';
@@ -7,6 +8,14 @@ import type { ContentPage, Section, SectionId } from './types';
 export type { ContentPage, Faq, Section, SectionId } from './types';
 
 export const SECTIONS: Section[] = [
+  {
+    id: 'answers',
+    title: 'Answers',
+    blurb: 'Direct answers to the questions people ask about Videokr, one sentence first.',
+    description:
+      'Answers about Videokr: what it is, who it is for, pricing and plays, technical limits and formats, analytics and lead capture, WordPress, privacy, video SEO and how it compares with Wistia, Vidyard, Vimeo and YouTube.',
+    pages: answersPages,
+  },
   {
     id: 'docs',
     title: 'Documentation',

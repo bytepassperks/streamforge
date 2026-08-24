@@ -3,6 +3,7 @@ import type { Video } from '../src/lib/types';
 import {
   absoluteUrl,
   breadcrumbLd,
+  isWorthIndexing,
   isoDuration,
   jsonLdScript,
   organizationLd,
@@ -115,6 +116,13 @@ describe('identity graph', () => {
     expect((org.sameAs as string[]).length).toBeGreaterThan(0);
   });
 
+  it('states the brand distinction machine-readably, since the name collides', () => {
+    const org = organizationLd(BASE);
+    expect(String(org.disambiguatingDescription)).toContain('videokr.com');
+    expect(String(org.disambiguatingDescription)).toContain('unrelated');
+    expect(org.mainEntityOfPage).toBe('https://videokr.com/answers/what-is-videokr');
+  });
+
   it('numbers breadcrumb positions from one and absolutises items', () => {
     const crumbs = breadcrumbLd(BASE, [
       { name: 'Videokr', url: '/' },
@@ -123,5 +131,19 @@ describe('identity graph', () => {
     const items = crumbs.itemListElement as { position: number; item: string }[];
     expect(items[0]).toMatchObject({ position: 1, item: 'https://videokr.com/' });
     expect(items[1]).toMatchObject({ position: 2, item: 'https://videokr.com/v/the-film' });
+  });
+});
+
+describe('index-worthiness', () => {
+  it('keeps placeholder titles out of the sitemap and the IndexNow feed', () => {
+    expect(isWorthIndexing('Untitled video')).toBe(false);
+    expect(isWorthIndexing('untitled video 2')).toBe(false);
+    expect(isWorthIndexing('  Untitled Video 12  ')).toBe(false);
+  });
+
+  it('leaves a named video alone, including one that merely mentions the word', () => {
+    expect(isWorthIndexing('Videokr — the product film')).toBe(true);
+    expect(isWorthIndexing('Untitled video: the director’s cut')).toBe(true);
+    expect(isWorthIndexing('Entrepreneur Life')).toBe(true);
   });
 });

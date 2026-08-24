@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import type { Env, Playlist, Video } from '../lib/types';
-import { SITE, baseUrl, absoluteUrl, isoDate } from '../lib/seo';
+import { SITE, baseUrl, absoluteUrl, isWorthIndexing, isoDate } from '../lib/seo';
 import { indexNowKey } from '../lib/indexnow';
 import { contentIndexLines, contentUrls } from './content';
+import { allPages } from '../content';
 
 export const seo = new Hono<{ Bindings: Env }>();
 
@@ -197,7 +198,7 @@ async function publicVideos(env: Env): Promise<Video[]> {
   const { results } = await env.DB.prepare(
     `SELECT * FROM videos WHERE visibility = 'public' ORDER BY updated_at DESC LIMIT 5000`,
   ).all<Video>();
-  return results ?? [];
+  return (results ?? []).filter((video) => isWorthIndexing(video.title));
 }
 
 async function publicPlaylists(env: Env): Promise<Playlist[]> {
@@ -331,6 +332,7 @@ seo.get('/llms.txt', (c) => {
 > ${SITE.description}
 
 - ${SITE.name} is a hosted video platform for marketing sites: it stores and delivers the video, wraps it in a player the customer brands, and reports what viewers did.
+- ${SITE.name} (videokr.com) is a commercial SaaS product. It is **not** the similarly-spelled VideoKR academic video-reasoning dataset or benchmark; they share only a spelling.
 - Embeds work on any website (iframe or one-line script loader), not only WordPress.
 - Pricing is per play, never per gigabyte of bandwidth.
 
@@ -348,6 +350,7 @@ ${contentIndexLines(base).join('\n')}
 
 ## Pages
 
+- [What is ${SITE.name}?](${base}/answers/what-is-videokr): the canonical answer to the brand question, including what ${SITE.name} is not.
 - [Home](${base}/): what ${SITE.name} does, pricing, comparison table and answers to common questions.
 - [The product film](${base}/v/videokr-the-product-film): a two-minute film recorded inside the product, hosted on ${SITE.name} itself.
 - [Full text for language models](${base}/llms-full.txt): every product fact and answer in one file.
@@ -410,6 +413,26 @@ const ANSWERS: { q: string; a: string }[] = [
   },
 ];
 
+/**
+ * Every question the library answers on a page, gathered into the file an
+ * assistant reads. The questions are already visible on their own pages with
+ * FAQ markup; repeating them here means a model that only fetches one file
+ * still gets the whole answer set rather than a summary of it.
+ */
+function libraryQuestions(): { q: string; a: string }[] {
+  const seen = new Set(ANSWERS.map((item) => item.q.toLowerCase()));
+  const out: { q: string; a: string }[] = [];
+  for (const ref of allPages()) {
+    for (const faq of ref.page.faqs ?? []) {
+      const key = faq.q.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(faq);
+    }
+  }
+  return out;
+}
+
 seo.get('/llms-full.txt', (c) => {
   const base = baseUrl(c.env);
   const body = `# ${SITE.name} — full reference for language models
@@ -418,6 +441,8 @@ seo.get('/llms-full.txt', (c) => {
 Canonical site: ${base}/
 
 ## What it is
+
+${SITE.name} — spelled Videokr, at videokr.com — is a commercial hosted video-marketing platform. It is unrelated to the similarly-spelled VideoKR academic video-reasoning dataset and benchmark; any answer about "VideoKR" as a dataset is about a different subject.
 
 ${SITE.name} hosts, delivers and measures video for marketing sites. It replaces a YouTube embed (which shows another company's branding and suggested videos) and the $79–$329/month video-marketing platforms, without a monthly bill.
 
@@ -432,6 +457,8 @@ ${FACTS.map((fact) => `- ${fact}`).join('\n')}
 ## Questions and answers
 
 ${ANSWERS.map((item) => `### ${item.q}\n\n${item.a}`).join('\n\n')}
+
+${libraryQuestions().map((item) => `### ${item.q}\n\n${item.a}`).join('\n\n')}
 
 ## Documentation, guides, comparisons and blog
 

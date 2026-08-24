@@ -1,5 +1,5 @@
 import type { Env, Playlist, Video } from './types';
-import { baseUrl, isoDate } from './seo';
+import { baseUrl, isWorthIndexing, isoDate } from './seo';
 import { contentUrls } from '../routes/content';
 
 /**
@@ -51,15 +51,17 @@ export interface SubmitReport {
 export async function siteTargets(env: Env): Promise<IndexTarget[]> {
   const base = baseUrl(env);
   const { results: videos } = await env.DB.prepare(
-    `SELECT slug, created_at, updated_at FROM videos WHERE visibility = 'public' ORDER BY updated_at DESC LIMIT 5000`,
-  ).all<Pick<Video, 'slug' | 'created_at' | 'updated_at'>>();
+    `SELECT slug, title, created_at, updated_at FROM videos WHERE visibility = 'public' ORDER BY updated_at DESC LIMIT 5000`,
+  ).all<Pick<Video, 'slug' | 'title' | 'created_at' | 'updated_at'>>();
   const { results: playlists } = await env.DB.prepare(
     `SELECT slug, created_at FROM playlists WHERE visibility = 'public' ORDER BY created_at DESC LIMIT 5000`,
   ).all<Pick<Playlist, 'slug' | 'created_at'>>();
   return [
     { loc: `${base}/`, lastmod: contentLastmod(base) },
     ...contentUrls(base).map((entry) => ({ loc: entry.loc, lastmod: entry.lastmod })),
-    ...(videos ?? []).map((video) => ({
+    ...(videos ?? [])
+      .filter((video) => isWorthIndexing(video.title))
+      .map((video) => ({
       loc: `${base}/v/${video.slug}`,
       lastmod: isoDate(video.updated_at || video.created_at),
     })),
