@@ -728,6 +728,7 @@ function pageShell(video: Video, payloadJson: string, env: Env, extras: PageExtr
 ${video.duration ? `<meta property="video:duration" content="${Math.round(video.duration)}">` : ''}
 <meta property="video:release_date" content="${new Date(video.created_at * 1000).toISOString()}">
 <meta name="twitter:card" content="player">
+<meta name="twitter:site" content="@videokrofficial">
 <meta name="twitter:title" content="${escapeHtml(video.title)}">
 <meta name="twitter:description" content="${description.slice(0, 200)}">
 <meta name="twitter:image" content="${escapeHtml(thumbnail)}">
@@ -920,6 +921,7 @@ function playlistShell(
     poster ? escapeHtml(absoluteUrl(base, poster.thumbnail_url)) : `${base}/brand/hero-dark.png`
   }">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@videokrofficial">
 <link rel="stylesheet" href="${stamp('/player/player.css')}">
 <link rel="stylesheet" href="${stamp('/styles.css')}">
 ${FONTS}

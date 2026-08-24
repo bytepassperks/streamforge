@@ -15,6 +15,8 @@ export const SITE = {
     'https://www.pinterest.com/videokr/',
     'https://www.reddit.com/user/videokr/',
     'https://www.producthunt.com/products/videokr',
+    'https://x.com/videokrofficial',
+    'https://www.linkedin.com/company/videokr-official/',
   ],
 } as const;
 
