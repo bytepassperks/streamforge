@@ -73,7 +73,9 @@ const PRIVATE_PATHS = [
   '/admin.html',
   '/admin',
   '/login.html',
+  '/login',
   '/reset.html',
+  '/reset',
 ];
 
 function robotsBlock(agents: string[]): string {
@@ -100,6 +102,10 @@ seo.get('/robots.txt', (c) => {
     'Allow: /',
     '',
     `Sitemap: ${base}/sitemap.xml`,
+    `Sitemap: ${base}/sitemap-pages.xml`,
+    `Sitemap: ${base}/sitemap-content.xml`,
+    `Sitemap: ${base}/sitemap-videos.xml`,
+    `Sitemap: ${base}/sitemap-playlists.xml`,
     '',
   ].join('\n');
   c.header('cache-control', 'public, max-age=3600');
