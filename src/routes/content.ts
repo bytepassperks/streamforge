@@ -81,6 +81,7 @@ ${meta.markdown ? `<link rel="alternate" type="text/markdown" href="${meta.markd
 <meta property="og:description" content="${escapeHtml(meta.description)}">
 <meta property="og:image" content="${new URL(meta.canonical).origin}/brand/hero-dark.png">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@videokrofficial">
 <meta name="twitter:title" content="${escapeHtml(meta.title)}">
 <meta name="twitter:description" content="${escapeHtml(meta.description)}">
 ${meta.published ? `<meta property="article:published_time" content="${meta.published}">` : ''}
