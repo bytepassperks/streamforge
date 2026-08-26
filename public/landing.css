@@ -262,12 +262,12 @@ body.lp {
 }
 .lp-dial-needle::before {
   content: ''; position: absolute; top: -20px; left: 50%; translate: -50% 0;
-  width: 112px; height: 48px; border: 8px solid #1d1d1d; border-bottom: 0;
-  border-radius: 56px 56px 0 0;
+  width: 124px; height: 54px; background: #1d1d1d;
+  border-radius: 62px 62px 8px 8px;
 }
 .lp-dial-needle::after {
-  content: ''; position: absolute; top: 10px; left: 50%; translate: -50% 0;
-  width: 16px; height: 34px; background: #1d1d1d;
+  content: ''; position: absolute; top: 30px; left: 46%; translate: -50% 0;
+  width: 18px; height: 30px; background: #1d1d1d;
   clip-path: polygon(0 0, 100% 0, 62% 100%, 38% 100%);
 }
 .lp-compare[data-state='after'] .lp-dial {
@@ -746,8 +746,8 @@ body.lp {
   .lp-dial::before { width: 48px; height: 48px; }
   .lp-dial svg { width: 34px; height: 34px; }
   .lp-dial-needle { transform-origin: center; }
-  .lp-dial-needle::before { top: -15px; width: 82px; height: 36px; border-width: 6px; border-radius: 42px 42px 0 0; }
-  .lp-dial-needle::after { top: 8px; width: 12px; height: 26px; }
+  .lp-dial-needle::before { top: -15px; width: 90px; height: 46px; border-radius: 46px 46px 6px 6px; }
+  .lp-dial-needle::after { top: 26px; width: 14px; height: 24px; }
   .lp-bento-mini .lp-tile { width: 100%; min-height: 0; }
   .lp-bento-mini .lp-tile:nth-child(2) { margin-top: 0; }
   .lp-bento-duo .lp-tile:nth-child(2) { grid-column: auto; }
