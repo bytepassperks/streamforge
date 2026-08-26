@@ -758,7 +758,7 @@ body.lp {
   .lp-compare-stage { height: auto; }
   .lp-compare-sticky { position: static; }
   .lp-compare-cards { min-height: 0; }
-  .lp-compare-card { position: static; opacity: 1 !important; transform: none !important; padding: 72px 28px 28px; }
+  .lp-compare-card { position: static; opacity: 1; transform: none !important; padding: 72px 28px 28px; }
   .lp-compare[data-state='before'] .lp-compare-card[data-card='after'],
   .lp-compare[data-state='after'] .lp-compare-card[data-card='before'] { display: none; }
   .lp-use { flex-basis: 280px; height: 360px; }
