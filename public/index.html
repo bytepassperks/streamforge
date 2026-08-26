@@ -24,201 +24,314 @@
 <link rel="icon" href="/brand/mark-512.png" sizes="512x512">
 <link rel="apple-touch-icon" href="/brand/mark-180.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#fdfbfc">
+<meta name="theme-color" content="#ffffff">
 <link rel="alternate" type="text/plain" href="/llms.txt" title="Videokr for language models">
-<link rel="preload" href="/brand/hero-1050.webp" as="image" type="image/webp" fetchpriority="high"
-      imagesrcset="/brand/hero-480.webp 480w, /brand/hero-700.webp 700w, /brand/hero-1050.webp 1050w, /brand/hero.webp 1400w"
-      imagesizes="(max-width: 860px) 92vw, 46vw">
-<link rel="preload" href="/fonts/kalam-700-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/figtree-400-800-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/instrument-serif-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/brand/lp/sky-1600.webp" as="image" type="image/webp" fetchpriority="high"
+      imagesrcset="/brand/lp/sky-1024.webp 1024w, /brand/lp/sky-1600.webp 1600w, /brand/lp/sky.webp 1920w"
+      imagesizes="100vw">
+<link rel="preload" href="/fonts/bricolage-grotesque-200-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/inter-400-800-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/fonts/fonts.css">
-<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/landing.css">
 </head>
-<body class="glow">
-<a class="sf-skip" href="#main">Skip to content</a>
+<body class="lp">
+<a class="lp-skip" href="#main">Skip to content</a>
 
-<nav class="nav" aria-label="Main">
-  <div class="wrap nav-inner">
-    <a class="brand" href="/"><img src="/brand/logo-ink-330.webp" alt="Videokr" width="110" height="30"></a>
-    <div class="nav-links">
-      <a href="#why">Why</a>
-      <a href="#features">Features</a>
-      <a href="#compare">The math</a>
-      <a href="#embed">Embed</a>
-      <a href="#wordpress">WordPress</a>
-      <a href="/answers">Answers</a>
-      <a href="/docs">Docs</a>
-      <a href="#pricing">Lifetime</a>
-    </div>
-    <div class="row">
-      <a class="btn btn-ghost btn-sm" id="nav-auth" href="/login.html">Sign in</a>
-      <a class="btn btn-sm" id="nav-buy" href="#pricing">Get $10 off lifetime</a>
-    </div>
+<nav class="lp-nav" aria-label="Main">
+  <a class="lp-nav-brand" href="/"><img src="/brand/logo-ink-330.webp" alt="Videokr" width="110" height="30"></a>
+  <div class="lp-nav-links" id="nav-links">
+    <a href="#features">Features</a>
+    <a href="#platform">Platform</a>
+    <a href="#use-cases">Use cases</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+  <div class="lp-nav-right">
+    <a class="lp-nav-signin" id="nav-auth" href="/login.html">Sign in</a>
+    <a class="lp-btn lp-btn-dark lp-btn-sm" id="nav-buy" href="#pricing">Try it free
+      <span class="lp-btn-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+    </a>
+    <button class="lp-burger" type="button" id="burger" aria-expanded="false" aria-controls="nav-panel" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="lp-nav-panel" id="nav-panel">
+    <a href="#features">Features</a>
+    <a href="#platform">Platform</a>
+    <a href="#how">How it works</a>
+    <a href="#use-cases">Use cases</a>
+    <a href="#compare">The math</a>
+    <a href="#pricing">Pricing</a>
+    <a href="/answers">Answers</a>
+    <a href="/docs">Docs</a>
   </div>
 </nav>
 
-<header class="hero">
-  <div class="blob blob-1" aria-hidden="true"><svg viewBox="0 0 300 300"><path d="M158 12c44-6 92 18 108 58 17 41-1 88-24 124-22 35-49 68-89 74-41 6-88-14-113-47-25-34-27-82-9-121C50 61 89 27 128 17c10-3 20-4 30-5Z" fill="#FF5A1F" opacity=".16"/><path d="M150 34c38-4 78 16 92 51 15 36-2 78-22 110-19 31-43 60-78 65-36 6-77-12-99-41" fill="none" stroke="#FF5A1F" stroke-width="2" stroke-linecap="round" stroke-dasharray="9 13" opacity=".5"/></svg></div>
-  <div class="blob blob-2" aria-hidden="true"><svg viewBox="0 0 300 300"><path d="M120 22c46-10 100 10 128 50 27 40 22 96-6 133-27 36-79 52-124 45-46-7-88-38-102-81-14-44 3-96 38-124 19-15 42-19 66-23Z" fill="#C3F53C" opacity=".1"/></svg></div>
-  <div class="wrap hero-grid">
-    <div>
-      <span class="badge" id="hero-badge">Free forever · 100 lifetime seats</span>
-      <h1>Stop paying rent<br>on your own <span class="ital">videos.</span></h1>
-      <p class="lede">
-        Host, brand and embed unlimited video on your site — your player, your logo, no suggested videos
-        pulling the viewer away. Capture emails inside the video, lock it behind a password, and see the
-        exact second people quit.
-      </p>
-      <div class="hero-actions">
-        <a class="btn btn-lg" id="hero-cta" href="/login.html?mode=signup">Start free — no card →</a>
-        <a class="btn btn-ghost btn-lg" href="#demo">Play the real player</a>
-      </div>
-      <div class="trust">
-        <span class="stars">★★★★★</span><span>free tier, no card</span><span>·</span><span>pay once, never again</span>
-      </div>
-      <p class="hand" style="margin-top:16px">no monthly bill. ever.</p>
+<header class="lp-hero">
+  <div class="lp-hero-sky" aria-hidden="true"></div>
+  <div class="lp-hero-clouds" aria-hidden="true">
+    <img class="lp-cloud lp-cloud-1" src="/brand/lp/cloud-1.webp" alt="" width="602" height="350" decoding="async">
+    <img class="lp-cloud lp-cloud-2" src="/brand/lp/cloud-2.webp" alt="" width="519" height="240" decoding="async">
+    <img class="lp-cloud lp-cloud-3" src="/brand/lp/cloud-3.webp" alt="" width="584" height="350" decoding="async">
+  </div>
+  <div class="lp-wrap lp-hero-inner">
+    <h1>Unlimited<span class="lp-prop" aria-hidden="true"></span><br>Video Hosting</h1>
+    <p class="lp-hero-lede">Host, brand and embed your video on your own site — your player, your logo, your leads,
+      and no monthly bill for the privilege.</p>
+    <div class="lp-hero-actions">
+      <a class="lp-btn lp-btn-blue" id="hero-cta" href="/login.html?mode=signup">Get started now
+        <span class="lp-btn-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="lp-btn lp-btn-white" href="#demo">View demo</a>
     </div>
-    <div class="hero-art">
-      <div class="hero-note hero-note-1">a $79/mo player is<br>$948 a year of rent.<small>the invoice we killed</small></div>
-      <picture>
-        <source type="image/webp"
-          srcset="/brand/hero-480.webp 480w, /brand/hero-700.webp 700w, /brand/hero-1050.webp 1050w, /brand/hero.webp 1400w"
-          sizes="(max-width: 860px) 92vw, 46vw">
-        <img src="/brand/hero.png" alt="A branded Videokr player with retention analytics and lead notes around it"
-          width="1400" height="675" fetchpriority="high" decoding="async">
-      </picture>
-      <div class="hero-note hero-note-2">retention shows the<br>exact quit second.<small>then you re-cut it</small></div>
+    <div class="lp-hero-pills">
+      <span id="hero-badge">Free forever · 100 lifetime seats</span>
+      <span aria-hidden="true">·</span>
+      <span>Password &amp; domain-locked embeds</span>
+      <span aria-hidden="true">·</span>
+      <span>Retention to the second</span>
+    </div>
+    <div class="lp-hero-stage">
+      <div class="lp-hero-art lp-reveal">
+        <picture>
+          <source type="image/webp" srcset="/brand/lp/app-hero.webp">
+          <img src="/brand/lp/app-hero.png" alt="The Videokr dashboard: a video library with plays, leads and retention"
+               width="1600" height="927" fetchpriority="high" decoding="async">
+        </picture>
+      </div>
+      <img class="lp-hero-meadow" src="/brand/lp/meadow-hero.webp"
+           srcset="/brand/lp/meadow-hero-1024.webp 1024w, /brand/lp/meadow-hero.webp 1960w" sizes="100vw"
+           alt="" width="1960" height="767" decoding="async" aria-hidden="true">
     </div>
   </div>
-
-  <div class="marquee"><div class="marquee-track">
-    <span>Own player, own logo ✦</span><span>Emails captured mid-video ✦</span><span>Password-locked client cuts ✦</span>
-    <span>Retention to the second ✦</span><span>A/B thumbnails ✦</span><span>Zero hosting bill ✦</span>
-    <span>Own player, own logo ✦</span><span>Emails captured mid-video ✦</span><span>Password-locked client cuts ✦</span>
-    <span>Retention to the second ✦</span><span>A/B thumbnails ✦</span><span>Zero hosting bill ✦</span>
-  </div></div>
 </header>
+
+<div class="lp-wrap lp-trust">
+  <p>Built for creators, businesses and marketers who want their own player.</p>
+  <!-- Customer logo strip: intentionally left empty until real customer logos are supplied.
+       Drop <img> marks straight into .lp-logo-strip when they arrive. -->
+  <div class="lp-logo-strip" aria-hidden="true"></div>
+</div>
 
 <main id="main">
 
-<section class="section" id="demo">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">not a mockup →</span>
-      <h2>The product film, hosted on Videokr.</h2>
-      <p class="section-lede">Two minutes recorded inside the product — uploads, the branded player, chapters, captions, in-video lead forms, embeds and the analytics behind them. It is playing through the same player and the same hosting your embeds use: jump a chapter, press <b>C</b> for subtitles, <b>F</b> or <b>P</b> for full screen and picture-in-picture.</p>
+<section class="lp-section lp-compare" id="why" data-state="before">
+  <div class="lp-wrap lp-head lp-reveal">
+    <span class="lp-eyebrow">The difference</span>
+    <h2 class="lp-h2" style="text-align:center">Smarter video hosting starts with Videokr</h2>
+  </div>
+  <div class="lp-wrap lp-compare-stage">
+    <div class="lp-compare-sticky">
+      <div class="lp-compare-tabs" role="tablist" aria-label="Before and after Videokr">
+        <button class="lp-compare-tab" type="button" role="tab" aria-selected="true" data-tab="before">Before Videokr</button>
+        <button class="lp-compare-tab" type="button" role="tab" aria-selected="false" data-tab="after">After Videokr</button>
+        <span class="lp-dial" aria-hidden="true">
+          <span class="lp-dial-needle"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8 5 12l4 4M15 8l4 4-4 4"/></svg>
+        </span>
+      </div>
+      <div class="lp-compare-cards">
+        <div class="lp-compare-card" data-card="before">
+          <h3 class="lp-h3">The problem with traditional video hosting</h3>
+          <ul class="lp-compare-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#d63a3a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>$79–$329 a month, for as long as you use it</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#d63a3a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Someone else's logo and suggested videos on your page</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#d63a3a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Email capture and branding locked to a higher tier</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#d63a3a" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>View counts that never tell you where people stopped</li>
+          </ul>
+          <div class="lp-compare-figures">
+            <div class="lp-figure"><b>$948/yr</b><span>A $79/month player, every year</span></div>
+            <div class="lp-figure"><b>Their brand</b><span>On a page you paid to build</span></div>
+          </div>
+        </div>
+        <div class="lp-compare-card" data-card="after">
+          <h3 class="lp-h3">A smarter way to host videos</h3>
+          <ul class="lp-compare-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Unlimited videos and unlimited embeds on every plan</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>No monthly bill on the lifetime licence</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Your player, your logo, in-video email capture and CTAs</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Retention measured second by second, per video</li>
+          </ul>
+          <div class="lp-compare-figures">
+            <div class="lp-figure"><b>$69 once</b><span>Lifetime licence, $10 off $79</span></div>
+            <div class="lp-figure"><b>Free forever</b><span>500 plays a month, no card</span></div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="hero-demo">
-      <div id="demo-player">
-        <button class="demo-poster" type="button" id="demo-poster" aria-label="Play the Videokr product film">
+  </div>
+</section>
+
+<section class="lp-section" id="features">
+  <div class="lp-wrap">
+    <div class="lp-head lp-reveal">
+      <span class="lp-eyebrow">Features</span>
+      <h2 class="lp-h2" style="text-align:center">One player. Every marketing lever.</h2>
+      <p class="lp-lede" style="text-align:center">Upload an MP4 or WebM, or link HLS, YouTube and Vimeo — it all comes out looking like you.</p>
+    </div>
+    <div class="lp-bento">
+      <div class="lp-tile lp-reveal">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label">Private by default</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-lock.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div class="lp-tile-art"><picture><source type="image/webp" srcset="/brand/lp/app-analytics.webp"><img src="/brand/lp/app-analytics.png" alt="Embed settings with a password and a domain allow-list" width="508" height="376" loading="lazy" decoding="async"></picture></div>
+        <div>
+          <h3>Password &amp; domain locks</h3>
+          <p>Client cuts and paid content stay off the open web. Wildcard domain rules included.</p>
+        </div>
+      </div>
+      <div class="lp-tile lp-reveal lp-reveal-1" style="background:#cfe6f6">
+        <img class="lp-tile-bg" src="/brand/lp/card-sky.webp" alt="" width="380" height="382" loading="lazy" decoding="async" aria-hidden="true">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label" style="color:#1d1d1d">Analytics</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-chart.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div class="lp-tile-art"><picture><source type="image/webp" srcset="/brand/lp/app-embed.webp"><img src="/brand/lp/app-embed.png" alt="A retention curve with the drop-off second highlighted" width="250" height="163" loading="lazy" decoding="async"></picture></div>
+        <div>
+          <h3>Retention, second by second</h3>
+          <p style="color:#1d1d1d">A 100-bucket drop-off curve per video, plus device, country and referrer.</p>
+        </div>
+      </div>
+      <div class="lp-tile lp-tile-dark lp-tile-tall lp-reveal lp-reveal-2">
+        <span class="lp-tile-label">Your library</span>
+        <p class="lp-tile-word">MANAGE<span aria-hidden="true">MANAGE</span></p>
+        <p>Projects, playlists, chapters, captions and thumbnails — one place, one edit, every embed updated.</p>
+      </div>
+      <div class="lp-tile lp-tile-wide lp-reveal">
+        <img class="lp-tile-bg" src="/brand/lp/card-meadow.webp" alt="" width="790" height="354" loading="lazy" decoding="async" aria-hidden="true">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label" style="color:#1d1d1d">Lead capture</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-chart.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div>
+          <h3>Emails captured inside the video</h3>
+          <p style="color:#1d1d1d">Pause at any second for an email, then resume playback. Timed CTAs, banners and end
+            screens link anywhere, and every lead exports as CSV or fires a signed webhook.</p>
+        </div>
+      </div>
+      <div class="lp-tile lp-reveal lp-reveal-1">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label">Smart video tools</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-play.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div class="lp-tile-art" style="background:#fff;padding:14px;display:grid;gap:10px">
+          <p class="lp-small" style="color:#1d1d1d;font-weight:600">A/B thumbnails · split traffic, per-variant play rate</p>
+          <p class="lp-small">Sticky miniplayer · playback follows the reader</p>
+          <p class="lp-small">Hotkeys, speeds, PiP and full screen</p>
+        </div>
+        <div>
+          <h3>Built for the details</h3>
+          <p>The small things that decide whether a viewer finishes the video.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="lp-overview" id="platform">
+  <div class="lp-overview-sky" aria-hidden="true"></div>
+  <div class="lp-overview-fade-top" aria-hidden="true"></div>
+  <div class="lp-wrap">
+    <div class="lp-head lp-reveal">
+      <span class="lp-eyebrow">Platform overview</span>
+      <h2 class="lp-h2" style="text-align:center">Your videos deserve more than just storage.</h2>
+      <p class="lp-lede" style="text-align:center">Upload, brand, embed, gate and measure — all in one place, on your own domain.</p>
+    </div>
+    <div class="lp-shot lp-reveal">
+      <picture>
+        <source type="image/webp" srcset="/brand/lp/app-overview.webp">
+        <img src="/brand/lp/app-overview.png" alt="The Videokr dashboard with plays, leads, retention and embed settings" width="1600" height="928" loading="lazy" decoding="async">
+      </picture>
+    </div>
+    <div class="lp-cards-3">
+      <div class="lp-card lp-reveal">
+        <h3>Fast, reliable playback</h3>
+        <p>Stored and delivered from a global network close to your viewers, with no metered egress on any plan.</p>
+      </div>
+      <div class="lp-card lp-reveal lp-reveal-1">
+        <h3>A player that is yours</h3>
+        <p>Skins, accent colour, corner radius, logo watermark and per-control toggles. No vendor badge on paid plans.</p>
+      </div>
+      <div class="lp-card lp-reveal lp-reveal-2">
+        <h3>Numbers you can act on</h3>
+        <p>Impressions, plays, completion, CTA clicks and leads per video — and the exact second viewers leave.</p>
+      </div>
+    </div>
+  </div>
+  <div class="lp-overview-fade-bottom" aria-hidden="true"></div>
+</section>
+
+<section class="lp-section" id="demo">
+  <div class="lp-wrap">
+    <div class="lp-head lp-reveal">
+      <span class="lp-eyebrow">Not a mockup</span>
+      <h2 class="lp-h2" style="text-align:center">The product film, hosted on Videokr.</h2>
+      <p class="lp-lede" style="text-align:center">Two minutes recorded inside the product, playing through the same player
+        and the same hosting your embeds use: jump a chapter, press <b>C</b> for subtitles, <b>F</b> or <b>P</b> for full
+        screen and picture-in-picture.</p>
+    </div>
+    <div class="lp-demo">
+      <div class="lp-demo-frame" id="demo-player">
+        <button class="lp-poster" type="button" id="demo-poster" aria-label="Play the Videokr product film">
           <img src="/media/usr_sfv3f9yfqwbgba7y/ehakkbfto6emgecd.jpg" alt="Opening frame of the Videokr product film" width="1280" height="720" loading="lazy" decoding="async">
-          <span class="demo-poster-play" aria-hidden="true"></span>
+          <span class="lp-poster-play" aria-hidden="true"></span>
         </button>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="why">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="hand">honest question:</span>
-      <h2>Why is putting a video on your site <span class="ital">still this bad?</span></h2>
+<section class="lp-section" id="how">
+  <div class="lp-wrap">
+    <div class="lp-head lp-reveal" style="margin-bottom:60px">
+      <span class="lp-eyebrow">How it works</span>
+      <h2 class="lp-h2" style="text-align:center">Three steps from file to funnel.</h2>
     </div>
-    <div class="grid-3">
-      <div class="paper reveal"><span class="tape" aria-hidden="true"></span><div class="no">#1</div><h3>YouTube embeds work for YouTube.</h3>
-        <p>Their logo, their suggested videos, their retargeting. You did the work; they keep the viewer.</p></div>
-      <div class="paper reveal reveal-d1"><span class="tape" aria-hidden="true"></span><div class="no">#2</div><h3>The pros want $79–$329 a month.</h3>
-        <p>Removing someone else's branding is a paid feature. Lead capture sits in a higher tier. Every month, forever.</p></div>
-      <div class="paper reveal reveal-d2"><span class="tape" aria-hidden="true"></span><div class="no">#3</div><h3>You're guessing at what works.</h3>
-        <p>Nobody quits "somewhere" — they quit at 0:47. Views alone can't tell you that, or which thumbnail won.</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="features">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">what you get →</span>
-      <h2>One player. Every marketing lever.</h2>
-      <p class="section-lede">Bring YouTube, Vimeo, an MP4, an HLS stream, or upload the file — it all comes out looking like you.</p>
-    </div>
-    <div class="grid-3">
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-skins.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-skins.png" alt="" width="360" height="306"></picture>
-        <h3>Brandable player</h3><p>Skins, accent colour, corner radius, logo watermark, title bar, per-control toggles.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-leads.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-leads.png" alt="" width="360" height="288"></picture>
-        <h3>Lead gates</h3><p>Pause at any second to collect an email, then resume playback. Export leads as CSV.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-ctas.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-ctas.png" alt="" width="360" height="257"></picture>
-        <h3>CTAs &amp; end screens</h3><p>Timed overlays, banners and end screens with buttons that link anywhere.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-retention.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-retention.png" alt="" width="360" height="273"></picture>
-        <h3>Retention curves</h3><p>100-bucket drop-off graph per video, plus device, country and referrer breakdowns.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-lock.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-lock.png" alt="" width="360" height="292"></picture>
-        <h3>Password + domain lock</h3><p>Client cuts and paid content stay off the open web. Wildcard domain rules supported.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-abtest.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-abtest.png" alt="" width="360" height="278"></picture>
-        <h3>A/B thumbnails</h3><p>Ship two thumbnails, get split traffic and per-variant play rates automatically.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-chapters.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-chapters.png" alt="" width="360" height="300"></picture>
-        <h3>Chapters</h3>
-        <p>Timeline markers and a jump menu, so long videos stay watchable.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-webhooks.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-webhooks.png" alt="" width="360" height="258"></picture>
-        <h3>Signed webhooks</h3>
-        <p>HMAC-signed events on play, complete, CTA click and new lead — wire up any CRM.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-playlists.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-playlists.png" alt="" width="360" height="267"></picture>
-        <h3>Playlists</h3>
-        <p>Public collection pages with a queue and autoplay-next.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-seo.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-seo.png" alt="" width="360" height="313"></picture>
-        <h3>SEO video pages</h3>
-        <p>Open Graph, Twitter player cards and VideoObject JSON-LD out of the box.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-miniplayer.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-miniplayer.png" alt="" width="360" height="322"></picture>
-        <h3>Sticky miniplayer</h3>
-        <p>Playback follows the reader down the page when the player scrolls out of view.</p></div>
-      <div class="card feature"><picture><source type="image/webp" srcset="/brand/ill-hotkeys.webp"><img class="feature-art" loading="lazy" decoding="async" src="/brand/ill-hotkeys.png" alt="" width="360" height="238"></picture>
-        <h3>Hotkeys &amp; speed</h3>
-        <p>Space, J/K/L, arrows, M, F, C, P, digits to seek, and configurable playback speeds.</p></div>
+    <div class="lp-steps">
+      <div class="lp-step-list" id="steps">
+        <button class="lp-step" type="button" aria-expanded="true" data-step="0">
+          <span class="lp-step-no">Step 01</span>
+          <h3>Upload or link the video</h3>
+          <p>Drop an MP4 or WebM up to 200 MB, or point Videokr at an HLS, YouTube or Vimeo source and keep the file where it already lives.</p>
+        </button>
+        <button class="lp-step" type="button" aria-expanded="false" data-step="1">
+          <span class="lp-step-no">Step 02</span>
+          <h3>Brand it and add the gates</h3>
+          <p>Pick a skin, accent and logo, add chapters and captions, then set the email gate, CTAs, password or domain rules.</p>
+        </button>
+        <button class="lp-step" type="button" aria-expanded="false" data-step="2">
+          <span class="lp-step-no">Step 03</span>
+          <h3>Embed it and read the curve</h3>
+          <p>One line of script or a plain iframe on any site, then watch plays, completion, CTA clicks, leads and the second people quit.</p>
+        </button>
+      </div>
+      <div class="lp-step-art lp-reveal">
+        <picture>
+          <source type="image/webp" srcset="/brand/lp/app-upload.webp">
+          <img id="step-art" src="/brand/lp/app-upload.png" alt="Uploading a video in Videokr" width="536" height="357" loading="lazy" decoding="async">
+        </picture>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="section compare" id="compare">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="hand">the receipt →</span>
-      <h2>$69 once. Or <span class="ital">$948 every year.</span></h2>
-      <p class="section-lede">Competitor prices are their public list prices at the time of writing — check them yourself, they only go up.</p>
+<section class="lp-section" id="embed">
+  <div class="lp-wrap">
+    <div class="lp-head lp-reveal">
+      <span class="lp-eyebrow">Ten seconds of work</span>
+      <h2 class="lp-h2" style="text-align:center">Embed it in one line.</h2>
+      <p class="lp-lede" style="text-align:center">Drop the loader anywhere and it builds a responsive, lazy-loaded iframe. Or paste the iframe yourself.</p>
     </div>
-    <table>
-      <thead><tr><th>What you actually care about</th><th>YouTube embed</th><th>Wistia / Vidyard</th><th class="col-us">Videokr</th></tr></thead>
-      <tbody>
-        <tr><td>Cost</td><td class="no">Free</td><td class="no">$79–$329/mo</td><td class="col-us yes">$69 once</td></tr>
-        <tr><td>Your branding only</td><td class="no">—</td><td class="yes">✓</td><td class="col-us yes">✓</td></tr>
-        <tr><td>No suggested videos stealing viewers</td><td class="no">—</td><td class="yes">✓</td><td class="col-us yes">✓</td></tr>
-        <tr><td>Email capture inside the video</td><td class="no">—</td><td class="no">Higher tier</td><td class="col-us yes">✓</td></tr>
-        <tr><td>Second-by-second retention</td><td class="no">Channel only</td><td class="yes">✓</td><td class="col-us yes">✓</td></tr>
-        <tr><td>Password / domain-locked embeds</td><td class="no">—</td><td class="yes">✓</td><td class="col-us yes">✓</td></tr>
-        <tr><td>A/B thumbnails</td><td class="no">—</td><td class="no">Rare</td><td class="col-us yes">✓</td></tr>
-        <tr><td>Own the data</td><td class="no">—</td><td class="no">Vendor database</td><td class="col-us yes">Your account</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section class="section" id="embed">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">ten seconds of work →</span>
-      <h2>Embed it in one line.</h2>
-      <p class="section-lede">Drop the loader anywhere and it builds a responsive, lazy-loaded iframe. Or paste the iframe yourself.</p>
-    </div>
-    <div class="grid-2">
-      <div>
+    <div class="lp-cards-3" style="grid-template-columns:1fr 1fr">
+      <div class="lp-card lp-reveal">
         <h3>Script loader</h3>
-        <pre class="code-block">&lt;script src="https://your-host/embed.js"
+        <pre class="lp-code">&lt;script src="https://videokr.com/embed.js"
         data-video="vid_example"
         async&gt;&lt;/script&gt;</pre>
       </div>
-      <div>
+      <div class="lp-card lp-reveal lp-reveal-1">
         <h3>Plain iframe</h3>
-        <pre class="code-block">&lt;iframe src="https://your-host/e/vid_example"
+        <pre class="lp-code">&lt;iframe src="https://videokr.com/e/vid_example"
         allow="autoplay; fullscreen; picture-in-picture"
         allowfullscreen&gt;&lt;/iframe&gt;</pre>
       </div>
@@ -226,203 +339,395 @@
   </div>
 </section>
 
-<section class="section" id="wordpress">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="hand">for the 40% of the web →</span>
-      <h2>A WordPress plugin, <span class="ital">free with every plan.</span></h2>
-      <p class="section-lede">Connect once with an API key, then pick a video from your library inside the editor. The player, analytics and lead gates stay in Videokr, so one edit updates every site the video sits on.</p>
+<section class="lp-section" id="use-cases">
+  <div class="lp-wrap lp-head lp-reveal">
+    <span class="lp-eyebrow">Use cases</span>
+    <h2 class="lp-h2" style="text-align:center">Who is Videokr built for?</h2>
+  </div>
+  <div class="lp-rail" id="rail">
+    <div class="lp-rail-track" id="rail-track">
+      <article class="lp-use">
+        <div><h3>Creators</h3><p>Host your own videos, keep your branding, and stop paying rent on a player.</p></div>
+        <div class="lp-use-foot"><h4>10× more control</h4><p class="lp-small">Your videos. Your brand.</p></div>
+      </article>
+      <article class="lp-use lp-use-photo">
+        <picture><source type="image/webp" srcset="/brand/lp/aud-1-560.webp"><img src="/brand/lp/aud-1.jpg" alt="" width="380" height="420" loading="lazy" decoding="async"></picture>
+      </article>
+      <article class="lp-use">
+        <div><h3>Businesses &amp; teams</h3><p>Training, marketing and internal video on one platform, on your own domain.</p></div>
+        <div class="lp-use-foot"><h4>One platform</h4><p class="lp-small">Everything in one place.</p></div>
+      </article>
+      <article class="lp-use lp-use-photo">
+        <picture><source type="image/webp" srcset="/brand/lp/aud-3-560.webp"><img src="/brand/lp/aud-3.jpg" alt="" width="380" height="420" loading="lazy" decoding="async"></picture>
+      </article>
+      <article class="lp-use">
+        <div><h3>Agencies</h3><p>Password-locked client cuts, projects per client, and analytics you can hand over.</p></div>
+        <div class="lp-use-foot"><h4>Client-ready</h4><p class="lp-small">Locked, branded, exportable.</p></div>
+      </article>
+      <article class="lp-use lp-use-photo">
+        <picture><source type="image/webp" srcset="/brand/lp/aud-5-560.webp"><img src="/brand/lp/aud-5.jpg" alt="" width="380" height="420" loading="lazy" decoding="async"></picture>
+      </article>
+      <article class="lp-use">
+        <div><h3>Course &amp; SaaS teams</h3><p>Gate a lesson behind an email, chapter the long ones, and see where attention drops.</p></div>
+        <div class="lp-use-foot"><h4>Built to convert</h4><p class="lp-small">Gates, CTAs, retention.</p></div>
+      </article>
+      <article class="lp-use lp-use-photo">
+        <picture><source type="image/webp" srcset="/brand/lp/aud-7-560.webp"><img src="/brand/lp/aud-7.jpg" alt="" width="380" height="420" loading="lazy" decoding="async"></picture>
+      </article>
     </div>
-    <div class="grid-2">
-      <div>
-        <h3>Shortcode or block</h3>
-        <pre class="code-block">[videokr id="vid_example"]
-[videokr playlist="launch-week"]
-[videokr id="vid_example" width="640" ratio="16/9"
-         autoplay="true" muted="true" start="30"]</pre>
-        <p class="section-lede">Or insert the <b>Videokr</b> block and choose a video visually, with a live preview in the editor.</p>
-      </div>
-      <div>
-        <h3>Insights without leaving WordPress</h3>
-        <p class="section-lede">Plays this month against your allowance, all-time impressions, plays, completions, CTA clicks and leads, a 30-day plays chart, your most played videos and your latest form submissions — all on one admin screen.</p>
-        <p class="section-lede">Your API key stays on your server: the library is read server-side, never from a visitor's browser.</p>
-        <a class="btn btn-lg btn-wrap" href="/downloads/videokr-wordpress-plugin.zip" download>Download the plugin (.zip) ↓</a>
-        <p class="tiny">Requires WordPress 6.0+ and PHP 7.4+. Install via Plugins → Add New → Upload Plugin, then paste an API key from Videokr → Integrations.</p>
+  </div>
+</section>
+
+<section class="lp-section" id="wordpress">
+  <div class="lp-wrap">
+    <div class="lp-integrations lp-reveal">
+      <span class="lp-eyebrow" style="background:#fff">Integrations</span>
+      <h2 class="lp-h2" style="margin-top:20px">Connect with the tools you already use</h2>
+      <p class="lp-lede" style="margin:20px auto 0;max-width:30em">A free WordPress plugin, signed webhooks into any CRM,
+        and sources from wherever your video already lives.</p>
+      <a class="lp-btn lp-btn-blue" style="margin-top:32px" href="/downloads/videokr-wordpress-plugin.zip" download>
+        <span class="lp-btn-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13M6 13l6 6 6-6"/></svg></span>
+        Download the WordPress plugin
+      </a>
+      <div class="lp-orbit">
+        <span class="lp-orbit-node" style="left:8%;top:60px;animation-delay:.2s"><span>WP</span></span>
+        <span class="lp-orbit-node" style="left:24%;top:10px;animation-delay:1.1s"><span>MP4</span></span>
+        <span class="lp-orbit-node" style="right:24%;top:14px;animation-delay:.6s"><span>HLS</span></span>
+        <span class="lp-orbit-node" style="right:6%;top:70px;animation-delay:1.6s"><span>CSV</span></span>
+        <span class="lp-orbit-node" style="left:14%;top:180px;animation-delay:.9s">
+          <svg viewBox="0 0 24 24" fill="#1d1d1d" aria-hidden="true"><path d="M21.6 7.2a2.6 2.6 0 0 0-1.8-1.8C18.1 5 12 5 12 5s-6.1 0-7.8.4A2.6 2.6 0 0 0 2.4 7.2C2 8.9 2 12 2 12s0 3.1.4 4.8a2.6 2.6 0 0 0 1.8 1.8C5.9 19 12 19 12 19s6.1 0 7.8-.4a2.6 2.6 0 0 0 1.8-1.8c.4-1.7.4-4.8.4-4.8s0-3.1-.4-4.8ZM10 15.2V8.8l5.5 3.2L10 15.2Z"/></svg>
+        </span>
+        <span class="lp-orbit-node" style="right:14%;top:186px;animation-delay:1.4s"><span>API</span></span>
+        <span class="lp-orbit-core" aria-hidden="true"><img src="/brand/mark-flat.png" alt="" width="62" height="62" loading="lazy" decoding="async"></span>
+        <p class="lp-orbit-caption">Integrate everywhere you work</p>
+        <img class="lp-orbit-hills" src="/brand/lp/hills-1600.webp" alt="" width="1220" height="321" loading="lazy" decoding="async" aria-hidden="true">
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="pricing">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="eyebrow">pay for plays, not for storage →</span>
-      <h2>Unlimited videos. You only pay for plays.</h2>
-      <p class="section-lede">Every plan carries unlimited videos and unlimited bandwidth — no metered egress, ever. Extra plays are $1 per 10,000.</p>
+<section class="lp-section" id="whyus">
+  <div class="lp-wrap">
+    <div class="lp-bento lp-bento-mini lp-bento-duo" style="margin-bottom:60px">
+      <div class="lp-tile lp-reveal">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label">Video hosting</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-video.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div><p class="lp-stat">Unlimited</p><p>Videos and embeds on every plan.</p></div>
+      </div>
+      <div class="lp-tile lp-tile-dark lp-reveal lp-reveal-1">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label">Pricing</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-chart.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div><p class="lp-stat">$0 monthly</p><p>Lifetime licence. One payment, no renewal.</p></div>
+      </div>
     </div>
-    <div class="price-grid">
-      <div class="card price-card">
-        <h3>Free</h3>
-        <div class="price">$0</div>
-        <p class="price-inr">forever · no card · no expiry</p>
-        <ul class="price-list">
-          <li>500 plays / month</li>
-          <li>5 videos, 2 GB storage</li>
-          <li>200 MB per video upload · 5 MB per image</li>
-          <li>Full player, analytics and lead capture</li>
-          <li>Small Videokr badge on the player</li>
-        </ul>
-        <a class="btn btn-ghost" id="free-cta" href="/login.html?mode=signup">Start free →</a>
+    <div class="lp-head lp-reveal">
+      <span class="lp-eyebrow">Why Videokr</span>
+      <h2 class="lp-h2" style="text-align:center">Everything you need to host videos</h2>
+      <p class="lp-lede" style="text-align:center">Host, manage and share your videos with the tools you need.</p>
+    </div>
+    <div class="lp-bento lp-bento-mini" style="margin-top:60px">
+      <div class="lp-tile lp-tile-dark lp-reveal">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label">Video player</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-lock.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div><p class="lp-stat">100% branded</p><p>Your brand. No ads. No suggested videos.</p></div>
       </div>
-      <div class="card price-card">
-        <h3>Starter</h3>
-        <div class="price">$29<span style="font-size:.42em"> /year</span></div>
-        <p class="price-inr">or $5 month-to-month</p>
-        <ul class="price-list">
-          <li>10,000 plays / month</li>
-          <li>Unlimited videos, 25 GB storage</li>
-          <li>Badge off — your logo only</li>
-          <li>Lead capture, CTAs, webhooks, A/B tests</li>
-        </ul>
-        <a class="btn btn-ghost" id="starter-cta" href="/login.html?mode=signup&amp;intent=starter">Get Starter →</a>
+      <div class="lp-tile lp-tile-blue lp-reveal lp-reveal-1">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label">Video analytics</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-rocket.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div><p class="lp-stat">Second by second</p><p>Know exactly how your videos perform.</p></div>
       </div>
-      <div class="card price-card">
-        <h3>Agency</h3>
-        <div class="price">$29<span style="font-size:.42em"> /month</span></div>
-        <p class="price-inr">or $290 a year</p>
-        <ul class="price-list">
-          <li>150,000 plays / month</li>
-          <li>Unlimited videos, 250 GB storage</li>
-          <li>Everything in Starter, for client work</li>
-          <li>Projects, playlists and SEO video pages</li>
-        </ul>
-        <a class="btn btn-ghost" id="agency-cta" href="/login.html?mode=signup&amp;intent=agency">Get Agency →</a>
-      </div>
-      <div class="card price-card hot">
-        <h3>Lifetime</h3>
-        <div class="price" id="price-usd">$69 <s>$79</s></div>
-        <p class="price-inr" id="price-inr">₹5,999 · one payment · yours forever</p>
-        <p class="tiny" id="price-off">$10 off applied at checkout — no code to type</p>
-        <ul class="price-list">
-          <li>10,000 plays / month, forever</li>
-          <li>Unlimited videos, 25 GB storage</li>
-          <li>Badge off — your logo only</li>
-          <li>Every feature we ship from here on</li>
-          <li>Export your videos, leads and analytics any time</li>
-        </ul>
-        <a class="btn btn-lg btn-wrap" id="lifetime-cta" href="/login.html?mode=signup&amp;intent=lifetime">Claim a lifetime seat →</a>
-        <div class="seats"><i id="seat-bar" style="width:0%"></i></div>
-        <p class="ladder" id="seat-line"><span>100 seats at this price</span><span>·</span><span>then <b>$99</b></span><span>·</span><span>then <b>$149</b></span></p>
+      <div class="lp-tile lp-reveal lp-reveal-2">
+        <div class="lp-tile-top">
+          <span class="lp-tile-label">Video management</span>
+          <span class="lp-tile-icon"><img src="/brand/lp/prop-folder.png" alt="" width="24" height="24" loading="lazy" decoding="async"></span>
+        </div>
+        <div><p class="lp-stat">1 platform</p><p>Upload, manage, embed &amp; share.</p></div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="learn">
-  <div class="wrap">
-    <div class="section-head">
-      <span class="hand">learn the craft →</span>
-      <h2>Documentation, guides and honest comparisons.</h2>
-      <p class="section-lede">Everything we know about hosting video for a marketing site — how to embed it, how to make it rank,
-        how to capture leads inside it, how to read a retention curve, and where Videokr is the wrong tool.</p>
+<section class="lp-loved" id="reviews">
+  <div class="lp-loved-bg" aria-hidden="true"></div>
+  <div class="lp-loved-fade" aria-hidden="true"></div>
+  <div class="lp-wrap">
+    <div class="lp-loved-head lp-reveal">
+      <h2 class="lp-h2">Loved by creators &amp; businesses building with video</h2>
+      <a class="lp-btn lp-btn-dark" href="/login.html?mode=signup">Get started today
+        <span class="lp-btn-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </a>
     </div>
-    <ul class="learn-grid">
-      <li><a href="/answers"><b>Answers</b><span>Direct answers to what Videokr is, who it is for, pricing and plays, formats and limits, analytics, WordPress, privacy and video SEO.</span></a></li>
-      <li><a href="/docs"><b>Documentation</b><span>Embeds, player branding, sources, chapters and captions, CTAs, playlists, analytics, privacy, webhooks and how plays are counted.</span></a></li>
-      <li><a href="/guides"><b>Guides</b><span>Video hosting for WordPress, embedding video on a website, video SEO, landing pages, lead capture, private video, choosing a platform.</span></a></li>
-      <li><a href="/compare"><b>Comparisons</b><span>Videokr against Wistia, Vidyard, Vimeo, a YouTube embed, WordPress player plugins and self-hosting.</span></a></li>
-      <li><a href="/blog"><b>Blog</b><span>Demo structure, video SEO checklists, page speed, thumbnails, AI search and why we meter plays instead of bandwidth.</span></a></li>
-    </ul>
-    <p class="learn-links">Popular:
-      <a href="/answers/what-is-videokr">what is Videokr</a>,
-      <a href="/guides/video-hosting-for-wordpress">video hosting for WordPress</a>,
-      <a href="/guides/embed-video-on-website">embedding video on a website</a>,
-      <a href="/guides/video-seo">video SEO</a>,
-      <a href="/guides/video-lead-capture">video lead capture</a>,
-      <a href="/guides/best-video-hosting">choosing a video host</a>,
-      <a href="/docs/quickstart">quickstart</a>.</p>
+    <!-- Reviews: the layout is here, the content is deliberately empty until real,
+         attributable customer quotes exist. Replace each .lp-quote-empty with a
+         quote, a name and a role — nothing invented goes on this page. -->
+    <div class="lp-quote-row">
+      <div class="lp-quote lp-quote-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4Z"/></svg>
+        <p class="lp-small">Customer reviews land here as soon as we have real ones to quote.</p>
+      </div>
+      <div class="lp-quote lp-quote-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4Z"/></svg>
+        <p class="lp-small">Used Videokr on a launch? <a href="mailto:hello@videokr.com" style="color:#3b82f6">Tell us how it went.</a></p>
+      </div>
+      <div class="lp-quote lp-quote-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4Z"/></svg>
+        <p class="lp-small">Until then, the free tier is the honest way to judge it.</p>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="section" id="faq">
-  <div class="wrap faq-wrap">
-    <div class="section-head">
-      <span class="hand">things people ask →</span>
-      <h2>Straight answers.</h2>
+<section class="lp-section" id="compare">
+  <div class="lp-wrap">
+    <div class="lp-head lp-reveal">
+      <span class="lp-eyebrow">The receipt</span>
+      <h2 class="lp-h2" style="text-align:center">$69 once. Or $948 every year.</h2>
+      <p class="lp-lede" style="text-align:center">Competitor prices are their public list prices at the time of writing — check them yourself, they only go up.</p>
     </div>
-    <details class="faq" open><summary>What is Videokr?</summary>
-      <p>Videokr is hosted video for marketing sites. You upload an MP4 or WebM, or link an HLS, YouTube or Vimeo source; Videokr stores and delivers it and plays it in your own branded player — your logo, your colours, no vendor branding on paid plans — on any site, through an iframe or script embed. The player carries chapters, captions, CTAs, end screens and an email form, and every play is measured second by second so you can see exactly where viewers stop. It starts free forever for 500 plays a month, or $69 once — $10 off $79 — for 10,000 plays a month. <a href="/answers/what-is-videokr">More on what Videokr is (and what it isn't)</a>.</p></details>
-    <details class="faq"><summary>Is the free tier a trial?</summary>
-      <p>No timer and no card. 5 videos and 500 plays a month, for as long as you want. Upgrade when you outgrow it, or never.</p></details>
-    <details class="faq"><summary>What counts as a play?</summary>
-      <p>One viewer starting one video, counted once per video per month — a viewer who reloads or rewatches the same video that month is not counted again. Free stops at 500 plays until the month rolls over; paid plans keep playing and any extra plays are billed at $1 per 10,000.</p></details>
-    <details class="faq"><summary>Why no refunds?</summary>
-      <p>Because the free tier lets you test every feature first, at no cost. Once the lifetime licence is issued it's yours and all sales are final; it carries a 1 year warranty.</p></details>
-    <details class="faq"><summary>What happens after 100 seats?</summary>
-      <p>The price steps to $99, then $149. If you already bought, nothing changes — ever.</p></details>
-    <details class="faq"><summary>Where are the videos stored, and will bandwidth bill me?</summary>
-      <p>On our own global storage and delivery network, close to your viewers — or you can simply link a YouTube, Vimeo, MP4 or HLS source and keep the file where it already lives. Bandwidth is on us: there is no metered egress charge on any plan, and the free tier's monthly play allowance is the only ceiling.</p></details>
-    <details class="faq"><summary>How large can an upload be?</summary>
-      <p>Up to <b>200 MB per video file</b> (MP4 or WebM), and up to <b>5 MB per image</b> for thumbnails and your player logo. Larger videos are no problem either — host them anywhere and link the MP4, WebM, HLS, YouTube or Vimeo source instead, and the Videokr player plays it as your own.</p></details>
-    <details class="faq"><summary>Does it work with WordPress?</summary>
-      <p>Yes — the <a href="/downloads/videokr-wordpress-plugin.zip" download>Videokr plugin</a> is free on every plan, including the free tier. It adds a shortcode and a Gutenberg block that embed your hosted videos and playlists, plus an Insights screen showing your usage, plays over the last 30 days, most played videos and leads. Nothing is uploaded into WordPress, so your hosting space and bandwidth stay untouched, and plays count against your Videokr plan exactly as they do on any other site.</p></details>
-    <details class="faq"><summary>Am I locked in?</summary>
-      <p>No. We host everything for you — no servers, no setup, nothing to maintain — and you can export your videos, leads and analytics whenever you want, so the data stays yours.</p></details>
+    <div class="lp-table-wrap lp-reveal">
+      <table class="lp-table">
+        <thead><tr><th>What you actually care about</th><th>YouTube embed</th><th>Wistia / Vidyard</th><th class="lp-us">Videokr</th></tr></thead>
+        <tbody>
+          <tr><td>Cost</td><td>Free</td><td>$79–$329/mo</td><td class="lp-us">$69 once</td></tr>
+          <tr><td>Your branding only</td><td>—</td><td>✓</td><td class="lp-us">✓</td></tr>
+          <tr><td>No suggested videos stealing viewers</td><td>—</td><td>✓</td><td class="lp-us">✓</td></tr>
+          <tr><td>Email capture inside the video</td><td>—</td><td>Higher tier</td><td class="lp-us">✓</td></tr>
+          <tr><td>Second-by-second retention</td><td>Channel only</td><td>✓</td><td class="lp-us">✓</td></tr>
+          <tr><td>Password / domain-locked embeds</td><td>—</td><td>✓</td><td class="lp-us">✓</td></tr>
+          <tr><td>A/B thumbnails</td><td>—</td><td>Rare</td><td class="lp-us">✓</td></tr>
+          <tr><td>Own the data</td><td>—</td><td>Vendor database</td><td class="lp-us">Your account</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </section>
 
-<section class="section final">
-  <div class="wrap">
-    <span class="hand">last thing →</span>
-    <h2 style="max-width:22em;margin:10px auto 16px">Your video is doing marketing for someone else right now.</h2>
-    <p class="section-lede" style="margin:0 auto 26px">Take it back in ten minutes. Free tier, no card. Lifetime if you like it.</p>
-    <a class="btn btn-lg" id="final-cta" href="/login.html?mode=signup">Start free — no card →</a>
+<section class="lp-section" id="pricing">
+  <div class="lp-wrap">
+    <div class="lp-head lp-reveal">
+      <span class="lp-eyebrow">Subscription plans</span>
+      <h2 class="lp-h2" style="text-align:center">Transparent pricing without hidden fees</h2>
+      <p class="lp-lede" style="text-align:center">Unlimited videos and unlimited bandwidth on every plan — you only pay for plays. Extra plays are $1 per 10,000.</p>
+      <div class="lp-toggle">
+        <span>Monthly</span>
+        <button class="lp-switch" type="button" id="billing-switch" role="switch" aria-checked="false" aria-label="Show yearly prices"><i></i></button>
+        <span>Yearly</span>
+        <span class="lp-save">save up to 52%</span>
+      </div>
+    </div>
+    <div class="lp-plans lp-reveal">
+      <div class="lp-plan-row">
+        <div class="lp-plan">
+          <div class="lp-plan-top"><h3>Free</h3></div>
+          <p class="lp-small">Best for trying every feature first</p>
+          <p class="lp-price">$0<small> forever</small></p>
+          <a class="lp-btn lp-btn-dark" id="free-cta" href="/login.html?mode=signup">Start free</a>
+          <ul class="lp-check">
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>500 plays / month</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>5 videos, 2 GB storage</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Full player, analytics &amp; lead capture</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Small Videokr badge on the player</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>No card, no expiry</li>
+          </ul>
+        </div>
+        <div class="lp-plan">
+          <div class="lp-plan-top"><h3>Starter plan</h3></div>
+          <p class="lp-small">Best for creators &amp; small businesses</p>
+          <p class="lp-price"><span data-price="starter">$5</span><small data-period="starter"> /month</small></p>
+          <a class="lp-btn lp-btn-dark" id="starter-cta" href="/login.html?mode=signup&amp;intent=starter">Get started</a>
+          <ul class="lp-check">
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>10,000 plays / month</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Unlimited videos, 25 GB storage</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Your logo, no Videokr badge</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Lead capture, CTAs, webhooks, A/B tests</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Email support</li>
+          </ul>
+        </div>
+        <div class="lp-plan lp-plan-dark">
+          <div class="lp-plan-top"><h3>Agency plan</h3><span class="lp-badge">Popular</span></div>
+          <p class="lp-small">Best for agencies &amp; growing businesses</p>
+          <p class="lp-price"><span data-price="agency">$29</span><small data-period="agency"> /month</small></p>
+          <a class="lp-btn lp-btn-white" id="agency-cta" href="/login.html?mode=signup&amp;intent=agency">Get started</a>
+          <ul class="lp-check">
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>150,000 plays / month</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Unlimited videos, 250 GB storage</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Everything in Starter, for client work</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Projects, playlists &amp; SEO video pages</li>
+            <li><svg viewBox="0 0 12 20" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l8 8-8 8"/></svg>Priority support</li>
+          </ul>
+        </div>
+      </div>
+      <p class="lp-plan-note"><span>No hidden fees</span><span aria-hidden="true">•</span><span>No credit card required</span><span aria-hidden="true">•</span><span>Cancel anytime</span></p>
+    </div>
+    <div class="lp-lifetime lp-reveal">
+      <img class="lp-lifetime-art" src="/brand/lp/dandelions.webp" alt="" width="454" height="180" loading="lazy" decoding="async" aria-hidden="true">
+      <div style="display:grid;gap:10px;max-width:30em">
+        <h3 class="lp-h3">Lifetime plan</h3>
+        <p class="lp-lede">Pay once. Own it forever.</p>
+        <p class="lp-price" id="price-usd">$69 <s>$79</s></p>
+        <p class="lp-small" id="price-inr">₹5,999 · one payment · yours forever</p>
+        <p class="lp-small" id="price-off">$10 off applied at checkout — no code to type</p>
+        <div class="lp-seats"><i id="seat-bar" style="width:0%"></i></div>
+        <p class="lp-small" id="seat-line">100 seats at this price · then $99 · then $149</p>
+      </div>
+      <a class="lp-btn lp-btn-dark" id="lifetime-cta" href="/login.html?mode=signup&amp;intent=lifetime">Claim lifetime access
+        <span class="lp-btn-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" id="learn">
+  <div class="lp-wrap">
+    <div class="lp-head lp-reveal">
+      <span class="lp-eyebrow">Library</span>
+      <h2 class="lp-h2" style="text-align:center">Documentation, guides and honest comparisons.</h2>
+      <p class="lp-lede" style="text-align:center">Everything we know about hosting video for a marketing site — including where Videokr is the wrong tool.</p>
+    </div>
+    <div class="lp-cards-3">
+      <a class="lp-card lp-reveal" href="/answers"><h3>Answers</h3><p>What Videokr is, who it is for, pricing and plays, formats and limits, analytics, WordPress, privacy and video SEO.</p></a>
+      <a class="lp-card lp-reveal lp-reveal-1" href="/docs"><h3>Documentation</h3><p>Embeds, player branding, sources, chapters and captions, CTAs, playlists, analytics, privacy and webhooks.</p></a>
+      <a class="lp-card lp-reveal lp-reveal-2" href="/guides"><h3>Guides</h3><p>WordPress, embedding video on a website, video SEO, landing pages, lead capture, private video.</p></a>
+      <a class="lp-card lp-reveal" href="/compare"><h3>Comparisons</h3><p>Videokr against Wistia, Vidyard, Vimeo, a YouTube embed, WordPress plugins and self-hosting.</p></a>
+      <a class="lp-card lp-reveal lp-reveal-1" href="/blog"><h3>Blog</h3><p>Demo structure, video SEO checklists, page speed, thumbnails, AI search and why we meter plays.</p></a>
+      <a class="lp-card lp-reveal lp-reveal-2" href="/v/videokr-the-product-film"><h3>Product film</h3><p>The two-minute walkthrough, hosted on Videokr itself, with chapters and captions.</p></a>
+    </div>
+  </div>
+</section>
+
+<section class="lp-section" id="faq">
+  <div class="lp-wrap lp-faq-grid">
+    <div class="lp-faq-aside lp-reveal">
+      <h2 class="lp-h2">Frequently asked questions</h2>
+      <p class="lp-lede">Straight answers about Videokr, pricing, video hosting and features.</p>
+      <div class="lp-faq-card">
+        <div class="lp-faces" aria-hidden="true">
+          <span class="lp-face">V</span><span class="lp-face">K</span><span class="lp-face" style="background:var(--dark)">+</span><span class="lp-face">You</span>
+        </div>
+        <h3 class="lp-h4">Still have questions?</h3>
+        <p class="lp-small">Reach out and we will answer it ourselves.</p>
+        <a class="lp-btn lp-btn-dark" href="mailto:hello@videokr.com">Talk to our team
+          <span class="lp-btn-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+        </a>
+      </div>
+    </div>
+    <div class="lp-faq-list">
+      <details class="lp-faq" open><summary>What is Videokr?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>Videokr is hosted video for marketing sites. You upload an MP4 or WebM, or link an HLS, YouTube or Vimeo source; Videokr stores and delivers it and plays it in your own branded player — your logo, your colours, no vendor branding on paid plans — on any site, through an iframe or script embed. The player carries chapters, captions, CTAs, end screens and an email form, and every play is measured second by second so you can see exactly where viewers stop. It starts free forever for 500 plays a month, or $69 once — $10 off $79 — for 10,000 plays a month. <a href="/answers/what-is-videokr">More on what Videokr is (and what it isn't)</a>.</p></details>
+      <details class="lp-faq"><summary>Is the free tier a trial?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>No timer and no card. 5 videos and 500 plays a month, for as long as you want. Upgrade when you outgrow it, or never.</p></details>
+      <details class="lp-faq"><summary>What counts as a play?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>One viewer starting one video, counted once per video per month — a viewer who reloads or rewatches the same video that month is not counted again. Free stops at 500 plays until the month rolls over; paid plans keep playing and any extra plays are billed at $1 per 10,000.</p></details>
+      <details class="lp-faq"><summary>Does Videokr offer a lifetime plan?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>Yes — $69 once, $10 off the $79 list price, for 10,000 plays a month forever, unlimited videos, 25 GB storage and no vendor badge. The launch price steps to $99 and then $149 after the first 100 seats; if you already bought, nothing changes, ever. All lifetime sales are final and carry a 1 year warranty.</p></details>
+      <details class="lp-faq"><summary>Can I host unlimited videos?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>Every paid plan carries unlimited videos and unlimited embeds; storage is the only ceiling (25 GB on Starter and Lifetime, 250 GB on Agency), and uploads are up to 200 MB per file. Larger videos can live anywhere else and be linked as an MP4, WebM, HLS, YouTube or Vimeo source, and the Videokr player still plays them as your own.</p></details>
+      <details class="lp-faq"><summary>Where are the videos stored, and will bandwidth bill me?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>On our own global storage and delivery network, close to your viewers — or you can simply link a YouTube, Vimeo, MP4 or HLS source and keep the file where it already lives. Bandwidth is on us: there is no metered egress charge on any plan, and the free tier's monthly play allowance is the only ceiling.</p></details>
+      <details class="lp-faq"><summary>Can I embed Videokr videos on my website?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>Yes, on as many sites and pages as you like: one line of script that builds a responsive lazy-loaded iframe, or a plain iframe you paste yourself. Embeds can be locked to a password or a domain allow-list, and playlists embed the same way.</p></details>
+      <details class="lp-faq"><summary>Does it work with WordPress?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>Yes — the <a href="/downloads/videokr-wordpress-plugin.zip" download>Videokr plugin</a> is free on every plan, including the free tier. It adds a shortcode and a Gutenberg block that embed your hosted videos and playlists, plus an Insights screen showing your usage, plays over the last 30 days, most played videos and leads. Nothing is uploaded into WordPress, so your hosting space and bandwidth stay untouched, and plays count against your Videokr plan exactly as they do on any other site.</p></details>
+      <details class="lp-faq"><summary>Am I locked in?<span class="lp-faq-sign" aria-hidden="true"></span></summary>
+        <p>No. We host everything for you — no servers, no setup, nothing to maintain — and you can export your videos, leads and analytics whenever you want, so the data stays yours.</p></details>
+    </div>
   </div>
 </section>
 
 </main>
 
-<footer class="footer">
-  <div class="wrap row spread row-wrap">
-    <span>© Videokr — video hosting you actually own.</span>
-    <nav class="social" aria-label="Videokr on social">
-      <a href="https://www.youtube.com/@videokr-s7z" target="_blank" rel="noopener" title="YouTube" aria-label="Videokr on YouTube">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2a2.6 2.6 0 0 0-1.8-1.8C18.1 5 12 5 12 5s-6.1 0-7.8.4A2.6 2.6 0 0 0 2.4 7.2C2 8.9 2 12 2 12s0 3.1.4 4.8a2.6 2.6 0 0 0 1.8 1.8C5.9 19 12 19 12 19s6.1 0 7.8-.4a2.6 2.6 0 0 0 1.8-1.8c.4-1.7.4-4.8.4-4.8s0-3.1-.4-4.8ZM10 15.2V8.8l5.5 3.2L10 15.2Z"/></svg>
+<section class="lp-final">
+  <div class="lp-final-bg" aria-hidden="true"></div>
+  <div class="lp-final-fade" aria-hidden="true"></div>
+  <div class="lp-wrap">
+    <h2>Ready to host smarter?</h2>
+    <p class="lp-lede-lg" style="margin:20px auto 0;max-width:26em">Host, manage and share your videos without the expensive monthly subscriptions.</p>
+    <div class="lp-final-actions">
+      <a class="lp-btn lp-btn-blue" id="final-cta" href="/login.html?mode=signup">Start free — no card
+        <span class="lp-btn-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
       </a>
-      <a href="https://www.instagram.com/videokrmaker/" target="_blank" rel="noopener" title="Instagram" aria-label="Videokr on Instagram">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>
-      </a>
-      <a href="https://www.facebook.com/profile.php?id=61593628350806" target="_blank" rel="noopener" title="Facebook" aria-label="Videokr on Facebook">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7.1h2.5l.4-2.9h-2.9V9.1c0-.8.2-1.4 1.4-1.4h1.5V5.1A20 20 0 0 0 14.2 5c-2.2 0-3.7 1.3-3.7 3.8V11H8v2.9h2.5V21h3Z"/></svg>
-      </a>
-      <a href="https://www.pinterest.com/videokr/" target="_blank" rel="noopener" title="Pinterest" aria-label="Videokr on Pinterest">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 0 0-3.3 17.4c-.1-.8-.2-2 0-2.9l1.1-4.6s-.3-.6-.3-1.4c0-1.4.8-2.4 1.8-2.4.8 0 1.2.6 1.2 1.4 0 .9-.6 2.2-.9 3.4-.2 1 .5 1.9 1.6 1.9 1.9 0 3.2-2.4 3.2-5.2 0-2.2-1.5-3.8-4.1-3.8-3 0-4.8 2.2-4.8 4.6 0 .9.3 1.6.7 2 .1.2.1.3.1.4l-.2 1c-.1.3-.2.4-.5.2-1.2-.5-1.9-2.1-1.9-3.4 0-2.8 2.2-6 6.5-6 3.5 0 5.8 2.5 5.8 5.2 0 3.6-2 6.3-5 6.3-1 0-2-.6-2.3-1.2l-.7 2.5c-.2.8-.7 1.7-1.1 2.3A9 9 0 1 0 12 3Z"/></svg>
-      </a>
-      <a href="https://www.reddit.com/user/videokr/" target="_blank" rel="noopener" title="Reddit" aria-label="Videokr on Reddit">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 11.6a2 2 0 0 0-3.4-1.4c-1.3-.9-3.1-1.4-5-1.5l1-3 2.7.6a1.6 1.6 0 1 0 .2-1.2l-3.4-.8a.6.6 0 0 0-.7.4l-1.3 4c-2 .1-3.9.6-5.3 1.5A2 2 0 0 0 2 13.1c0 .8.4 1.4 1 1.8v.5C3 18.4 7 20.5 12 20.5s9-2.1 9-5.1v-.5c.6-.4 1-1.1 1-1.9v-1.4ZM8.3 13.3a1.3 1.3 0 1 1 1.3 1.3 1.3 1.3 0 0 1-1.3-1.3Zm7.5 4c-1 1-2.5 1.3-3.8 1.3s-2.8-.3-3.8-1.3a.5.5 0 0 1 .7-.7c.7.7 2 1 3.1 1s2.4-.3 3.1-1a.5.5 0 0 1 .7.7Zm-.4-2.7a1.3 1.3 0 1 1 1.3-1.3 1.3 1.3 0 0 1-1.3 1.3Z"/></svg>
-      </a>
-      <a href="https://www.producthunt.com/products/videokr" target="_blank" rel="noopener" title="Product Hunt" aria-label="Videokr on Product Hunt">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 17V7h3.2a2.9 2.9 0 0 1 0 5.8H10"/></svg>
-      </a>
-      <a href="https://x.com/videokrofficial" target="_blank" rel="noopener" title="X" aria-label="Videokr on X">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 3h3.1l-6.8 7.8L21.5 21h-5.4l-4.2-5.6L6.9 21H3.8l7.1-8.1L3 3h5.5l3.9 5.2L17.5 3Zm-1.1 16h1.7L7.6 4.7H5.8L16.4 19Z"/></svg>
-      </a>
-      <a href="https://www.linkedin.com/company/videokr-official/" target="_blank" rel="noopener" title="LinkedIn" aria-label="Videokr on LinkedIn">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.1 8.6H3.3V21h2.8V8.6ZM4.7 3a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4ZM21 14.2c0-3.2-1.7-4.7-4-4.7a3.5 3.5 0 0 0-3.1 1.7V8.6H8.4V21h2.8v-6.5c0-1.5.6-2.5 2-2.5s1.9.9 1.9 2.5V21H21v-6.8Z"/></svg>
-      </a>
-    </nav>
-    <nav class="foot-links" aria-label="Videokr library">
-      <a href="/answers">Answers</a>
-      <a href="/docs">Docs</a>
-      <a href="/guides">Guides</a>
-      <a href="/compare">Comparisons</a>
-      <a href="/blog">Blog</a>
-      <a href="/v/videokr-the-product-film">Product film</a>
-      <a href="/downloads/videokr-wordpress-plugin.zip" download>WordPress plugin</a>
-    </nav>
-    <span class="tiny">Free tier forever · all lifetime sales final, 1 year warranty · using the YouTube source mode? keep YouTube's terms in mind and prefer own-media mode for branding-critical embeds.</span>
+      <a class="lp-btn lp-btn-white" href="#demo">Try the live demo</a>
+    </div>
+    <footer class="lp-footer">
+      <div class="lp-footer-grid">
+        <div class="lp-footer-brand">
+          <img src="/brand/logo-ink.png" alt="Videokr" width="200" height="55" loading="lazy" decoding="async">
+          <p>Hosted video for marketing sites — your player, your leads, your retention data.</p>
+          <a class="lp-btn lp-btn-dark" href="mailto:hello@videokr.com">hello@videokr.com</a>
+        </div>
+        <div>
+          <h4>Quick links</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how">How it works</a></li>
+            <li><a href="#use-cases">Use cases</a></li>
+            <li><a href="#wordpress">Integrations</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Library</h4>
+          <ul>
+            <li><a href="/answers">Answers</a></li>
+            <li><a href="/docs">Docs</a></li>
+            <li><a href="/guides">Guides</a></li>
+            <li><a href="/compare">Comparisons</a></li>
+            <li><a href="/blog">Blog</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Support</h4>
+          <ul>
+            <li><a href="#faq">FAQs</a></li>
+            <li><a href="/docs/quickstart">Quickstart</a></li>
+            <li><a href="/downloads/videokr-wordpress-plugin.zip" download>WordPress plugin</a></li>
+            <li><a href="/v/videokr-the-product-film">Product film</a></li>
+            <li><a href="/privacy">Privacy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="lp-footer-rule" aria-hidden="true"></div>
+      <div class="lp-footer-base">
+        <p>© Videokr — video hosting you actually own.</p>
+        <nav class="lp-social" aria-label="Videokr on social">
+          <a href="https://www.youtube.com/@videokr-s7z" target="_blank" rel="noopener" title="YouTube" aria-label="Videokr on YouTube">
+            <svg viewBox="0 0 24 24"><path d="M21.6 7.2a2.6 2.6 0 0 0-1.8-1.8C18.1 5 12 5 12 5s-6.1 0-7.8.4A2.6 2.6 0 0 0 2.4 7.2C2 8.9 2 12 2 12s0 3.1.4 4.8a2.6 2.6 0 0 0 1.8 1.8C5.9 19 12 19 12 19s6.1 0 7.8-.4a2.6 2.6 0 0 0 1.8-1.8c.4-1.7.4-4.8.4-4.8s0-3.1-.4-4.8ZM10 15.2V8.8l5.5 3.2L10 15.2Z"/></svg>
+          </a>
+          <a href="https://www.instagram.com/videokrmaker/" target="_blank" rel="noopener" title="Instagram" aria-label="Videokr on Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>
+          </a>
+          <a href="https://x.com/videokrofficial" target="_blank" rel="noopener" title="X" aria-label="Videokr on X">
+            <svg viewBox="0 0 24 24"><path d="M17.5 3h3.1l-6.8 7.8L21.5 21h-5.4l-4.2-5.6L6.9 21H3.8l7.1-8.1L3 3h5.5l3.9 5.2L17.5 3Zm-1.1 16h1.7L7.6 4.7H5.8L16.4 19Z"/></svg>
+          </a>
+          <a href="https://www.linkedin.com/company/videokr-official/" target="_blank" rel="noopener" title="LinkedIn" aria-label="Videokr on LinkedIn">
+            <svg viewBox="0 0 24 24"><path d="M6.1 8.6H3.3V21h2.8V8.6ZM4.7 3a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 0 0 0-3.4ZM21 14.2c0-3.2-1.7-4.7-4-4.7a3.5 3.5 0 0 0-3.1 1.7V8.6H8.4V21h2.8v-6.5c0-1.5.6-2.5 2-2.5s1.9.9 1.9 2.5V21H21v-6.8Z"/></svg>
+          </a>
+          <a href="https://www.facebook.com/profile.php?id=61593628350806" target="_blank" rel="noopener" title="Facebook" aria-label="Videokr on Facebook">
+            <svg viewBox="0 0 24 24"><path d="M13.5 21v-7.1h2.5l.4-2.9h-2.9V9.1c0-.8.2-1.4 1.4-1.4h1.5V5.1A20 20 0 0 0 14.2 5c-2.2 0-3.7 1.3-3.7 3.8V11H8v2.9h2.5V21h3Z"/></svg>
+          </a>
+          <a href="https://www.pinterest.com/videokr/" target="_blank" rel="noopener" title="Pinterest" aria-label="Videokr on Pinterest">
+            <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-3.3 17.4c-.1-.8-.2-2 0-2.9l1.1-4.6s-.3-.6-.3-1.4c0-1.4.8-2.4 1.8-2.4.8 0 1.2.6 1.2 1.4 0 .9-.6 2.2-.9 3.4-.2 1 .5 1.9 1.6 1.9 1.9 0 3.2-2.4 3.2-5.2 0-2.2-1.5-3.8-4.1-3.8-3 0-4.8 2.2-4.8 4.6 0 .9.3 1.6.7 2 .1.2.1.3.1.4l-.2 1c-.1.3-.2.4-.5.2-1.2-.5-1.9-2.1-1.9-3.4 0-2.8 2.2-6 6.5-6 3.5 0 5.8 2.5 5.8 5.2 0 3.6-2 6.3-5 6.3-1 0-2-.6-2.3-1.2l-.7 2.5c-.2.8-.7 1.7-1.1 2.3A9 9 0 1 0 12 3Z"/></svg>
+          </a>
+          <a href="https://www.reddit.com/user/videokr/" target="_blank" rel="noopener" title="Reddit" aria-label="Videokr on Reddit">
+            <svg viewBox="0 0 24 24"><path d="M22 11.6a2 2 0 0 0-3.4-1.4c-1.3-.9-3.1-1.4-5-1.5l1-3 2.7.6a1.6 1.6 0 1 0 .2-1.2l-3.4-.8a.6.6 0 0 0-.7.4l-1.3 4c-2 .1-3.9.6-5.3 1.5A2 2 0 0 0 2 13.1c0 .8.4 1.4 1 1.8v.5C3 18.4 7 20.5 12 20.5s9-2.1 9-5.1v-.5c.6-.4 1-1.1 1-1.9v-1.4ZM8.3 13.3a1.3 1.3 0 1 1 1.3 1.3 1.3 1.3 0 0 1-1.3-1.3Zm7.5 4c-1 1-2.5 1.3-3.8 1.3s-2.8-.3-3.8-1.3a.5.5 0 0 1 .7-.7c.7.7 2 1 3.1 1s2.4-.3 3.1-1a.5.5 0 0 1 .7.7Zm-.4-2.7a1.3 1.3 0 1 1 1.3-1.3 1.3 1.3 0 0 1-1.3 1.3Z"/></svg>
+          </a>
+          <a href="https://www.producthunt.com/products/videokr" target="_blank" rel="noopener" title="Product Hunt" aria-label="Videokr on Product Hunt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 17V7h3.2a2.9 2.9 0 0 1 0 5.8H10"/></svg>
+          </a>
+        </nav>
+      </div>
+      <p class="lp-fineprint">Free tier forever · all lifetime sales final, 1 year warranty · using the YouTube source mode? keep YouTube's terms in mind and prefer own-media mode for branding-critical embeds.</p>
+    </footer>
   </div>
-</footer>
+</section>
 
 <script>
   /* The film is the heaviest thing on the page and nobody scrolls to it on load,
@@ -565,7 +870,6 @@
     var buy = el('nav-buy');
     buy.href = '/app.html';
     buy.textContent = 'Lifetime · owned';
-    buy.classList.add('btn-ghost');
     var cta = el('lifetime-cta');
     cta.href = '/app.html';
     cta.textContent = 'Open your dashboard →';
@@ -609,24 +913,8 @@
       loadOffer();
     })
     .catch(function () { loadOffer(); });
-
-  /* Scroll reveals: hand-timed, and everything stays visible without JS or motion. */
-  (function reveals() {
-    var nodes = document.querySelectorAll('.reveal');
-    if (!('IntersectionObserver' in window)) {
-      for (var i = 0; i < nodes.length; i++) nodes[i].classList.add('in-view');
-      return;
-    }
-    var seen = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('in-view');
-        seen.unobserve(entry.target);
-      });
-    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.15 });
-    for (var n = 0; n < nodes.length; n++) seen.observe(nodes[n]);
-  })();
 </script>
+<script src="/landing.js" defer></script>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
 {"@type":"Organization","@id":"https://videokr.com/#org","name":"Videokr","url":"https://videokr.com/","email":"hello@videokr.com","logo":{"@type":"ImageObject","url":"https://videokr.com/brand/mark-512.png","width":512,"height":512},"description":"Videokr is hosted video for marketing sites: upload or link a video, brand the player, capture emails inside it, embed it anywhere and read second-by-second retention.","sameAs":["https://www.youtube.com/@videokr-s7z","https://www.instagram.com/videokrmaker/","https://www.facebook.com/profile.php?id=61593628350806","https://www.pinterest.com/videokr/","https://www.reddit.com/user/videokr/","https://www.producthunt.com/products/videokr","https://x.com/videokrofficial","https://www.linkedin.com/company/videokr-official/"]},
@@ -642,10 +930,10 @@
 {"@type":"Question","name":"What is Videokr?","acceptedAnswer":{"@type":"Answer","text":"Videokr is hosted video for marketing sites. You upload an MP4 or WebM, or link an HLS, YouTube or Vimeo source; Videokr stores and delivers it and plays it in your own branded player \u2014 your logo, your colours, no vendor branding on paid plans \u2014 on any site, through an iframe or script embed. The player carries chapters, captions, CTAs, end screens and an email form, and every play is measured second by second so you can see exactly where viewers stop. It starts free forever for 500 plays a month, or $69 once — $10 off $79 — for 10,000 plays a month."}},
 {"@type":"Question","name":"Is the free tier a trial?","acceptedAnswer":{"@type":"Answer","text":"No timer and no card. 5 videos and 500 plays a month, for as long as you want. Upgrade when you outgrow it, or never."}},
 {"@type":"Question","name":"What counts as a play?","acceptedAnswer":{"@type":"Answer","text":"One viewer starting one video, counted once per video per month \u2014 a viewer who reloads or rewatches the same video that month is not counted again. Free stops at 500 plays until the month rolls over; paid plans keep playing and any extra plays are billed at $1 per 10,000."}},
-{"@type":"Question","name":"Why no refunds?","acceptedAnswer":{"@type":"Answer","text":"Because the free tier lets you test every feature first, at no cost. Once the lifetime licence is issued it\u2019s yours and all sales are final."}},
-{"@type":"Question","name":"What happens after 100 seats?","acceptedAnswer":{"@type":"Answer","text":"The price steps to $99, then $149. If you already bought, nothing changes \u2014 ever."}},
+{"@type":"Question","name":"Does Videokr offer a lifetime plan?","acceptedAnswer":{"@type":"Answer","text":"Yes \u2014 $69 once, $10 off the $79 list price, for 10,000 plays a month forever, unlimited videos, 25 GB storage and no vendor badge. The launch price steps to $99 and then $149 after the first 100 seats; if you already bought, nothing changes, ever. All lifetime sales are final and carry a 1 year warranty."}},
+{"@type":"Question","name":"Can I host unlimited videos?","acceptedAnswer":{"@type":"Answer","text":"Every paid plan carries unlimited videos and unlimited embeds; storage is the only ceiling (25 GB on Starter and Lifetime, 250 GB on Agency), and uploads are up to 200 MB per file. Larger videos can live anywhere else and be linked as an MP4, WebM, HLS, YouTube or Vimeo source, and the Videokr player still plays them as your own."}},
 {"@type":"Question","name":"Where are the videos stored, and will bandwidth bill me?","acceptedAnswer":{"@type":"Answer","text":"On our own global storage and delivery network, close to your viewers \u2014 or you can simply link a YouTube, Vimeo, MP4 or HLS source and keep the file where it already lives. Bandwidth is on us: there is no metered egress charge on any plan, and the free tier\u2019s monthly play allowance is the only ceiling."}},
-{"@type":"Question","name":"How large can an upload be?","acceptedAnswer":{"@type":"Answer","text":"Up to 200 MB per video file (MP4 or WebM), and up to 5 MB per image for thumbnails and your player logo. Larger videos are no problem either \u2014 host them anywhere and link the MP4, WebM, HLS, YouTube or Vimeo source instead, and the Videokr player plays it as your own."}},
+{"@type":"Question","name":"Can I embed Videokr videos on my website?","acceptedAnswer":{"@type":"Answer","text":"Yes, on as many sites and pages as you like: one line of script that builds a responsive lazy-loaded iframe, or a plain iframe you paste yourself. Embeds can be locked to a password or a domain allow-list, and playlists embed the same way."}},
 {"@type":"Question","name":"Does it work with WordPress?","acceptedAnswer":{"@type":"Answer","text":"Yes \u2014 the Videokr plugin is free on every plan, including the free tier. It adds a shortcode and a Gutenberg block that embed your hosted videos and playlists, plus an Insights screen showing your usage, plays over the last 30 days, most played videos and leads. Nothing is uploaded into WordPress, so your hosting space and bandwidth stay untouched, and plays count against your Videokr plan exactly as they do on any other site."}},
 {"@type":"Question","name":"Am I locked in?","acceptedAnswer":{"@type":"Answer","text":"No. We host everything for you \u2014 no servers, no setup, nothing to maintain \u2014 and you can export your videos, leads and analytics whenever you want, so the data stays yours."}}]}
 ]}
