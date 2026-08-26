@@ -242,34 +242,47 @@ body.lp {
 .lp-compare-tab[aria-selected='true'] { background: #fff; color: var(--ink); }
 .lp-dial {
   position: absolute; left: 50%; top: 100%; z-index: 3;
-  width: 140px; height: 140px; border: 4px solid #1d1d1d; border-radius: 50%; display: grid; place-items: center;
+  width: 140px; height: 140px; border: 6px solid #1d1d1d; border-radius: 50%; display: grid; place-items: center;
   transform: translate(-50%, -50%);
   background: radial-gradient(circle at 35% 30%, #fafafa 0%, #d9d9d9 45%, #9a9a9a 100%);
   background-clip: padding-box;
   box-shadow: 0 8px 18px rgba(29, 29, 29, .18);
+  transition: background .4s ease;
 }
 .lp-dial::before {
   content: ''; position: absolute; width: 62px; height: 62px; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #e8e8e8 0%, #b9b9b9 55%, #888 100%);
   box-shadow: inset 0 3px 7px rgba(0, 0, 0, .28), 0 1px 2px rgba(255, 255, 255, .65);
+  z-index: 1;
 }
-.lp-dial svg { display: none; }
+.lp-dial svg { display: none; position: relative; z-index: 3; width: 44px; height: 44px; }
 .lp-dial-needle {
-  position: absolute; inset: 0; transform-origin: center; transform: rotate(-45deg); z-index: 2;
+  position: absolute; inset: 0; transform-origin: center; transform: rotate(-12deg); z-index: 2;
   transition: transform .6s cubic-bezier(.2, 0, 0, 1);
 }
 .lp-dial-needle::before {
-  content: ''; position: absolute; top: -22px; left: 50%; translate: -50% 0;
-  width: 66px; height: 46px; background: #1d1d1d;
-  clip-path: polygon(0 0, 100% 0, 72% 100%, 28% 100%);
+  content: ''; position: absolute; top: -20px; left: 50%; translate: -50% 0;
+  width: 112px; height: 48px; border: 8px solid #1d1d1d; border-bottom: 0;
+  border-radius: 56px 56px 0 0;
 }
-.lp-compare[data-state='after'] .lp-dial-needle { transform: rotate(135deg); }
+.lp-dial-needle::after {
+  content: ''; position: absolute; top: 10px; left: 50%; translate: -50% 0;
+  width: 16px; height: 34px; background: #1d1d1d;
+  clip-path: polygon(0 0, 100% 0, 62% 100%, 38% 100%);
+}
+.lp-compare[data-state='after'] .lp-dial {
+  background: radial-gradient(circle at 40% 30%, #6fe7cf 0%, #16b39a 60%, #0d8d7b 100%);
+}
+.lp-compare[data-state='after'] .lp-dial::before { display: none; }
+.lp-compare[data-state='after'] .lp-dial svg { display: block; }
+.lp-compare[data-state='after'] .lp-dial-needle { transform: rotate(10deg); }
 .lp-compare-cards { position: relative; width: 100%; max-width: 760px; min-height: 420px; }
 .lp-compare-card {
   position: absolute; inset: 0; padding: 100px 40px 40px; border-radius: var(--r-card);
   display: grid; grid-template-columns: 1.2fr .8fr; align-content: start; align-items: start;
   column-gap: 32px; row-gap: 20px;
-  transition: opacity .5s ease, transform .5s cubic-bezier(.2, 0, 0, 1);
+  visibility: visible; pointer-events: auto;
+  transition: opacity .5s ease, transform .5s cubic-bezier(.2, 0, 0, 1), visibility 0s linear 0s;
 }
 .lp-compare-card .lp-h3 { grid-column: 1; }
 .lp-compare-card .lp-compare-list { grid-column: 1; }
@@ -280,7 +293,8 @@ body.lp {
 .lp-compare-card[data-card='after'] p, .lp-compare-card[data-card='after'] li { color: var(--dim); }
 .lp-compare[data-state='before'] .lp-compare-card[data-card='after'],
 .lp-compare[data-state='after'] .lp-compare-card[data-card='before'] {
-  opacity: 0; transform: scale(.98); pointer-events: none;
+  opacity: 0; transform: scale(.98); visibility: hidden; pointer-events: none;
+  transition-delay: 0s, 0s, .5s;
 }
 .lp-compare-list { display: grid; gap: 14px; }
 .lp-compare-list li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; line-height: 20.8px; color: var(--muted); }
@@ -352,16 +366,21 @@ body.lp {
 #features .lp-features-bento .lp-tile > div:last-child { display: contents; }
 #features .lp-features-bento .lp-tile h3 {
   grid-row: 1; text-align: center; font-family: var(--display); font-size: 24px;
-  line-height: 28.8px; font-weight: 600; color: var(--ink);
+  line-height: 28.8px; font-weight: 600; color: var(--ink); position: relative; z-index: 2;
 }
 #features .lp-features-bento .lp-tile > div:last-child > p {
   grid-row: 3; text-align: center; font-size: 16px; line-height: 20.8px;
+  color: var(--ink); position: relative; z-index: 2;
 }
 #features .lp-features-bento .lp-tile > .lp-tile-art { grid-row: 2; }
 #features .lp-features-bento .lp-tile > .lp-tile-label {
   grid-row: 1; text-align: center; font-family: var(--display); font-size: 24px;
-  line-height: 28.8px; font-weight: 600; color: #fff;
+  line-height: 28.8px; font-weight: 600; color: var(--ink); position: relative; z-index: 2;
 }
+#features .lp-features-bento .lp-tile-dark > .lp-tile-label,
+#features .lp-features-bento .lp-tile-dark > div:last-child > p,
+#features .lp-features-bento .lp-tile-dark h3 { color: #fff; }
+#features .lp-features-bento .lp-tile-dark > div:last-child > p { color: var(--dim); }
 #features .lp-tile-art img { max-height: 300px; object-fit: contain; }
 #features .lp-tile-tall { grid-row: auto; }
 
@@ -474,6 +493,7 @@ body.lp {
   font-family: var(--display); font-size: 28px; font-weight: 600; color: var(--ink);
   text-transform: capitalize; white-space: nowrap;
 }
+.lp p.lp-orbit-caption { color: var(--ink); }
 
 /* ---------- testimonials ---------- */
 .lp-loved { position: relative; padding: 200px 0 120px; overflow: hidden; }
@@ -504,13 +524,15 @@ body.lp {
 }
 .lp-switch {
   position: relative; width: 56px; height: 32px; border-radius: var(--r-pill);
-  background: #fff; border: 0; cursor: pointer; box-shadow: inset 0 0 0 1px #dde5ed;
+  background: var(--panel); border: 0; cursor: pointer; box-shadow: inset 0 0 0 1px #dde5ed;
 }
 .lp-switch i {
   position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%;
-  background: var(--panel); transition: transform .3s cubic-bezier(.2, 0, 0, 1), background .3s ease;
+  background: #fff; box-shadow: 0 1px 3px rgba(29, 29, 29, .18);
+  transition: transform .3s cubic-bezier(.2, 0, 0, 1), background .3s ease;
 }
-.lp-switch[aria-checked='true'] i { transform: translateX(24px); background: var(--gloss); }
+.lp-switch[aria-checked='true'] { background: #d7e2eb; }
+.lp-switch[aria-checked='true'] i { transform: translateX(24px); background: #fff; }
 .lp-save { padding: 4px 10px; border-radius: var(--r-pill); background: rgba(16, 185, 129, .12); color: var(--green); font-size: 14px; font-weight: 600; }
 .lp-plans {
   margin-top: 28px; border-radius: var(--r-card); overflow: hidden; background: #fff;
@@ -522,7 +544,7 @@ body.lp {
 .lp-plan:first-child { border-radius: var(--r-tile) 0 0 var(--r-tile); }
 .lp-plan:last-child { border-radius: 0 var(--r-tile) var(--r-tile) 0; }
 .lp-plan-dark { background: #1c1c1c; color: #fff; }
-.lp-plan-dark h3, .lp-plan-dark .lp-price { color: #fff; }
+.lp-plan-dark h3, .lp-plan-dark .lp-price, .lp-plan-dark p.lp-price { color: #fff; }
 .lp-plan-dark p, .lp-plan-dark li { color: var(--dim); }
 .lp-plan-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .lp-plan h3 { font-size: 24px; }
@@ -530,6 +552,7 @@ body.lp {
 .lp-badge { padding: 6px 12px; border-radius: var(--r-pill); background: var(--gloss); color: #fff; font-size: 14px; font-weight: 600; }
 .lp-price { font-family: var(--display); font-size: 48px; line-height: 1; letter-spacing: -1px; color: var(--ink); }
 .lp p.lp-price { color: var(--ink); }
+.lp-plan-dark p.lp-price { color: #fff; }
 .lp-price small { font-family: var(--text); font-size: 16px; line-height: 20.8px; font-weight: 500; color: var(--ink); letter-spacing: 0; }
 .lp-plan-dark .lp-price small { color: var(--dim); }
 .lp-plan .lp-btn, .lp-lifetime .lp-btn {
@@ -719,9 +742,12 @@ body.lp {
   .lp-compare-tabs { height: 56px; }
   .lp-compare-tab { padding-left: 58px; padding-right: 58px; }
   .lp-compare-tab[data-tab='after'] { padding-left: 58px; padding-right: 58px; }
-  .lp-dial { width: 100px; height: 100px; }
+  .lp-dial { width: 100px; height: 100px; border-width: 5px; }
   .lp-dial::before { width: 48px; height: 48px; }
+  .lp-dial svg { width: 34px; height: 34px; }
   .lp-dial-needle { transform-origin: center; }
+  .lp-dial-needle::before { top: -15px; width: 82px; height: 36px; border-width: 6px; border-radius: 42px 42px 0 0; }
+  .lp-dial-needle::after { top: 8px; width: 12px; height: 26px; }
   .lp-bento-mini .lp-tile { width: 100%; min-height: 0; }
   .lp-bento-mini .lp-tile:nth-child(2) { margin-top: 0; }
   .lp-bento-duo .lp-tile:nth-child(2) { grid-column: auto; }
