@@ -284,6 +284,10 @@ body.lp {
 .lp-bento-mini .lp-tile:nth-child(3) { justify-self: end; }
 .lp-bento-duo .lp-tile:nth-child(2) { grid-column: 3; justify-self: end; margin-top: 0; }
 .lp-tile-wide { grid-column: span 2; }
+.lp-tile-wide::before {
+  content: ''; position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .06) 0%, rgba(255, 255, 255, .62) 46%, rgba(255, 255, 255, .93) 100%);
+}
 .lp-tile-tall { grid-row: span 2; }
 .lp-tile-label { font-size: 16px; font-weight: 500; color: var(--muted); }
 .lp-tile-dark .lp-tile-label { color: var(--dim); }
@@ -558,13 +562,14 @@ body.lp {
 .lp-footer-rule { height: 1px; background: var(--line); margin: 40px 0 24px; }
 .lp-footer-base { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
 .lp-footer-base p { font-size: 16px; }
-.lp-social { display: flex; gap: 10px; }
+.lp-social { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .lp-social a {
   width: 36px; height: 36px; border-radius: 50%; background: var(--panel);
   display: grid; place-items: center; color: var(--ink);
 }
 .lp-social a:hover { background: var(--ink); color: #fff; }
-.lp-social svg { width: 16px; height: 16px; fill: currentColor; }
+.lp-social svg { width: 16px; height: 16px; }
+.lp-social svg:not([fill]) { fill: currentColor; }
 .lp-fineprint { margin-top: 20px; font-size: 14px; color: var(--muted); }
 
 /* ---------- demo player ---------- */
