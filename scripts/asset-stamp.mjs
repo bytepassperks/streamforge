@@ -11,6 +11,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const ASSETS = [
   '/styles.css',
+  '/landing.css',
+  '/landing.js',
   '/fonts/fonts.css',
   '/player/player.css',
   '/player/player.js',
