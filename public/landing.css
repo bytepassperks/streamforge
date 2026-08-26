@@ -367,6 +367,8 @@ body.lp {
 
 /* ---------- use cases ---------- */
 .lp-rail { margin-top: 60px; overflow: hidden; }
+#use-cases { padding: 200px 0; }
+#use-cases .lp-rail { margin-top: 130px; }
 .lp-rail-track { display: flex; gap: 20px; will-change: transform; }
 .lp-use {
   position: relative; flex: 0 0 380px; height: 420px; border-radius: var(--r-card); overflow: hidden;
@@ -389,6 +391,8 @@ body.lp {
   position: relative; overflow: hidden; border-radius: var(--r-card); background: var(--panel);
   padding: 120px 30px 0; text-align: center;
 }
+#wordpress { padding-top: 80px; }
+#wordpress .lp-integrations { padding-top: 100px; }
 .lp-orbit { position: relative; height: 500px; margin-top: 40px; }
 .lp-orbit-core {
   position: absolute; left: 50%; top: 180px; transform: translateX(-50%);
@@ -416,6 +420,7 @@ body.lp {
 
 /* ---------- testimonials ---------- */
 .lp-loved { position: relative; padding: 200px 0 120px; overflow: hidden; }
+#reviews { padding-bottom: 232px; }
 .lp-loved-bg {
   position: absolute; inset: 0; z-index: -2;
   background: url('/brand/lp/flowers.webp') center bottom / cover no-repeat, linear-gradient(#dfe9f2, #cfe0d8);
@@ -435,6 +440,7 @@ body.lp {
 .lp-quote-empty svg { width: 28px; height: 28px; stroke: var(--line); }
 
 /* ---------- pricing ---------- */
+#pricing { padding: 60px 0; }
 .lp-toggle {
   display: inline-flex; align-items: center; gap: 12px; margin: 0 auto;
   font-size: 16px; font-weight: 500; color: var(--muted);
@@ -493,13 +499,10 @@ body.lp {
 .lp-faq-grid { display: grid; grid-template-columns: 430px 1fr; gap: 70px; align-items: start; }
 .lp-faq-aside { display: grid; gap: 20px; }
 .lp-faq-card { background: var(--panel); border-radius: var(--r-card); padding: 30px; display: grid; gap: 14px; justify-items: start; margin-top: 40px; }
-.lp-faq-list {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start;
-}
-.lp-faq-list > :first-child { grid-column: 1 / -1; }
+.lp-faq-list { display: grid; gap: 12px; }
 .lp-faq {
   border-radius: var(--r-tile); background: #fff; box-shadow: 0 0 0 1px var(--line);
-  padding: 14px 20px; transition: background-color .3s ease;
+  padding: 22px 28px; transition: background-color .3s ease;
 }
 .lp-faq[open] { background: var(--panel); box-shadow: none; }
 .lp-faq summary {
@@ -563,13 +566,6 @@ body.lp {
 .lp-social a:hover { background: var(--ink); color: #fff; }
 .lp-social svg { width: 16px; height: 16px; fill: currentColor; }
 .lp-fineprint { margin-top: 20px; font-size: 14px; color: var(--muted); }
-#use-cases { padding: 200px 0; }
-#use-cases .lp-rail { margin-top: 130px; }
-#wordpress { padding-top: 80px; }
-#wordpress .lp-integrations { padding-top: 100px; }
-#pricing { padding: 60px 0; }
-#faq { padding: 32px 0; }
-#reviews { padding-bottom: 232px; }
 
 /* ---------- demo player ---------- */
 .lp-demo { display: grid; gap: 24px; margin-top: 48px; }
@@ -636,7 +632,6 @@ body.lp {
   #use-cases { padding: 80px 0; }
   #use-cases .lp-rail { margin-top: 60px; }
   #reviews { padding: 140px 0 80px; }
-  #faq { padding: 64px 0; }
 }
 
 @media (max-width: 760px) {
@@ -682,9 +677,6 @@ body.lp {
   #reviews { padding: 140px 0 80px; }
   #use-cases { padding: 64px 0; }
   #use-cases .lp-rail { margin-top: 60px; }
-  #faq { padding: 64px 0; }
-  #faq .lp-faq-list { grid-template-columns: 1fr; }
-  #faq .lp-faq-list > :first-child { grid-column: auto; }
   .lp-quote { min-height: 190px; }
   .lp-plan, .lp-lifetime, .lp-footer { padding: 28px; }
   .lp-price { font-size: 40px; }
