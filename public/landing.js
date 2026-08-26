@@ -62,13 +62,19 @@
   /* ---- before / after dial ---- */
   var compare = document.getElementById('why');
   var stage = compare && compare.querySelector('.lp-compare-stage');
-  var pinned = null; /* set once a visitor clicks a tab, so scrolling stops overriding them */
+  var scrollArea = compare && compare.querySelector('.lp-compare-scroll');
+  var scrollSide = null;
 
   function turnDial() {
-    if (!stage || pinned) return;
-    var box = stage.getBoundingClientRect();
-    var travelled = (window.innerHeight * 0.5 - box.top) / Math.max(1, box.height);
-    compare.dataset.state = travelled > 0.42 ? 'after' : 'before';
+    if (!stage || !scrollArea || reduce) return;
+    var box = scrollArea.getBoundingClientRect();
+    var stickyTop = parseFloat(window.getComputedStyle(stage).top) || 0;
+    var travel = Math.max(1, scrollArea.offsetHeight - stage.offsetHeight);
+    var progress = Math.min(1, Math.max(0, (stickyTop - box.top) / travel));
+    var nextSide = progress > 0.35 ? 'after' : 'before';
+    if (nextSide === scrollSide) return;
+    scrollSide = nextSide;
+    compare.dataset.state = nextSide;
     syncTabs();
   }
 
@@ -79,10 +85,10 @@
   }
 
   if (compare) {
+    if (reduce) compare.classList.add('lp-compare-static');
     Array.prototype.forEach.call(compare.querySelectorAll('.lp-compare-tab'), function (tab) {
       tab.addEventListener('click', function () {
-        pinned = tab.dataset.tab;
-        compare.dataset.state = pinned;
+        compare.dataset.state = tab.dataset.tab;
         syncTabs();
       });
     });
