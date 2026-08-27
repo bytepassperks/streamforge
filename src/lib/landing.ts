@@ -49,11 +49,24 @@ async function landingSchema(env: Env): Promise<string> {
   return schemaCache;
 }
 
-export function mergeLanding(html: string, base: string, source: string, schema: string): string {
+function absolutePath(base: string, path: string): string {
+  const url = new URL(path || '/', absoluteBase(base));
+  url.search = '';
+  url.hash = '';
+  return url.toString();
+}
+
+export function mergeLanding(
+  html: string,
+  base: string,
+  source: string,
+  schema: string,
+  path = '/',
+): string {
   const closeHead = /<\/head\s*>/i;
   if (!closeHead.test(html)) return html;
 
-  const target = absoluteBase(base);
+  const target = absolutePath(base, path);
   /* Origins, not the full urls: a link the published page writes as
      `<origin>/pricing` has to come out as `<base>/pricing`, so the part being
      swapped must stop before the path. */
@@ -80,9 +93,12 @@ export function mergeLanding(html: string, base: string, source: string, schema:
   return merged;
 }
 
-export async function landingHtml(env: Env, source: string): Promise<string | null> {
+export async function landingHtml(env: Env, source: string, path: string): Promise<string | null> {
   try {
-    const response = await fetch(source, {
+    const upstream = new URL(path || '/', new URL(source).origin + '/');
+    upstream.search = '';
+    upstream.hash = '';
+    const response = await fetch(upstream, {
       cf: { cacheTtl: 300, cacheEverything: true },
       signal: AbortSignal.timeout(5000),
     });
@@ -90,7 +106,8 @@ export async function landingHtml(env: Env, source: string): Promise<string | nu
     if (!response.ok || !type.startsWith('text/html')) return null;
     const html = await response.text();
     if (!html) return null;
-    return mergeLanding(html, env.PUBLIC_BASE_URL, source, await landingSchema(env));
+    const schema = path === '/' ? await landingSchema(env) : '';
+    return mergeLanding(html, env.PUBLIC_BASE_URL, source, schema, path);
   } catch {
     return null;
   }

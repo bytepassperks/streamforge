@@ -86,7 +86,7 @@ app.get('/favicon.ico', async (c) => {
 app.on(['GET', 'HEAD'], '/', async (c, next) => {
   const source = c.env.LANDING_SOURCE_URL;
   if (!source) return next();
-  const html = await landingHtml(c.env, source);
+  const html = await landingHtml(c.env, source, c.req.path);
   if (html === null) return next();
   return c.html(html);
 });
@@ -95,6 +95,11 @@ app.on(['GET', 'HEAD'], '/', async (c, next) => {
 app.all('*', async (c) => {
   const response = await c.env.ASSETS.fetch(c.req.raw);
   const path = c.req.path;
+  const source = c.env.LANDING_SOURCE_URL;
+  if ((c.req.method === 'GET' || c.req.method === 'HEAD') && source && response.status === 404) {
+    const html = await landingHtml(c.env, source, path);
+    if (html !== null) return c.html(html);
+  }
   /* Content type, not the path: the assets layer redirects `/login.html` to the
      extensionless `/login`, so an HTML page arrives here with no extension to
      match on, and it still needs its stamps and its headers. */
