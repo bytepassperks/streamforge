@@ -69,9 +69,15 @@
 <header class="lp-hero">
   <div class="lp-hero-sky" aria-hidden="true"></div>
   <div class="lp-hero-clouds" aria-hidden="true">
-    <img class="lp-cloud lp-cloud-1" src="/brand/lp/cloud-1.webp" alt="" width="602" height="350" decoding="async">
-    <img class="lp-cloud lp-cloud-2" src="/brand/lp/cloud-2.webp" alt="" width="519" height="240" decoding="async">
-    <img class="lp-cloud lp-cloud-3" src="/brand/lp/cloud-3.webp" alt="" width="584" height="350" decoding="async">
+    <span class="lp-cloud-shift lp-cloud-1">
+      <img class="lp-cloud" src="/brand/lp/cloud-1.webp" alt="" width="602" height="350" decoding="async">
+    </span>
+    <span class="lp-cloud-shift lp-cloud-2">
+      <img class="lp-cloud" src="/brand/lp/cloud-2.webp" alt="" width="519" height="240" decoding="async">
+    </span>
+    <span class="lp-cloud-shift lp-cloud-3">
+      <img class="lp-cloud" src="/brand/lp/cloud-3.webp" alt="" width="584" height="350" decoding="async">
+    </span>
   </div>
   <div class="lp-wrap lp-hero-inner">
     <h1><span class="lp-line">Unlimited<span class="lp-prop" aria-hidden="true"></span></span><span class="lp-line">Video Hosting</span></h1>
@@ -801,8 +807,18 @@
     var poster = document.getElementById('demo-poster');
     if (!host) return;
     var loading = false;
+    var idleMount = null;
+    var autoplayRequested = false;
+
+    function cancelIdleMount() {
+      if (idleMount === null) return;
+      if ('cancelIdleCallback' in window) window.cancelIdleCallback(idleMount);
+      else window.clearTimeout(idleMount);
+      idleMount = null;
+    }
 
     function mountDemo(autoplay) {
+      if (autoplay) autoplayRequested = true;
       if (loading) return;
       loading = true;
       var css = document.createElement('link');
@@ -812,19 +828,27 @@
       var script = document.createElement('script');
       script.src = '/player/player.js';
       script.onload = function () {
-        if (autoplay) demoConfig.player.autoplay = true;
+        if (autoplayRequested) demoConfig.player.autoplay = true;
         Videokr.mount(host, demoConfig);
       };
       document.head.appendChild(script);
     }
 
-    if (poster) poster.addEventListener('click', function () { mountDemo(true); });
+    if (poster) poster.addEventListener('click', function () {
+      cancelIdleMount();
+      mountDemo(true);
+    });
 
     if ('IntersectionObserver' in window) {
       var io = new IntersectionObserver(function (entries) {
         if (entries.some(function (entry) { return entry.isIntersecting; })) {
           io.disconnect();
-          mountDemo(false);
+          var mount = function () {
+            idleMount = null;
+            mountDemo(false);
+          };
+          if ('requestIdleCallback' in window) idleMount = window.requestIdleCallback(mount, { timeout: 2000 });
+          else idleMount = window.setTimeout(mount, 300);
         }
       }, { rootMargin: '300px' });
       io.observe(host);

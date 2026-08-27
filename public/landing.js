@@ -41,36 +41,60 @@
   /* ---- which nav link is lit ---- */
   var navLinks = document.querySelectorAll('#nav-links a');
   var watched = [];
+  var currentNav = null;
   Array.prototype.forEach.call(navLinks, function (link) {
     var section = document.querySelector(link.getAttribute('href'));
-    if (section) watched.push({ link: link, section: section });
+    if (section) watched.push({ link: link, section: section, top: 0 });
   });
 
-  function lightNav() {
-    var line = window.scrollY + window.innerHeight * 0.32;
+  var compare = document.getElementById('why');
+  var stage = compare && compare.querySelector('.lp-compare-stage');
+  var scrollArea = compare && compare.querySelector('.lp-compare-scroll');
+  var scrollSide = null;
+  var rail = document.getElementById('rail');
+  var track = document.getElementById('rail-track');
+  var heroClouds = document.querySelector('.lp-hero-clouds');
+  var prop = document.querySelector('.lp-prop');
+  var clouds = document.querySelectorAll('.lp-cloud-shift');
+  var compareVisible = !!scrollArea;
+  var railVisible = !!rail;
+  var cloudsVisible = !!heroClouds;
+  var metrics = {
+    stickyTop: 0,
+    compareTravel: 1,
+    railOverflow: 0
+  };
+
+  function measure() {
+    watched.forEach(function (pair) {
+      pair.top = pair.section.offsetTop;
+    });
+    if (stage && scrollArea) {
+      metrics.stickyTop = parseFloat(window.getComputedStyle(stage).top) || 0;
+      metrics.compareTravel = Math.max(1, scrollArea.offsetHeight - stage.offsetHeight);
+    }
+    if (rail && track) {
+      metrics.railOverflow = Math.max(0, track.scrollWidth - rail.clientWidth);
+    }
+  }
+
+  function lightNav(scrollY, innerHeight) {
+    var line = scrollY + innerHeight * 0.32;
     var current = null;
     watched.forEach(function (pair) {
-      var top = pair.section.offsetTop;
-      if (line >= top) current = pair;
+      if (line >= pair.top) current = pair;
     });
+    if (current === currentNav) return;
+    currentNav = current;
     watched.forEach(function (pair) {
       if (pair === current) pair.link.setAttribute('aria-current', 'true');
       else pair.link.removeAttribute('aria-current');
     });
   }
 
-  /* ---- before / after dial ---- */
-  var compare = document.getElementById('why');
-  var stage = compare && compare.querySelector('.lp-compare-stage');
-  var scrollArea = compare && compare.querySelector('.lp-compare-scroll');
-  var scrollSide = null;
-
-  function turnDial() {
-    if (!stage || !scrollArea || reduce) return;
-    var box = scrollArea.getBoundingClientRect();
-    var stickyTop = parseFloat(window.getComputedStyle(stage).top) || 0;
-    var travel = Math.max(1, scrollArea.offsetHeight - stage.offsetHeight);
-    var progress = Math.min(1, Math.max(0, (stickyTop - box.top) / travel));
+  function turnDial(box) {
+    if (!stage || !scrollArea || reduce || !compareVisible || !box) return;
+    var progress = Math.min(1, Math.max(0, (metrics.stickyTop - box.top) / metrics.compareTravel));
     var nextSide = progress > 0.35 ? 'after' : 'before';
     if (nextSide === scrollSide) return;
     scrollSide = nextSide;
@@ -95,28 +119,34 @@
   }
 
   /* ---- the drifting clouds follow the scroll a little ---- */
-  var clouds = document.querySelectorAll('.lp-cloud');
-  function driftClouds() {
-    if (reduce) return;
-    var y = window.scrollY;
+  function driftClouds(y) {
+    if (reduce || !cloudsVisible) return;
     if (y > 1400) return;
     Array.prototype.forEach.call(clouds, function (cloud, index) {
-      cloud.style.marginTop = (y * (0.06 + index * 0.04)).toFixed(1) + 'px';
+      cloud.style.transform = 'translate3d(0, ' + (y * (0.06 + index * 0.04)).toFixed(1) + 'px, 0)';
     });
   }
 
   /* ---- the use-case rail slides as the section passes ---- */
-  var rail = document.getElementById('rail');
-  var track = document.getElementById('rail-track');
-  function slideRail() {
-    if (!rail || !track || reduce) return;
-    var box = rail.getBoundingClientRect();
-    if (box.bottom < 0 || box.top > window.innerHeight) return;
-    var overflow = track.scrollWidth - rail.clientWidth;
+  function slideRail(box, innerHeight) {
+    if (!rail || !track || reduce || !railVisible || !box) return;
+    var overflow = metrics.railOverflow;
     if (overflow <= 0) { track.style.transform = 'none'; return; }
-    var progress = (window.innerHeight - box.top) / (window.innerHeight + box.height);
+    var progress = (innerHeight - box.top) / (innerHeight + box.height);
     progress = Math.min(1, Math.max(0, progress));
     track.style.transform = 'translate3d(' + (-overflow * progress).toFixed(1) + 'px,0,0)';
+  }
+
+  function readScrollFrame() {
+    var frame = {
+      scrollY: window.scrollY,
+      innerHeight: window.innerHeight,
+      compareBox: null,
+      railBox: null
+    };
+    if (compareVisible) frame.compareBox = scrollArea.getBoundingClientRect();
+    if (railVisible) frame.railBox = rail.getBoundingClientRect();
+    return frame;
   }
 
   var queued = false;
@@ -125,14 +155,54 @@
     queued = true;
     window.requestAnimationFrame(function () {
       queued = false;
-      lightNav();
-      turnDial();
-      driftClouds();
-      slideRail();
+      var frame = readScrollFrame();
+      lightNav(frame.scrollY, frame.innerHeight);
+      turnDial(frame.compareBox);
+      driftClouds(frame.scrollY);
+      slideRail(frame.railBox, frame.innerHeight);
     });
   }
   window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll);
+  var measureTimer = null;
+  function scheduleMeasure() {
+    if (measureTimer) window.clearTimeout(measureTimer);
+    measureTimer = window.setTimeout(function () {
+      measureTimer = null;
+      measure();
+      onScroll();
+    }, 150);
+  }
+  window.addEventListener('resize', scheduleMeasure);
+  window.addEventListener('load', function () {
+    measure();
+    onScroll();
+  });
+
+  if ('IntersectionObserver' in window) {
+    var visibilityObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.target === heroClouds) cloudsVisible = entry.isIntersecting;
+        if (entry.target === scrollArea) compareVisible = entry.isIntersecting;
+        if (entry.target === rail) railVisible = entry.isIntersecting;
+      });
+    });
+    if (heroClouds) visibilityObserver.observe(heroClouds);
+    if (scrollArea) visibilityObserver.observe(scrollArea);
+    if (rail) visibilityObserver.observe(rail);
+
+    var animationObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        entry.target.classList.toggle('lp-animation-paused', !entry.isIntersecting);
+      });
+    });
+    if (heroClouds) animationObserver.observe(heroClouds);
+    if (prop) animationObserver.observe(prop);
+    Array.prototype.forEach.call(document.querySelectorAll('.lp-orbit-node'), function (node) {
+      animationObserver.observe(node);
+    });
+  }
+
+  measure();
   onScroll();
 
   /* ---- how it works ---- */
