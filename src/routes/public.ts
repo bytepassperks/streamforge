@@ -26,7 +26,7 @@ import {
 } from '../lib/seo';
 import {
   countPlay,
-  isLifetime,
+  isPaid,
   lifetimeDiscount,
   offerForSeats,
   planForProduct,
@@ -318,7 +318,7 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     chapters: chapters.results ?? [],
     ctas: ctas.results ?? [],
     variant,
-    badge: !(owner && isLifetime(owner)),
+    badge: !(owner && isPaid(owner)),
     share: shareLinks(env, video.slug),
     related: related?.results ?? [],
     capped: Boolean(usage?.blocked),

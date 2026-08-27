@@ -1073,7 +1073,7 @@
     }
 
     if (this.payload.badge) {
-      // Free-tier attribution; lifetime accounts get badge: false from the api.
+      // Free-tier attribution; paid accounts get badge: false from the API.
       var badge = document.createElement('a');
       badge.className = 'sf-badge';
       badge.href = assetBase() + '/?ref=player';
