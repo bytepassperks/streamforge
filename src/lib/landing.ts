@@ -49,12 +49,15 @@ async function landingSchema(env: Env): Promise<string> {
   return schemaCache;
 }
 
-export function mergeLanding(html: string, base: string, sourceOrigin: string, schema: string): string {
+export function mergeLanding(html: string, base: string, source: string, schema: string): string {
   const closeHead = /<\/head\s*>/i;
   if (!closeHead.test(html)) return html;
 
   const target = absoluteBase(base);
-  let merged = html.replaceAll(sourceOrigin, base);
+  /* Origins, not the full urls: a link the published page writes as
+     `<origin>/pricing` has to come out as `<base>/pricing`, so the part being
+     swapped must stop before the path. */
+  let merged = html.replaceAll(new URL(source).origin, new URL(base).origin);
   let found: boolean;
 
   [merged, found] = forceTag(

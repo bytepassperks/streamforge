@@ -27,7 +27,7 @@ describe('mergeLanding', () => {
 
   it('rewrites source-origin occurrences', () => {
     const merged = mergeLanding(`<head>${SOURCE}asset</head>`, BASE, SOURCE, '');
-    expect(merged).toContain('https://videokr.comasset');
+    expect(merged).toContain('https://videokr.com/asset');
     expect(merged).not.toContain(SOURCE);
   });
 
