@@ -201,6 +201,35 @@ function embedderHostname(c: { req: { header: (n: string) => string | undefined 
   }
 }
 
+export function embedBlocked(
+  c: {
+    env: Env;
+    req: { url: string; header: (name: string) => string | undefined };
+  },
+  video: Pick<Video, 'allowed_domains'>,
+): boolean {
+  const host = embedderHostname(c) || '';
+  if (!video.allowed_domains || !host) return false;
+
+  /* Domain restrictions apply to third-party embeds, not the video's own pages. */
+  const ownHosts = new Set<string>();
+  try {
+    const baseHost = new URL(baseUrl(c.env)).hostname.toLowerCase();
+    ownHosts.add(baseHost);
+    ownHosts.add(baseHost.startsWith('www.') ? baseHost.slice(4) : `www.${baseHost}`);
+  } catch {
+    /* An invalid base should not disable the request-host exemption. */
+  }
+  try {
+    ownHosts.add(new URL(c.req.url).hostname.toLowerCase());
+  } catch {
+    /* The request URL is supplied by the runtime and should always be valid. */
+  }
+
+  if (ownHosts.has(host.toLowerCase())) return false;
+  return !hostnameAllowed(host, video.allowed_domains);
+}
+
 async function loadVideoBySlugOrId(env: Env, key: string): Promise<Video | null> {
   return env.DB.prepare('SELECT * FROM videos WHERE id = ? OR slug = ? LIMIT 1')
     .bind(key, key)
@@ -321,8 +350,7 @@ pub.get('/api/embed/:key', async (c) => {
   const video = await loadVideoBySlugOrId(c.env, c.req.param('key'));
   if (!video) return c.json({ error: 'not found' }, 404);
 
-  const host = embedderHostname(c);
-  if (video.allowed_domains && host && !hostnameAllowed(host, video.allowed_domains)) {
+  if (embedBlocked(c, video)) {
     return c.json({ error: 'this video is not allowed to play on this domain', code: 'domain_blocked' }, 403);
   }
 
@@ -342,6 +370,9 @@ pub.post('/api/embed/:key/unlock', async (c) => {
   const video = await loadVideoBySlugOrId(c.env, c.req.param('key'));
   if (!video) return c.json({ error: 'not found' }, 404);
   if (!video.password_hash) return c.json({ error: 'video is not password protected' }, 400);
+  if (embedBlocked(c, video)) {
+    return c.json({ error: 'this video is not allowed to play on this domain', code: 'domain_blocked' }, 403);
+  }
   const { password } = await c.req.json<{ password?: string }>();
   const ok = await verifyPassword(password ?? '', video.password_salt, video.password_hash);
   if (!ok) return c.json({ error: 'incorrect password' }, 401);
@@ -601,8 +632,8 @@ pub.get('/e/:key', async (c) => {
      page that should rank is /v/<slug>, never the bare iframe. */
   c.header('x-robots-tag', 'noindex, indexifembedded');
 
-  const host = embedderHostname(c);
-  if (video.allowed_domains && host && !hostnameAllowed(host, video.allowed_domains)) {
+  const host = embedderHostname(c) || '';
+  if (embedBlocked(c, video)) {
     return c.html(
       `<div style="font:14px/1.5 system-ui;padding:24px;color:#fff;background:#111">
          This video is not authorised to play on <b>${escapeHtml(host)}</b>.
