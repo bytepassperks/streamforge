@@ -2128,9 +2128,17 @@
             '/api/embed/' + encodeURIComponent(payload.video.id) + '?token=' + encodeURIComponent(result.body.token),
           )
             .then(function (res) {
-              return res.json();
+              return res.json().then(function (body) {
+                return { ok: res.ok, body: body };
+              });
             })
-            .then(function (full) {
+            .then(function (result) {
+              if (!result.ok) {
+                submit.disabled = false;
+                error.textContent = result.body.error || 'Unable to load video';
+                return;
+              }
+              var full = result.body;
               root.classList.remove('sf-locked');
               // Carry page-level options (e.g. document key capture) onto the unlocked payload.
               full.captureDocumentKeys = payload.captureDocumentKeys;

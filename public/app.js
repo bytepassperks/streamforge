@@ -1582,21 +1582,35 @@
     host.appendChild(block);
   }
 
+  /* Players ping progress once per 5% of the video, so the stored 100 buckets are
+     mostly empty and reading them straight gives a row of spikes. What the panel
+     promises is survival: how many viewers were still watching at that point, which
+     is the number who pinged at or after it — a suffix maximum, never rising. */
+  function retentionSurvival(rows) {
+    var views = [];
+    var b;
+    for (b = 0; b <= 100; b += 1) views.push(0);
+    rows.forEach(function (row) {
+      var bucket = Math.round(Number(row.bucket));
+      if (bucket >= 0 && bucket <= 100) {
+        views[bucket] = Math.max(views[bucket], Number(row.views) || 0);
+      }
+    });
+    var still = views.slice();
+    for (b = 99; b >= 0; b -= 1) still[b] = Math.max(still[b], still[b + 1]);
+    return still;
+  }
+
   /* Retention as one drawn curve rather than a row of loose sticks: a filled area
      over a dashed baseline, with the quarter marks written under it. */
   function retentionChart(rows) {
     var W = 100;
     var H = 34;
-    var byBucket = {};
-    var max = 1;
-    rows.forEach(function (row) {
-      byBucket[row.bucket] = row.views;
-      max = Math.max(max, row.views);
-    });
+    var still = retentionSurvival(rows);
+    var max = Math.max(1, still[0]);
     var points = [];
-    for (var b = 0; b <= 100; b += 2) {
-      var views = byBucket[b] || 0;
-      points.push([(b / 100) * W, H - (views / max) * H]);
+    for (var b = 0; b <= 100; b += 1) {
+      points.push([(b / 100) * W, H - (still[b] / max) * H]);
     }
     var line = points
       .map(function (point, i) {
@@ -1631,18 +1645,13 @@
 
   /** The bucket where the audience falls away fastest, in percent of the video. */
   function biggestDrop(rows) {
-    var byBucket = {};
-    rows.forEach(function (row) {
-      byBucket[row.bucket] = row.views;
-    });
+    var still = retentionSurvival(rows);
     var worst = null;
     var drop = 0;
-    for (var b = 0; b < 100; b += 2) {
-      var here = byBucket[b] || 0;
-      var next = byBucket[b + 2] || 0;
-      if (here - next > drop) {
-        drop = here - next;
-        worst = b + 2;
+    for (var b = 0; b < 100; b += 1) {
+      if (still[b] - still[b + 1] > drop) {
+        drop = still[b] - still[b + 1];
+        worst = b + 1;
       }
     }
     return drop > 0 ? worst : null;
