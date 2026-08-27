@@ -4,6 +4,8 @@ export interface Env {
   ASSETS: Fetcher;
   APP_NAME: string;
   PUBLIC_BASE_URL: string;
+  /** Homepage is served from this published page; clearing this var instantly reverts to bundled public/index.html. */
+  LANDING_SOURCE_URL?: string;
   DODO_ENVIRONMENT?: string;
   DODO_LIFETIME_PRODUCT_ID?: string;
   DODO_STARTER_PRODUCT_ID?: string;
