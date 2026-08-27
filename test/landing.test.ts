@@ -58,4 +58,39 @@ describe('mergeLanding', () => {
     expect(merged).toContain('<link rel="canonical" href="https://videokr.com/pricing">');
     expect(merged).toContain('<meta property="og:url" content="https://videokr.com/pricing">');
   });
+
+  it('rewrites Get started contact anchors to signup', () => {
+    const merged = mergeLanding(
+      '<head><a href="./contact">Get started</a></head>',
+      BASE,
+      SOURCE,
+      '',
+      '/',
+    );
+    expect(merged).toContain('<a href="https://videokr.com/login?mode=signup">Get started</a>');
+  });
+
+  it('keeps team and footer contact anchors unchanged', () => {
+    const merged = mergeLanding(
+      '<head><a href="./contact">Talk to our team</a><a href="./contact">Contact</a></head>',
+      BASE,
+      SOURCE,
+      '',
+      '/',
+    );
+    expect(merged).toContain('<a href="./contact">Talk to our team</a>');
+    expect(merged).toContain('<a href="./contact">Contact</a>');
+  });
+
+  it('rewrites only the Get started anchors among several contact links', () => {
+    const merged = mergeLanding(
+      '<head><a href="./contact"><span>Get started</span></a><a href="./contact">Contact</a><a href="./contact">Get started</a></head>',
+      BASE,
+      SOURCE,
+      '',
+      '/pricing',
+    );
+    expect(merged.match(/https:\/\/videokr\.com\/login\?mode=signup/g)).toHaveLength(2);
+    expect(merged.match(/href="\.\/contact"/g)).toHaveLength(1);
+  });
 });
