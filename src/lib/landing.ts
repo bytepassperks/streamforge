@@ -30,6 +30,33 @@ function forceTag(html: string, pattern: RegExp, name: string, value: string): [
   return [result, found];
 }
 
+// These are the pages that carry plan cards today; extend this set when that changes.
+const PLAN_CARD_PATHS = new Set(['/', '/pricing']);
+
+function rewriteSignupCtas(html: string, base: string, path: string): string {
+  const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
+  const contactAnchor =
+    /<a\b(?=[^>]*\bhref\s*=\s*(["'])\.\/contact\1)[^>]*>[\s\S]*?<\/a>/gi;
+  const contactCount = html.match(contactHref)?.length ?? 0;
+  if (!contactCount) return html;
+
+  const signupUrl = new URL('/login?mode=signup', absoluteBase(base)).toString();
+  let rewritten = 0;
+  const result = html.replace(contactAnchor, (anchor) => {
+    const label = anchor.slice(anchor.indexOf('>') + 1);
+    if (!label.includes('Get started')) return anchor;
+    rewritten += 1;
+    return anchor.replace(contactHref, `href="${escapeAttribute(signupUrl)}"`);
+  });
+
+  /* Paid-plan CTAs currently point at the contact form; warn if a republish
+     changes the markup and silently removes the signup match. */
+  if (!rewritten && PLAN_CARD_PATHS.has(path)) {
+    console.warn(`[landing] no Get started CTA matched at ${path}`);
+  }
+  return result;
+}
+
 function extractSchema(html: string): string {
   const scripts =
     html.match(
@@ -74,6 +101,7 @@ export function mergeLanding(
      `<origin>/pricing` has to come out as `<base>/pricing`, so the part being
      swapped must stop before the path. */
   let merged = html.replaceAll(new URL(source).origin, new URL(base).origin);
+  merged = rewriteSignupCtas(merged, base, path);
   let found: boolean;
 
   [merged, found] = forceTag(

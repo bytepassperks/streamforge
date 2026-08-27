@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mergeLanding } from '../src/lib/landing';
 
 const BASE = 'https://videokr.com';
@@ -57,5 +57,55 @@ describe('mergeLanding', () => {
     const merged = mergeLanding('<head></head>', BASE, SOURCE, '', '/pricing');
     expect(merged).toContain('<link rel="canonical" href="https://videokr.com/pricing">');
     expect(merged).toContain('<meta property="og:url" content="https://videokr.com/pricing">');
+  });
+
+  it('rewrites Get started contact anchors to signup', () => {
+    const merged = mergeLanding(
+      '<head><a href="./contact">Get started</a></head>',
+      BASE,
+      SOURCE,
+      '',
+      '/',
+    );
+    expect(merged).toContain('<a href="https://videokr.com/login?mode=signup">Get started</a>');
+  });
+
+  it('keeps team and footer contact anchors unchanged', () => {
+    const merged = mergeLanding(
+      '<head><a href="./contact">Talk to our team</a><a href="./contact">Contact</a></head>',
+      BASE,
+      SOURCE,
+      '',
+      '/',
+    );
+    expect(merged).toContain('<a href="./contact">Talk to our team</a>');
+    expect(merged).toContain('<a href="./contact">Contact</a>');
+  });
+
+  it('rewrites only the Get started anchors among several contact links', () => {
+    const merged = mergeLanding(
+      '<head><a href="./contact"><span>Get started</span></a><a href="./contact">Contact</a><a href="./contact">Get started</a></head>',
+      BASE,
+      SOURCE,
+      '',
+      '/pricing',
+    );
+    expect(merged.match(/https:\/\/videokr\.com\/login\?mode=signup/g)).toHaveLength(2);
+    expect(merged.match(/href="\.\/contact"/g)).toHaveLength(1);
+  });
+
+  it('does not warn for contact links on non-plan-card pages', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mergeLanding('<head><a href="./contact">Contact</a></head>', BASE, SOURCE, '', '/about');
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('warns when a plan-card page has no matching signup CTA', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mergeLanding('<head><a href="./contact">Contact</a></head>', BASE, SOURCE, '', '/pricing');
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith('[landing] no Get started CTA matched at /pricing');
+    warn.mockRestore();
   });
 });
