@@ -46,4 +46,16 @@ describe('mergeLanding', () => {
     const merged = mergeLanding('<head></head>', BASE, SOURCE, '', '/pricing');
     expect(merged).not.toContain('application/ld+json');
   });
+
+  it('falls back to the site root for protocol-relative paths', () => {
+    const merged = mergeLanding('<head></head>', BASE, SOURCE, '', '//evil.example/x');
+    expect(merged).toContain('<link rel="canonical" href="https://videokr.com/">');
+    expect(merged).toContain('<meta property="og:url" content="https://videokr.com/">');
+  });
+
+  it('keeps a normal path unchanged', () => {
+    const merged = mergeLanding('<head></head>', BASE, SOURCE, '', '/pricing');
+    expect(merged).toContain('<link rel="canonical" href="https://videokr.com/pricing">');
+    expect(merged).toContain('<meta property="og:url" content="https://videokr.com/pricing">');
+  });
 });

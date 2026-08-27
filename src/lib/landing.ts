@@ -50,10 +50,13 @@ async function landingSchema(env: Env): Promise<string> {
 }
 
 function absolutePath(base: string, path: string): string {
-  const url = new URL(path || '/', absoluteBase(base));
+  const site = new URL(base);
+  const url = new URL(path || '/', `${site.origin}/`);
   url.search = '';
   url.hash = '';
-  return url.toString();
+  /* The request path is attacker-controlled; reject protocol-relative paths
+     rather than allowing them to replace the site's origin. */
+  return url.origin === site.origin ? url.toString() : absoluteBase(base);
 }
 
 export function mergeLanding(
@@ -95,9 +98,13 @@ export function mergeLanding(
 
 export async function landingHtml(env: Env, source: string, path: string): Promise<string | null> {
   try {
-    const upstream = new URL(path || '/', new URL(source).origin + '/');
+    const sourceOrigin = new URL(source).origin;
+    const upstream = new URL(path || '/', `${sourceOrigin}/`);
     upstream.search = '';
     upstream.hash = '';
+    /* The request path is attacker-controlled; never fetch a different
+       origin, even when URL resolution accepts a protocol-relative path. */
+    if (upstream.origin !== sourceOrigin) return null;
     const response = await fetch(upstream, {
       cf: { cacheTtl: 300, cacheEverything: true },
       signal: AbortSignal.timeout(5000),
