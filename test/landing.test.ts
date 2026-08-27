@@ -67,7 +67,9 @@ describe('mergeLanding', () => {
       '',
       '/',
     );
-    expect(merged).toContain('<a href="https://videokr.com/login?mode=signup">Get started</a>');
+    expect(merged).toContain(
+      '<a href="https://videokr.com/login?mode=signup" data-videokr-signup="">Get started</a>',
+    );
   });
 
   it('keeps team and footer contact anchors unchanged', () => {
@@ -92,6 +94,32 @@ describe('mergeLanding', () => {
     );
     expect(merged.match(/https:\/\/videokr\.com\/login\?mode=signup/g)).toHaveLength(2);
     expect(merged.match(/href="\.\/contact"/g)).toHaveLength(1);
+    expect(merged.match(/data-videokr-signup=""/g)).toHaveLength(2);
+  });
+
+  it('injects one signup click handler before the body closes', () => {
+    const merged = mergeLanding(
+      '<head></head><body><a href="./contact">Get started</a></body>',
+      BASE,
+      SOURCE,
+      '',
+      '/',
+    );
+    expect(merged.match(/<script>/g)).toHaveLength(1);
+    expect(merged).toContain('a[data-videokr-signup]');
+    expect(merged.indexOf('<script>')).toBeLessThan(merged.indexOf('</body>'));
+  });
+
+  it('does not inject a click handler when no signup CTA is rewritten', () => {
+    const merged = mergeLanding(
+      '<head></head><body><a href="./contact">Contact</a></body>',
+      BASE,
+      SOURCE,
+      '',
+      '/about',
+    );
+    expect(merged).not.toContain('data-videokr-signup');
+    expect(merged).not.toContain('window.location.assign');
   });
 
   it('does not warn for contact links on non-plan-card pages', () => {
