@@ -32,13 +32,15 @@ function forceTag(html: string, pattern: RegExp, name: string, value: string): [
 
 // These are the pages that carry plan cards today; extend this set when that changes.
 const PLAN_CARD_PATHS = new Set(['/', '/pricing']);
+const SIGNUP_CLICK_SCRIPT =
+  '<script>document.addEventListener("click",function(e){var t=e.target;var a=t&&t.closest?t.closest("a[data-videokr-signup]"):null;if(!a)return;e.preventDefault();e.stopPropagation();window.location.assign(a.getAttribute("href"));},true);</script>';
 
-function rewriteSignupCtas(html: string, base: string, path: string): string {
+function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
   const contactAnchor =
     /<a\b(?=[^>]*\bhref\s*=\s*(["'])\.\/contact\1)[^>]*>[\s\S]*?<\/a>/gi;
   const contactCount = html.match(contactHref)?.length ?? 0;
-  if (!contactCount) return html;
+  if (!contactCount) return [html, 0];
 
   const signupUrl = new URL('/login?mode=signup', absoluteBase(base)).toString();
   let rewritten = 0;
@@ -46,7 +48,10 @@ function rewriteSignupCtas(html: string, base: string, path: string): string {
     const label = anchor.slice(anchor.indexOf('>') + 1);
     if (!label.includes('Get started')) return anchor;
     rewritten += 1;
-    return anchor.replace(contactHref, `href="${escapeAttribute(signupUrl)}"`);
+    const rewrittenAnchor = anchor.replace(contactHref, `href="${escapeAttribute(signupUrl)}"`);
+    return rewrittenAnchor.replace(/^<a\b[^>]*>/i, (opening) =>
+      opening.replace(/>$/, ' data-videokr-signup="">'),
+    );
   });
 
   /* Paid-plan CTAs currently point at the contact form; warn if a republish
@@ -54,7 +59,7 @@ function rewriteSignupCtas(html: string, base: string, path: string): string {
   if (!rewritten && PLAN_CARD_PATHS.has(path)) {
     console.warn(`[landing] no Get started CTA matched at ${path}`);
   }
-  return result;
+  return [result, rewritten];
 }
 
 function extractSchema(html: string): string {
@@ -100,8 +105,12 @@ export function mergeLanding(
   /* Origins, not the full urls: a link the published page writes as
      `<origin>/pricing` has to come out as `<base>/pricing`, so the part being
      swapped must stop before the path. */
-  let merged = html.replaceAll(new URL(source).origin, new URL(base).origin);
-  merged = rewriteSignupCtas(merged, base, path);
+  const [rewrittenHtml, rewrittenCtas] = rewriteSignupCtas(
+    html.replaceAll(new URL(source).origin, new URL(base).origin),
+    base,
+    path,
+  );
+  let merged = rewrittenHtml;
   let found: boolean;
 
   [merged, found] = forceTag(
@@ -121,6 +130,12 @@ export function mergeLanding(
   if (!found) merged = merged.replace(closeHead, `<meta property="og:url" content="${escapeAttribute(target)}">$&`);
 
   if (schema) merged = merged.replace(closeHead, `${schema}$&`);
+  if (rewrittenCtas) {
+    const closeBody = /<\/body\s*>/i;
+    merged = closeBody.test(merged)
+      ? merged.replace(closeBody, `${SIGNUP_CLICK_SCRIPT}$&`)
+      : merged.replace(closeHead, `${SIGNUP_CLICK_SCRIPT}$&`);
+  }
   return merged;
 }
 
