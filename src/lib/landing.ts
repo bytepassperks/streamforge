@@ -30,6 +30,9 @@ function forceTag(html: string, pattern: RegExp, name: string, value: string): [
   return [result, found];
 }
 
+// These are the pages that carry plan cards today; extend this set when that changes.
+const PLAN_CARD_PATHS = new Set(['/', '/pricing']);
+
 function rewriteSignupCtas(html: string, base: string, path: string): string {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
   const contactAnchor =
@@ -48,7 +51,9 @@ function rewriteSignupCtas(html: string, base: string, path: string): string {
 
   /* Paid-plan CTAs currently point at the contact form; warn if a republish
      changes the markup and silently removes the signup match. */
-  if (!rewritten) console.warn(`[landing] no Get started CTA matched at ${path}`);
+  if (!rewritten && PLAN_CARD_PATHS.has(path)) {
+    console.warn(`[landing] no Get started CTA matched at ${path}`);
+  }
   return result;
 }
 

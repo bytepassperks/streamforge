@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mergeLanding } from '../src/lib/landing';
 
 const BASE = 'https://videokr.com';
@@ -92,5 +92,20 @@ describe('mergeLanding', () => {
     );
     expect(merged.match(/https:\/\/videokr\.com\/login\?mode=signup/g)).toHaveLength(2);
     expect(merged.match(/href="\.\/contact"/g)).toHaveLength(1);
+  });
+
+  it('does not warn for contact links on non-plan-card pages', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mergeLanding('<head><a href="./contact">Contact</a></head>', BASE, SOURCE, '', '/about');
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('warns when a plan-card page has no matching signup CTA', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mergeLanding('<head><a href="./contact">Contact</a></head>', BASE, SOURCE, '', '/pricing');
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith('[landing] no Get started CTA matched at /pricing');
+    warn.mockRestore();
   });
 });
