@@ -6,6 +6,7 @@ import { siteTargets, submitChanged } from './lib/indexnow';
 import { closePeriod, previousPeriod } from './lib/overage';
 import { syncLifetimePricing } from './lib/pricing-sync';
 import { canonicalRedirect } from './lib/util';
+import { landingHtml } from './lib/landing';
 import { api } from './routes/api';
 import { content } from './routes/content';
 import { plugin } from './routes/plugin';
@@ -80,6 +81,14 @@ app.get('/favicon.ico', async (c) => {
   const headers = new Headers(response.headers);
   headers.set('cache-control', 'public, max-age=604800, stale-while-revalidate=86400');
   return new Response(response.body, { status: response.status, headers });
+});
+
+app.on(['GET', 'HEAD'], '/', async (c, next) => {
+  const source = c.env.LANDING_SOURCE_URL;
+  if (!source) return next();
+  const html = await landingHtml(c.env, source);
+  if (html === null) return next();
+  return c.html(html);
 });
 
 // Anything not handled above falls through to the static assets bundle.
