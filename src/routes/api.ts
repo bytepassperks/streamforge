@@ -409,6 +409,15 @@ api.patch('/videos/:id', async (c) => {
   const updates: Record<string, string | number | null> = {};
 
   if (typeof body.title === 'string' && body.title.trim()) updates.title = body.title.trim();
+  if (typeof body.slug === 'string') {
+    const slug = slugify(body.slug, '');
+    if (!slug) return c.json({ error: 'slug must contain letters or numbers' }, 400);
+    const conflict = await c.env.DB.prepare('SELECT id FROM videos WHERE slug = ? AND id != ?')
+      .bind(slug, id)
+      .first<{ id: string }>();
+    if (conflict) return c.json({ error: 'that URL is already taken' }, 409);
+    updates.slug = slug;
+  }
   if (typeof body.description === 'string') updates.description = body.description;
   if (typeof body.thumbnail_url === 'string') updates.thumbnail_url = body.thumbnail_url;
   if (typeof body.thumbnail_url_b === 'string') updates.thumbnail_url_b = body.thumbnail_url_b;
@@ -457,7 +466,8 @@ api.patch('/videos/:id', async (c) => {
   const visibility = (updates.visibility as string | undefined) ?? (existing.visibility as string);
   const title = (updates.title as string | undefined) ?? (existing.title as string);
   if (visibility === 'public' && isWorthIndexing(title)) {
-    c.executionCtx.waitUntil(announce(c.env, `/v/${existing.slug as string}`));
+    const slug = (updates.slug as string | undefined) ?? (existing.slug as string);
+    c.executionCtx.waitUntil(announce(c.env, `/v/${slug}`));
   }
   return c.json({ ok: true, updated: Object.keys(updates).length });
 });

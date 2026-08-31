@@ -49,7 +49,11 @@
           } catch (err) {
             if (res.ok) throw new Error('unexpected response from the server');
           }
-          if (!res.ok) throw new Error(body.error || 'Request failed (' + res.status + ')');
+          if (!res.ok) {
+            var error = new Error(body.error || 'Request failed (' + res.status + ')');
+            error.status = res.status;
+            throw error;
+          }
           return body;
         });
       },
@@ -1382,6 +1386,8 @@
     var config = result.player_config;
     $('ed-title').textContent = video.title;
     $('ed-name').value = video.title;
+    $('ed-slug').value = video.slug;
+    renderSlugPreview();
     $('ed-desc').value = video.description || '';
     $('ed-source').value = video.source_ref || '';
     $('ed-project').value = video.project_id || '';
@@ -1439,6 +1445,11 @@
     syncEditorHlsAction();
     setLoading($('ed-form-leads'), 'Loading submissions');
     renderSnippets(video);
+  }
+
+  function renderSlugPreview() {
+    var slug = $('ed-slug').value.trim() || '…';
+    $('ed-slug-url').textContent = shareBase() + '/v/' + slug;
   }
 
   function renderThumbPreviews() {
@@ -1839,6 +1850,8 @@
     showPickedName(picker, picker.files[0] ? picker.files[0].name : '');
   });
 
+  $('ed-slug').addEventListener('input', renderSlugPreview);
+
   /* Captions live in R2 like any other asset, so the editor uploads the file and fills
      in the url it gets back instead of asking for a url the customer has to host. */
   $('ed-captions-upload').addEventListener('click', function () {
@@ -1874,6 +1887,7 @@
 
     var patch = {
       title: $('ed-name').value.trim(),
+      slug: $('ed-slug').value.trim(),
       description: $('ed-desc').value,
       thumbnail_url: $('ed-thumb').value.trim(),
       thumbnail_url_b: $('ed-thumb-b').value.trim(),
@@ -1905,6 +1919,10 @@
       })
       .catch(function (err) {
         button.disabled = false;
+        if (err && err.status === 409) {
+          fail(new Error('that URL is already taken'));
+          return;
+        }
         fail(err);
       });
   });

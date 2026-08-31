@@ -87,6 +87,83 @@ function hlsEnv(mediaOverrides: Record<string, unknown> = {}): Env {
   return env;
 }
 
+function editableSlugEnv(conflictingSlug = ''): { env: Env; video: Record<string, unknown> } {
+  const video: Record<string, unknown> = {
+    id: 'vid_1',
+    user_id: user.id,
+    slug: 'old-slug',
+    title: 'Demo video',
+    visibility: 'unlisted',
+  };
+  const prepare = (sql: string) => {
+    let values: unknown[] = [];
+    const statement = {
+      bind(...args: unknown[]) {
+        values = args;
+        return statement;
+      },
+      async first<T>() {
+        if (sql.includes('FROM sessions')) return { ...user, expires_at: 1_800_000_000 } as T;
+        if (sql.includes('SELECT id FROM videos WHERE slug = ? AND id != ?')) {
+          return conflictingSlug && values[0] === conflictingSlug ? ({ id: 'vid_2' } as T) : null;
+        }
+        if (sql.includes('SELECT * FROM videos WHERE id = ? AND user_id = ?')) return video as T;
+        return null;
+      },
+      async run() {
+        if (sql.includes('UPDATE videos SET') && sql.includes('slug = ?')) video.slug = values[0];
+        return {};
+      },
+    };
+    return statement;
+  };
+  return {
+    video,
+    env: {
+      PUBLIC_BASE_URL: 'https://videokr.com',
+      DB: { prepare },
+    } as unknown as Env,
+  };
+}
+
+function editableSlugRequest(slug: string): Request {
+  return new Request('https://videokr.com/videos/vid_1', {
+    method: 'PATCH',
+    headers: { cookie: 'sf_session=session-1', 'content-type': 'application/json' },
+    body: JSON.stringify({ slug }),
+  });
+}
+
+describe('editable video slugs', () => {
+  it('normalizes and renames a video slug', async () => {
+    const { env, video } = editableSlugEnv();
+    const response = await api.request(editableSlugRequest(' New Client URL! '), {}, env);
+    expect(response.status).toBe(200);
+    expect(video.slug).toBe('new-client-url');
+  });
+
+  it('allows re-saving the current slug', async () => {
+    const { env, video } = editableSlugEnv();
+    const response = await api.request(editableSlugRequest(String(video.slug)), {}, env);
+    expect(response.status).toBe(200);
+    expect(video.slug).toBe('old-slug');
+  });
+
+  it('rejects a slug already used by another video', async () => {
+    const { env } = editableSlugEnv('taken-slug');
+    const response = await api.request(editableSlugRequest('Taken slug'), {}, env);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'that URL is already taken' });
+  });
+
+  it('rejects a slug that normalizes to empty', async () => {
+    const { env } = editableSlugEnv();
+    const response = await api.request(editableSlugRequest('!!!'), {}, env);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'slug must contain letters or numbers' });
+  });
+});
+
 describe('HLS API-key authentication scope', () => {
   it('does not let an API key authenticate non-HLS API routes', async () => {
     const env = hlsEnv();

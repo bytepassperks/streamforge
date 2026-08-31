@@ -357,7 +357,15 @@
 
       <div class="sec-panels">
         <div class="tab-panel" data-panel="details">
-          <div class="field"><label for="ed-name">Title</label><input id="ed-name"></div>
+          <div class="grid-2">
+            <div class="field"><label for="ed-name">Title</label><input id="ed-name"></div>
+            <div class="field">
+              <label for="ed-slug">Public URL slug</label>
+              <input id="ed-slug">
+              <p class="tiny muted" id="ed-slug-url"></p>
+              <p class="tiny muted">Changing this URL breaks the old link.</p>
+            </div>
+          </div>
           <div class="field"><label for="ed-desc">Description</label><textarea id="ed-desc"></textarea></div>
           <div class="grid-2">
             <div class="field"><label for="ed-source">Source</label><input id="ed-source"></div>
