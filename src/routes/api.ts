@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import type { Env, User } from '../lib/types';
 import { currentUser, createSession, destroySession, hashPassword, randomSalt, verifyPassword } from '../lib/auth';
 import { userForApiKey } from '../lib/apikeys';
@@ -1053,6 +1054,124 @@ function uploadLimitFor(ext: string): { bytes: number; label: string } {
   if (ext === 'vtt') return { bytes: UPLOAD_LIMITS.text, label: '1MB' };
   return { bytes: UPLOAD_LIMITS.image, label: '5MB' };
 }
+
+const MULTIPART_PART_LIMIT = 10 * 1024 * 1024;
+const MULTIPART_PART_COUNT_LIMIT = 40;
+
+function multipartKeyError(key: string, userId: string): 'ownership' | 'format' | null {
+  if (!key.startsWith(`${userId}/`)) return 'ownership';
+  const name = key.slice(userId.length + 1);
+  return /^[A-Za-z0-9_-]+\.(?:mp4|webm)$/.test(name) ? null : 'format';
+}
+
+function multipartError(c: Context<{ Bindings: Env; Variables: Vars }>, key: unknown, userId: string): Response | null {
+  if (typeof key !== 'string' || !key) return c.json({ error: 'upload key is required' }, 400);
+  const error = multipartKeyError(key, userId);
+  if (error === 'ownership') return c.json({ error: 'upload does not belong to this user' }, 403);
+  if (error === 'format') return c.json({ error: 'invalid upload key' }, 400);
+  return null;
+}
+
+api.post('/uploads/create', async (c) => {
+  const body = await c.req.json<{ filename?: string; extension?: string; size?: number }>();
+  const filename = typeof body.filename === 'string' ? body.filename.trim() : '';
+  const extension = (typeof body.extension === 'string' ? body.extension : filename.split('.').pop() ?? '')
+    .replace(/^\./, '')
+    .toLowerCase();
+  if (extension !== 'mp4' && extension !== 'webm') {
+    return c.json({ error: 'only MP4 and WebM video uploads are supported' }, 415);
+  }
+  const size = body.size;
+  if (typeof size !== 'number' || !Number.isSafeInteger(size) || size < 0) {
+    return c.json({ error: 'a valid file size is required' }, 400);
+  }
+  const limit = uploadLimitFor(extension);
+  if (size > limit.bytes) return c.json({ error: `file is larger than ${limit.label}` }, 413);
+  const key = `${c.get('user').id}/${newId()}.${extension}`;
+  const upload = await c.env.MEDIA.createMultipartUpload(key, {
+    httpMetadata: { contentType: `video/${extension}` },
+  });
+  return c.json({ key, uploadId: upload.uploadId }, 201);
+});
+
+api.post('/uploads/part', async (c) => {
+  const form = await c.req.formData();
+  const key = form.get('key');
+  const uploadId = form.get('uploadId');
+  const partNumber = Number(form.get('partNumber'));
+  const entry: unknown = form.get('file');
+  const invalidKey = multipartError(c, key, c.get('user').id);
+  if (invalidKey) return invalidKey;
+  if (typeof uploadId !== 'string' || !uploadId) return c.json({ error: 'upload id is required' }, 400);
+  if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > MULTIPART_PART_COUNT_LIMIT) {
+    return c.json({ error: 'part number must be between 1 and 40' }, 400);
+  }
+  if (!(entry instanceof File)) return c.json({ error: 'file is required' }, 400);
+  if (entry.size > MULTIPART_PART_LIMIT) return c.json({ error: 'upload parts must be 10 MB or smaller' }, 413);
+  try {
+    const upload = c.env.MEDIA.resumeMultipartUpload(key as string, uploadId);
+    const part = await upload.uploadPart(partNumber, entry.stream());
+    return c.json({ etag: part.etag });
+  } catch {
+    return c.json({ error: 'upload session not found or expired' }, 400);
+  }
+});
+
+api.post('/uploads/complete', async (c) => {
+  const body = await c.req.json<{
+    key?: string;
+    uploadId?: string;
+    parts?: Array<{ partNumber?: number; etag?: string }>;
+  }>();
+  const invalidKey = multipartError(c, body.key, c.get('user').id);
+  if (invalidKey) return invalidKey;
+  if (typeof body.uploadId !== 'string' || !body.uploadId) return c.json({ error: 'upload id is required' }, 400);
+  if (!Array.isArray(body.parts) || body.parts.length < 1 || body.parts.length > MULTIPART_PART_COUNT_LIMIT) {
+    return c.json({ error: 'parts must contain between 1 and 40 entries' }, 400);
+  }
+  let previous = 0;
+  const parts: R2UploadedPart[] = [];
+  for (const part of body.parts) {
+    if (
+      !Number.isInteger(part.partNumber) ||
+      (part.partNumber as number) < 1 ||
+      (part.partNumber as number) > MULTIPART_PART_COUNT_LIMIT ||
+      typeof part.etag !== 'string' ||
+      !part.etag ||
+      (part.partNumber as number) <= previous
+    ) {
+      return c.json({ error: 'parts must be ordered by part number' }, 400);
+    }
+    previous = part.partNumber as number;
+    parts.push({ partNumber: previous, etag: part.etag });
+  }
+  try {
+    const upload = c.env.MEDIA.resumeMultipartUpload(body.key as string, body.uploadId);
+    await upload.complete(parts);
+  } catch {
+    return c.json({ error: 'upload session not found or expired' }, 400);
+  }
+  const object = await c.env.MEDIA.head(body.key as string);
+  if (object && object.size > UPLOAD_LIMITS.video) {
+    await c.env.MEDIA.delete(body.key as string);
+    return c.json({ error: `file is larger than ${uploadLimitFor('mp4').label}` }, 413);
+  }
+  return c.json({ key: body.key, url: `/media/${body.key}` }, 201);
+});
+
+api.post('/uploads/abort', async (c) => {
+  const body = await c.req.json<{ key?: string; uploadId?: string }>();
+  const invalidKey = multipartError(c, body.key, c.get('user').id);
+  if (invalidKey) return invalidKey;
+  if (typeof body.uploadId !== 'string' || !body.uploadId) return c.json({ error: 'upload id is required' }, 400);
+  try {
+    const upload = c.env.MEDIA.resumeMultipartUpload(body.key as string, body.uploadId);
+    await upload.abort();
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ error: 'upload session not found or expired' }, 400);
+  }
+});
 
 api.post('/uploads', async (c) => {
   const form = await c.req.formData();
