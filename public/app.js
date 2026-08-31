@@ -136,6 +136,7 @@
         });
       });
     }).catch(function () {
+      ffmpegPromise = null;
       throw new Error('browser encoder failed to load');
     });
     return ffmpegPromise;
