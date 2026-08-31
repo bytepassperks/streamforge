@@ -628,17 +628,17 @@
 .sf-skin-wave .sf-played { background: var(--sf-accent); border-radius: 0; }
 .sf-skin-wave .sf-handle { width: 10px; height: 10px; }
 .sf-skin-wave .sf-play { order: 1; }
+.sf-skin-wave .sf-badge { order: 1; }
 .sf-skin-wave .sf-time-current { order: 2; margin-left: auto; }
 .sf-skin-wave .sf-time-duration { display: none; }
 .sf-skin-wave .sf-volume { order: 3; width: 92px; min-width: 92px; max-width: 92px; }
-.sf-skin-wave .sf-settings { order: 4; }
-.sf-skin-wave .sf-pip { order: 5; }
-.sf-skin-wave .sf-fs { order: 6; }
-.sf-skin-wave .sf-cc { order: 7; }
-.sf-skin-wave .sf-share { order: 8; }
-.sf-skin-wave .sf-rewind,
-.sf-skin-wave .sf-controls > .sf-forward { order: 9; }
-.sf-skin-wave .sf-badge { order: 10; }
+.sf-skin-wave .sf-cc { order: 4; }
+.sf-skin-wave .sf-share { order: 5; }
+.sf-skin-wave .sf-rewind { order: 6; }
+.sf-skin-wave .sf-controls > .sf-forward { order: 7; }
+.sf-skin-wave .sf-settings { order: 8; }
+.sf-skin-wave .sf-pip { order: 9; }
+.sf-skin-wave .sf-fs { order: 10; }
 .sf-skin-wave .sf-btn {
   padding: 6px; border-radius: 0; color: #fff;
 }
@@ -649,14 +649,18 @@
   background: transparent; color: var(--sf-accent); outline: 0;
 }
 .sf-skin-wave .sf-play svg,
-.sf-skin-wave .sf-mute svg { fill: var(--sf-accent); }
+.sf-skin-wave .sf-mute svg { fill: #fff; }
 .sf-skin-wave .sf-play:hover svg,
 .sf-skin-wave .sf-play:focus-visible svg,
 .sf-skin-wave .sf-mute:hover svg,
-.sf-skin-wave .sf-mute:focus-visible svg { fill: #fff; }
+.sf-skin-wave .sf-mute:focus-visible svg { fill: var(--sf-accent); }
 .sf-skin-wave .sf-titlebar { display: none; }
 @container (max-width: 420px) {
-  .sf-skin-wave .sf-controls { padding-left: 4px; padding-right: 4px; }
-  .sf-skin-wave .sf-volume { width: 52px; min-width: 52px; max-width: 52px; }
-  .sf-skin-wave .sf-volume input[type="range"] { display: block; margin: 0 2px; }
+  .sf-skin-wave .sf-controls { gap: 0; padding: 4px; }
+  .sf-skin-wave .sf-btn { padding: 3px; }
+  .sf-skin-wave .sf-volume { width: 44px; min-width: 44px; max-width: 44px; }
+  .sf-skin-wave .sf-volume input[type="range"] { display: none; }
+  .sf-skin-wave .sf-pip,
+  .sf-skin-wave .sf-rewind,
+  .sf-skin-wave .sf-controls > .sf-forward { display: block; }
 }
