@@ -131,6 +131,9 @@ describe('HLS API-key authentication scope', () => {
   it('repairs measured master bandwidth and is idempotent', async () => {
     let master = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv0/index.m3u8\n';
     let writes = 0;
+    const list = vi.fn(async () => ({
+      objects: [{ key: 'usr_1/vid_1/hls/v0/seg_000.ts', size: 50_000 }],
+    }));
     const env = hlsEnv({
       async get(path: string) {
         return {
@@ -141,9 +144,7 @@ describe('HLS API-key authentication scope', () => {
           },
         };
       },
-      async list() {
-        return { objects: [{ key: 'usr_1/vid_1/hls/v0/seg_000.ts', size: 50_000 }] };
-      },
+      list,
       async put(_path: string, body: string) {
         writes += 1;
         master = body;
@@ -163,44 +164,59 @@ describe('HLS API-key authentication scope', () => {
     expect(master).toContain('BANDWIDTH=100000,AVERAGE-BANDWIDTH=100000');
     expect((await request()).status).toBe(200);
     expect(writes).toBe(1);
+    expect(list).toHaveBeenCalledTimes(2);
   });
 
-  it('follows truncated listings when counting uploaded parts', async () => {
-    const firstPage = Array.from({ length: 1000 }, (_, index) => ({
-      key: `usr_1/vid_1/hls/v0/old_${index}.ts`,
-      size: 1,
-    }));
-    const listCalls: Array<Record<string, unknown>> = [];
+  it('uploads parts without listing and allows re-uploading a part', async () => {
+    const list = vi.fn();
+    let puts = 0;
     const env = hlsEnv({
-      async list(options: Record<string, unknown>) {
-        listCalls.push(options);
-        return options.cursor
-          ? { objects: Array.from({ length: 500 }, (_, index) => ({
-              key: `usr_1/vid_1/hls/v0/old_${index + 1000}.ts`,
-              size: 1,
-            })) }
-          : { objects: firstPage, truncated: true, cursor: 'page-2' };
+      list,
+      async put() {
+        puts += 1;
       },
     });
-    const part = new FormData();
-    part.append('path', 'v0/new.ts');
-    part.append('file', new File(['part'], 'new.ts', { type: 'video/mp2t' }));
+    for (const value of ['first', 'second']) {
+      const part = new FormData();
+      part.append('path', 'v0/seg_001.ts');
+      part.append('file', new File([value], 'seg_001.ts', { type: 'video/mp2t' }));
+      const response = await api.request(
+        new Request('https://videokr.com/videos/vid_1/hls/parts', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${key}` },
+          body: part,
+        }),
+        {},
+        env,
+      );
+      expect(response.status).toBe(200);
+    }
+    expect(puts).toBe(2);
+    expect(list).not.toHaveBeenCalled();
+  });
 
+  it('rejects a completed ladder over the part limit', async () => {
+    const env = hlsEnv({
+      async list() {
+        return {
+          objects: Array.from({ length: 3001 }, (_, index) => ({
+            key: `usr_1/vid_1/hls/v0/part_${index}.ts`,
+            size: 1,
+          })),
+        };
+      },
+    });
     const response = await api.request(
-      new Request('https://videokr.com/videos/vid_1/hls/parts', {
+      new Request('https://videokr.com/videos/vid_1/hls/complete', {
         method: 'POST',
         headers: { authorization: `Bearer ${key}` },
-        body: part,
       }),
       {},
       env,
     );
 
-    expect(response.status).toBe(200);
-    expect(listCalls).toEqual([
-      { prefix: 'usr_1/vid_1/hls', limit: 1000 },
-      { prefix: 'usr_1/vid_1/hls', limit: 1000, cursor: 'page-2' },
-    ]);
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ error: 'an HLS ladder cannot contain more than 3000 parts' });
   });
 
   it('follows truncated listings when repairing segment measurements', async () => {

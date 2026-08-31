@@ -507,7 +507,12 @@ async function listAllR2Objects(media: R2Bucket, prefix: string): Promise<R2Obje
   return objects;
 }
 
-async function repairedHlsMaster(media: R2Bucket, prefix: string, master: string): Promise<string> {
+async function repairedHlsMaster(
+  media: R2Bucket,
+  prefix: string,
+  master: string,
+  objects: R2Object[],
+): Promise<string> {
   const variants = await Promise.all(
     hlsMasterVariantUris(master).map(async (variantUri) => {
       const cleanVariantUri = variantUri.split(/[?#]/, 1)[0];
@@ -518,7 +523,6 @@ async function repairedHlsMaster(media: R2Bucket, prefix: string, master: string
       const slash = cleanVariantUri.lastIndexOf('/');
       const directory = slash >= 0 ? cleanVariantUri.slice(0, slash + 1) : '';
       const segmentPrefix = `${prefix}/${directory}`;
-      const objects = await listAllR2Objects(media, segmentPrefix);
       const segmentSizes: Record<string, number> = {};
       for (const object of objects) {
         if (object.key.startsWith(segmentPrefix)) {
@@ -547,12 +551,7 @@ api.post('/videos/:id/hls/parts', async (c) => {
   if (entry.size > HLS_PART_LIMIT) return c.json({ error: 'HLS parts must be 20MB or smaller' }, 413);
 
   const prefix = hlsPrefix(user.id, id);
-  const objects = await listAllR2Objects(c.env.MEDIA, prefix);
   const key = `${prefix}/${path}`;
-  const alreadyStored = objects.some((object) => object.key === key);
-  if (!alreadyStored && objects.length >= HLS_PART_COUNT_LIMIT) {
-    return c.json({ error: 'an HLS ladder cannot contain more than 3000 parts' }, 413);
-  }
   await c.env.MEDIA.put(key, entry.stream(), { httpMetadata: { contentType: hlsPartType(path) } });
   return c.json({ ok: true, path, key });
 });
@@ -572,7 +571,11 @@ api.post('/videos/:id/hls/complete', async (c) => {
   const master = await c.env.MEDIA.get(masterKey);
   if (!master) return c.json({ error: 'master.m3u8 has not been uploaded' }, 400);
   const masterText = await master.text();
-  const repairedMaster = await repairedHlsMaster(c.env.MEDIA, prefix, masterText);
+  const objects = await listAllR2Objects(c.env.MEDIA, prefix);
+  if (objects.length > HLS_PART_COUNT_LIMIT) {
+    return c.json({ error: 'an HLS ladder cannot contain more than 3000 parts' }, 413);
+  }
+  const repairedMaster = await repairedHlsMaster(c.env.MEDIA, prefix, masterText, objects);
   if (repairedMaster !== masterText) {
     await c.env.MEDIA.put(masterKey, repairedMaster, {
       httpMetadata: { contentType: 'application/vnd.apple.mpegurl' },
