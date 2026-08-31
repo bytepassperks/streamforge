@@ -72,6 +72,39 @@ function embedEnv(owner: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>): En
   } as unknown as Env;
 }
 
+function renameablePublicEnv(): { env: Env; video: Video } {
+  const storedVideo = embedVideo({ visibility: 'public' });
+  const prepare = (sql: string) => {
+    let values: unknown[] = [];
+    const statement = {
+      bind(...args: unknown[]) {
+        values = args;
+        return statement;
+      },
+      async first<T>() {
+        if (sql.includes('WHERE id = ? OR slug = ?')) {
+          return values.some((value) => value === storedVideo.id || value === storedVideo.slug) ? (storedVideo as T) : null;
+        }
+        if (sql.includes('FROM events')) return { n: 0 } as T;
+        if (sql.includes('FROM users')) return { id: 'usr_1', plan: 'free', role: 'user', unlimited: 0 } as T;
+        if (sql.includes('FROM play_usage')) return { plays: 0 } as T;
+        return null;
+      },
+      async all<T>() {
+        return { results: [] as T[] };
+      },
+    };
+    return statement;
+  };
+  return {
+    video: storedVideo,
+    env: {
+      PUBLIC_BASE_URL: 'https://videokr.com',
+      DB: { prepare },
+    } as unknown as Env,
+  };
+}
+
 async function embedPayload(owner: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>) {
   const response = await pub.request(
     new Request('https://videokr.com/api/embed/vid_1'),
@@ -126,6 +159,20 @@ describe('embedBlocked', () => {
   it('allows empty allowlists and missing referers', () => {
     expect(embedBlocked(request({ referer: 'https://other.example/page' }), video(''))).toBe(false);
     expect(embedBlocked(request(), video('partner.example'))).toBe(false);
+  });
+});
+
+describe('public video slugs', () => {
+  it('serves the renamed slug and not the old slug', async () => {
+    const { env, video } = renameablePublicEnv();
+    video.slug = 'renamed-film';
+
+    const renamed = await pub.request(new Request('https://videokr.com/v/renamed-film'), {}, env);
+    expect(renamed.status).toBe(200);
+    expect(await renamed.text()).toContain('<title>The film — Videokr</title>');
+
+    const old = await pub.request(new Request('https://videokr.com/v/the-film'), {}, env);
+    expect(old.status).toBe(404);
   });
 });
 

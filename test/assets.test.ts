@@ -62,4 +62,15 @@ describe('asset stamps', () => {
       expect(unstamped, `${file} loads unstamped assets`).toEqual([]);
     }
   });
+
+  it('includes the editable video slug controls in the dashboard', () => {
+    const html = readFileSync(join(root, 'public', 'app.html'), 'utf8');
+    const js = readFileSync(join(root, 'public', 'app.js'), 'utf8');
+    expect(html).toContain('id="ed-slug"');
+    expect(html).toContain('id="ed-slug-url"');
+    expect(html).toContain('Changing this URL breaks the old link.');
+    expect(js).toContain("slug: $('ed-slug').value.trim()");
+    expect(js).toContain('err && err.status === 409');
+    expect(js).toContain('That URL is already taken.');
+  });
 });
