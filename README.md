@@ -71,7 +71,7 @@ uploads a three-rung VOD ladder, and never prints the API key.
 Browser-optimised videos keep an uncapped copied top rung because encoding 1080p in
 ffmpeg.wasm is substantially slower. Auto may therefore stay on 720p for those videos,
 while viewers can still select 1080p manually; the native PC encoder produces a capped
-1080p rung for more reliable automatic switching.
+source-resolution top rung for more reliable automatic switching.
 
 ## Note on YouTube sources
 

@@ -8,9 +8,10 @@ describe('native encoder ladder', () => {
   it('encodes the top rung instead of copying it', () => {
     const source = readFileSync(join(root, 'scripts/encoder-agent.mjs'), 'utf8');
     expect(source).toMatch(
-      /const targetHeight = variant === 0 \? 360 : variant === 1 \? 720 : height;[\s\S]*?`-c:v:\$\{stream\}`, 'libx264'[\s\S]*?`-crf:v:\$\{stream\}`, variant === 0 \? '26' : variant === 1 \? '24' : '21'[\s\S]*?`-maxrate:v:\$\{stream\}`, variant === 0 \? '800k' : variant === 1 \? '2500k' : '4500k'[\s\S]*?`-bufsize:v:\$\{stream\}`, variant === 0 \? '1600k' : variant === 1 \? '5000k' : '9000k'[\s\S]*?`-g:v:\$\{stream\}`, '60'[\s\S]*?`-force_key_frames:v:\$\{stream\}`, 'expr:gte\(t,n_forced\*2\)'/,
+      /const targetHeight = variant === 0 \? 360 : variant === 1 \? 720 : height;[\s\S]*?`-c:v:\$\{stream\}`, 'libx264'[\s\S]*?`-preset:v:\$\{stream\}`, 'veryfast'[\s\S]*?`-crf:v:\$\{stream\}`, variant === 0 \? '26' : variant === 1 \? '24' : '21'[\s\S]*?`-maxrate:v:\$\{stream\}`, variant === 0 \? '800k' : variant === 1 \? '2500k' : '4500k'[\s\S]*?`-bufsize:v:\$\{stream\}`, variant === 0 \? '1600k' : variant === 1 \? '5000k' : '9000k'[\s\S]*?`-c:a:\$\{stream\}`, 'aac'[\s\S]*?`-b:a:\$\{stream\}`, variant === 0 \? '96k' : '128k'[\s\S]*?`-g:v:\$\{stream\}`, '60'[\s\S]*?`-force_key_frames:v:\$\{stream\}`, 'expr:gte\(t,n_forced\*2\)'/,
     );
     expect(source).not.toContain('`-c:v:${stream}`, \'copy\'');
+    expect(source).toContain("'-hls_time', '2'");
   });
 });
 
