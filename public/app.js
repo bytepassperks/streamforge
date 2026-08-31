@@ -118,10 +118,11 @@
           var worker = source
             .replaceAll('./const.js', 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/const.js')
             .replaceAll('./errors.js', 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/errors.js');
-          return window.FFmpegUtil.toBlobURL(
-            'data:text/javascript;base64,' + window.btoa(worker),
-            'text/javascript',
-          );
+          try {
+            return window.URL.createObjectURL(new Blob([worker], { type: 'text/javascript' }));
+          } catch {
+            throw new Error('browser encoder failed to prepare its worker');
+          }
         }),
       ]).then(function (workerAndCore) {
         return ffmpeg.load({
@@ -130,8 +131,12 @@
           classWorkerURL: workerAndCore[2],
         }).then(function () {
           return ffmpeg;
+        }, function () {
+          throw new Error('browser encoder failed to load');
         });
       });
+    }).catch(function () {
+      throw new Error('browser encoder failed to load');
     });
     return ffmpegPromise;
   }
@@ -217,6 +222,7 @@
   function uploadHlsParts(videoId, ffmpeg, files, master, job, prefix) {
     var work = files.slice();
     var cursor = 0;
+    var completed = 0;
     function upload(path) {
       return ffmpeg.readFile(path).then(function (data) {
         var relative = path.replace(/^\/ladder\//, '');
@@ -240,7 +246,8 @@
       if (cursor >= work.length) return Promise.resolve();
       var path = work[cursor++];
       return upload(path).then(function () {
-        setHlsProgress(prefix, 82 + ((files.length - work.length + 1) / files.length) * 16, 'Uploading ladder parts…', true);
+        completed += 1;
+        setHlsProgress(prefix, 82 + (completed / Math.max(files.length, 1)) * 16, 'Uploading ladder parts…', true);
         return worker();
       });
     }
