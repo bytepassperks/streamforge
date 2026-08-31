@@ -44,8 +44,17 @@ export const pub = new Hono<{ Bindings: Env }>();
 pub.use('/api/embed/*', async (c, next) => {
   await next();
   c.header('access-control-allow-origin', '*');
-  c.header('access-control-allow-headers', 'content-type');
+  c.header('access-control-allow-headers', 'content-type, range');
 });
+
+pub.options('/media/*', (c) =>
+  c.body(null, 204, {
+    'access-control-allow-origin': '*',
+    'access-control-allow-headers': 'content-type, range',
+    'access-control-allow-methods': 'GET, HEAD, OPTIONS',
+    'access-control-max-age': '86400',
+  }),
+);
 
 /* ---------------------------------------------------------- lifetime ---- */
 
@@ -244,6 +253,7 @@ interface EmbedPayload {
     description: string;
     source_type: string;
     source_ref: string;
+    fallback_ref: string;
     duration: number;
     thumbnail_url: string;
     captions_url: string;
@@ -310,6 +320,7 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
       description: video.description,
       source_type: video.source_type,
       source_ref: video.source_ref,
+      fallback_ref: video.fallback_ref,
       duration: video.duration,
       thumbnail_url: thumbnail,
       captions_url: video.captions_url,
@@ -590,7 +601,10 @@ async function fillMediaCache(cacheKey: Request, key: string, media: R2Bucket): 
     object.writeHttpMetadata(headers);
     headers.set('content-length', String(object.size));
     headers.set('accept-ranges', 'bytes');
-    headers.set('cache-control', 'public, max-age=31536000, immutable');
+    headers.set(
+      'cache-control',
+      /\.m3u8(?:$|\?)/i.test(key) ? 'public, max-age=60' : 'public, max-age=31536000, immutable',
+    );
     headers.set('etag', object.httpEtag);
     await caches.default.put(cacheKey, new Response(object.body, { headers }));
   } catch {
@@ -603,6 +617,9 @@ pub.get('/media/*', async (c) => {
   const key = decodeURIComponent(c.req.path.replace(/^\/media\//, ''));
   if (!key) return c.text('not found', 404);
   const range = c.req.header('range');
+  const cacheControl = /\.m3u8(?:$|\?)/i.test(key)
+    ? 'public, max-age=60'
+    : 'public, max-age=31536000, immutable';
   if (c.req.method === 'GET' && typeof caches !== 'undefined') {
     const cacheKey = new Request(c.req.url, { method: 'GET' });
     const cacheRequest = range
@@ -613,6 +630,8 @@ pub.get('/media/*', async (c) => {
       if (cached) {
         const headers = new Headers(cached.headers);
         headers.set('x-videokr-cache', 'hit');
+        headers.set('access-control-allow-origin', '*');
+        headers.set('access-control-allow-headers', 'content-type, range');
         return new Response(cached.body, {
           status: cached.status,
           statusText: cached.statusText,
@@ -638,7 +657,9 @@ pub.get('/media/*', async (c) => {
   object.writeHttpMetadata(headers);
   headers.set('etag', object.httpEtag);
   headers.set('accept-ranges', 'bytes');
-  headers.set('cache-control', 'public, max-age=31536000, immutable');
+  headers.set('cache-control', cacheControl);
+  headers.set('access-control-allow-origin', '*');
+  headers.set('access-control-allow-headers', 'content-type, range');
   if (range && object.range && 'offset' in object.range) {
     const offset = object.range.offset ?? 0;
     const length = object.range.length ?? object.size - offset;

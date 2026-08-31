@@ -14,6 +14,7 @@ import {
   safeExternalUrl,
   slugify,
 } from '../src/lib/util';
+import { selectHlsMasterPlaylist, selectHlsVariantIndexes } from '../src/lib/hls';
 
 describe('parseSource', () => {
   it('reads youtube watch, short, embed and shorts urls', () => {
@@ -160,6 +161,18 @@ describe('player config', () => {
     expect(normalizeSkin('<script>')).toBe('videokr');
     expect(mergePlayerConfig(JSON.stringify({ skin: 'nope' })).skin).toBe('videokr');
     expect(mergePlayerConfig(JSON.stringify({ skin: 'pop' })).skin).toBe('pop');
+  });
+});
+
+describe('HLS variant selection', () => {
+  it('keeps the copied rendition when its segments are at most 12 seconds', () => {
+    expect(selectHlsVariantIndexes(12)).toEqual([0, 1, 2]);
+  });
+
+  it('drops the copied rendition when its segments exceed 12 seconds', () => {
+    expect(selectHlsVariantIndexes(12.01)).toEqual([0, 1]);
+    const master = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv0/index.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=2\nv1/index.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=3\nv2/index.m3u8\n';
+    expect(selectHlsMasterPlaylist(master, [0, 1])).not.toContain('v2/index.m3u8');
   });
 });
 

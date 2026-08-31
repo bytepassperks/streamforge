@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env, User } from '../lib/types';
 import { currentUser, createSession, destroySession, hashPassword, randomSalt, verifyPassword } from '../lib/auth';
+import { userForApiKey } from '../lib/apikeys';
 import {
   OVERAGE_PER_10K_USD,
   PLANS,
@@ -47,7 +48,9 @@ const OPEN_PATHS = new Set([
 
 api.use('*', async (c, next) => {
   const path = c.req.path.replace(/^\/api/, '');
-  const user = await currentUser(c);
+  const match = /^Bearer\s+(.+)$/i.exec((c.req.header('authorization') ?? '').trim());
+  const keyUser = match?.[1] ? await userForApiKey(c.env, match[1].trim()) : null;
+  const user = keyUser ?? (await currentUser(c));
   if (user) c.set('user', user);
   if (user && Number(user.suspended) === 1 && path !== '/auth/logout') {
     return c.json({ error: 'this account is suspended' }, 403);
@@ -297,7 +300,7 @@ async function posterFor(type: string, ref: string): Promise<string> {
 
 api.get('/videos', async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT v.id, v.slug, v.title, v.source_type, v.source_ref, v.thumbnail_url, v.visibility,
+    `SELECT v.id, v.slug, v.title, v.source_type, v.source_ref, v.fallback_ref, v.thumbnail_url, v.visibility,
             v.duration, v.project_id, v.created_at,
             (SELECT COUNT(*) FROM events e WHERE e.video_id = v.id AND e.kind = 'play') AS plays,
             (SELECT COUNT(*) FROM leads l WHERE l.video_id = v.id) AS leads
@@ -361,7 +364,7 @@ api.post('/videos', async (c) => {
       ts,
     )
     .run();
-  return c.json({ video: { id, slug, title, source_type: parsed.type, source_ref: parsed.ref } }, 201);
+  return c.json({ video: { id, slug, title, source_type: parsed.type, source_ref: parsed.ref, fallback_ref: '' } }, 201);
 });
 
 api.get('/videos/:id', async (c) => {
@@ -464,6 +467,81 @@ async function assertOwnedVideo(c: { env: Env }, videoId: string, userId: string
     .first();
   return Boolean(row);
 }
+
+const HLS_PART_LIMIT = 20 * 1024 * 1024;
+const HLS_PART_COUNT_LIMIT = 900;
+const HLS_PATH = /^[A-Za-z0-9][A-Za-z0-9_.-]*(\/[A-Za-z0-9][A-Za-z0-9_.-]*)*$/;
+const HLS_TYPES: Record<string, string> = {
+  '.m3u8': 'application/vnd.apple.mpegurl',
+  '.ts': 'video/mp2t',
+  '.m4s': 'video/mp4',
+  '.mp4': 'video/mp4',
+};
+
+function hlsPrefix(userId: string, videoId: string): string {
+  return `${userId}/${videoId}/hls`;
+}
+
+function hlsPartType(path: string): string {
+  const dot = path.lastIndexOf('.');
+  return dot >= 0 ? HLS_TYPES[path.slice(dot).toLowerCase()] ?? '' : '';
+}
+
+api.post('/videos/:id/hls/parts', async (c) => {
+  const id = c.req.param('id');
+  const user = c.get('user');
+  if (!(await assertOwnedVideo(c, id, user.id))) return c.json({ error: 'not found' }, 404);
+  const form = await c.req.formData();
+  const pathValue = form.get('path');
+  const entry: unknown = form.get('file');
+  const path = typeof pathValue === 'string' ? pathValue : '';
+  if (!HLS_PATH.test(path) || path.split('/').some((part) => part === '..')) {
+    return c.json({ error: 'invalid HLS part path' }, 400);
+  }
+  if (!hlsPartType(path)) return c.json({ error: 'unsupported HLS part extension' }, 415);
+  if (!(entry instanceof File)) return c.json({ error: 'file is required' }, 400);
+  if (entry.size > HLS_PART_LIMIT) return c.json({ error: 'HLS parts must be 20MB or smaller' }, 413);
+
+  const prefix = hlsPrefix(user.id, id);
+  const listed = await c.env.MEDIA.list({ prefix, limit: HLS_PART_COUNT_LIMIT + 1 });
+  const key = `${prefix}/${path}`;
+  const alreadyStored = (listed.objects ?? []).some((object) => object.key === key);
+  if (!alreadyStored && (listed.objects?.length ?? 0) >= HLS_PART_COUNT_LIMIT) {
+    return c.json({ error: 'an HLS ladder cannot contain more than 900 parts' }, 413);
+  }
+  await c.env.MEDIA.put(key, entry.stream(), { httpMetadata: { contentType: hlsPartType(path) } });
+  return c.json({ ok: true, path, key });
+});
+
+api.post('/videos/:id/hls/complete', async (c) => {
+  const id = c.req.param('id');
+  const user = c.get('user');
+  const video = await c.env.DB.prepare(
+    'SELECT id, source_type, source_ref, fallback_ref FROM videos WHERE id = ? AND user_id = ?',
+  )
+    .bind(id, user.id)
+    .first<{ id: string; source_type: string; source_ref: string; fallback_ref: string }>();
+  if (!video) return c.json({ error: 'not found' }, 404);
+
+  const prefix = hlsPrefix(user.id, id);
+  const masterKey = `${prefix}/master.m3u8`;
+  const master = await c.env.MEDIA.head(masterKey);
+  if (!master) return c.json({ error: 'master.m3u8 has not been uploaded' }, 400);
+
+  const nextRef = `/media/${masterKey}`;
+  const fallback =
+    video.fallback_ref ||
+    (video.source_type === 'mp4' &&
+    /^\/media\/.+\.(?:mp4|webm)(?:$|\?)/i.test(video.source_ref)
+      ? video.source_ref
+      : '');
+  await c.env.DB.prepare(
+    `UPDATE videos SET source_type = 'hls', source_ref = ?, fallback_ref = ?, updated_at = ? WHERE id = ? AND user_id = ?`,
+  )
+    .bind(nextRef, fallback, now(), id, user.id)
+    .run();
+  return c.json({ ok: true, source_type: 'hls', source_ref: nextRef, fallback_ref: fallback });
+});
 
 api.put('/videos/:id/chapters', async (c) => {
   const id = c.req.param('id');

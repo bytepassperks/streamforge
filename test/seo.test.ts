@@ -22,6 +22,7 @@ function video(overrides: Partial<Video> = {}): Video {
     description: 'A film.',
     source_type: 'mp4',
     source_ref: '/media/usr_1/a.mp4',
+    fallback_ref: '',
     duration: 130,
     thumbnail_url: '/media/usr_1/a.jpg',
     thumbnail_url_b: '',

@@ -384,6 +384,7 @@
     this._container = container;
     this._source = source;
     this._options = options || {};
+    this._fallback = this._options.fallback || '';
   }
   HtmlAdapter.prototype = Object.create(Emitter.prototype);
 
@@ -429,6 +430,22 @@
     });
 
     var isHls = /\.m3u8($|\?)/i.test(this._source);
+    var fallback = this._fallback;
+    var useFallback = function () {
+      if (!fallback || self._usingFallback) return false;
+      self._usingFallback = true;
+      if (self._hls) {
+        self._hls.destroy();
+        self._hls = null;
+      }
+      video.src = fallback;
+      return true;
+    };
+    if (isHls && fallback) {
+      video.addEventListener('error', function () {
+        useFallback();
+      });
+    }
     if (isHls && !video.canPlayType('application/vnd.apple.mpegurl')) {
       return loadScript('https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js')
         .then(function () {
@@ -437,15 +454,18 @@
             hls.loadSource(self._source);
             hls.attachMedia(video);
             self._hls = hls;
+            hls.on(window.Hls.Events.ERROR, function (_event, data) {
+              if (data && data.fatal) useFallback();
+            });
             hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
               self.emit('qualities');
             });
           } else {
-            video.src = self._source;
+            video.src = fallback || self._source;
           }
         })
         .catch(function () {
-          video.src = self._source;
+          video.src = fallback || self._source;
         });
     }
     video.src = this._source;
@@ -719,9 +739,10 @@
       });
     if (v.source_type === 'vimeo')
       return new VimeoAdapter(container, v.source_ref, { poster: v.thumbnail_url });
-    return new HtmlAdapter(container, v.source_ref, {
-      hls: v.source_type === 'hls',
-      poster: v.thumbnail_url,
+      return new HtmlAdapter(container, v.source_ref, {
+        hls: v.source_type === 'hls',
+        fallback: v.fallback_ref,
+        poster: v.thumbnail_url,
       captionsUrl: v.captions_url,
       muted: cfg.muted,
     });

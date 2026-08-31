@@ -48,6 +48,21 @@ npm test
 
 This repo is deployed at <https://videokr.com>.
 
+## Optional offline HLS encoding
+
+Owners who keep a PC running can generate adaptive HLS without paid hosting. Install native
+`ffmpeg`, create an API key in Dashboard → Integrations, and run:
+
+```bash
+export VIDEOKR_API_KEY='vk_live_…'
+node scripts/encoder-agent.mjs --base-url https://videokr.com --video VIDEO_ID
+# Or process every progressive upload owned by that key:
+node scripts/encoder-agent.mjs --base-url https://videokr.com --all
+```
+
+The agent keeps the original progressive source as a fallback, uploads a three-rung VOD
+ladder, and is safe to re-run. It never prints the API key.
+
 ## Note on YouTube sources
 
 Hiding YouTube's controls/branding on embedded videos conflicts with YouTube's Terms of

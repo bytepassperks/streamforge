@@ -107,7 +107,7 @@ admin.get('/users/:id', async (c) => {
   if (!user) return c.json({ error: 'no such user' }, 404);
   const plays = await playUsage(c.env, user);
   const videos = await c.env.DB.prepare(
-    'SELECT id, slug, title, source_type, visibility, created_at FROM videos WHERE user_id = ? ORDER BY created_at DESC',
+    'SELECT id, slug, title, source_type, source_ref, fallback_ref, visibility, created_at FROM videos WHERE user_id = ? ORDER BY created_at DESC',
   )
     .bind(id)
     .all();
@@ -263,7 +263,7 @@ admin.post('/users/:id/impersonate', async (c) => {
 admin.get('/videos', async (c) => {
   const q = `%${(c.req.query('q') ?? '').trim().toLowerCase()}%`;
   const { results } = await c.env.DB.prepare(
-    `SELECT v.id, v.slug, v.title, v.source_type, v.visibility, v.created_at,
+    `SELECT v.id, v.slug, v.title, v.source_type, v.source_ref, v.fallback_ref, v.visibility, v.created_at,
             u.email AS owner_email, u.id AS owner_id,
             (SELECT COUNT(*) FROM events e WHERE e.video_id = v.id AND e.kind = 'play') AS plays
        FROM videos v JOIN users u ON u.id = v.user_id

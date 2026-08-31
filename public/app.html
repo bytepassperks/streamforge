@@ -173,6 +173,17 @@
           </div>
           <p class="tiny muted" style="margin:6px 0 0">Optional — leave it and we grab a frame from the video for you.</p>
 
+          <label class="checkbox" style="margin-top:12px">
+            <input type="checkbox" id="cv-hls">
+            <span>Optimise for slow connections</span>
+          </label>
+          <p class="tiny muted">Encoding runs in this browser tab and takes roughly five times the video's length. Keep this tab open. For long videos, the PC encoder is preferable.</p>
+          <div class="hls-progress hidden" id="cv-hls-progress">
+            <progress id="cv-hls-bar" max="100" value="0"></progress>
+            <span class="tiny muted" id="cv-hls-status"></span>
+            <button class="btn btn-ghost btn-sm" id="cv-hls-cancel" type="button">Cancel</button>
+          </div>
+
           <div class="form-error" id="cv-error"></div>
 
           <div class="composer-foot">
@@ -357,6 +368,12 @@
           </div>
           <div class="field"><label for="ed-transcript">Transcript (searchable on the public page)</label>
             <textarea id="ed-transcript"></textarea></div>
+          <div class="hls-progress" id="ed-hls-progress">
+            <button class="btn btn-ghost btn-sm" id="ed-hls-start" type="button">Optimise for slow connections</button>
+            <progress id="ed-hls-bar" max="100" value="0"></progress>
+            <span class="tiny muted" id="ed-hls-status"></span>
+            <button class="btn btn-ghost btn-sm hidden" id="ed-hls-cancel" type="button">Cancel</button>
+          </div>
         </div>
 
         <div class="tab-panel" data-panel="thumbnail">
