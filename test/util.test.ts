@@ -210,6 +210,34 @@ describe('HLS variant selection', () => {
     ).toEqual({ bandwidth: 800_000, averageBandwidth: 650_000 });
   });
 
+  it('keeps the ten-second window with two-second segments', () => {
+    const playlist = [
+      '#EXTM3U',
+      '#EXTINF:2,',
+      'seg_000.ts',
+      '#EXTINF:2,',
+      'seg_001.ts',
+      '#EXTINF:2,',
+      'seg_002.ts',
+      '#EXTINF:2,',
+      'seg_003.ts',
+      '#EXTINF:2,',
+      'seg_004.ts',
+      '#EXTINF:2,',
+      'seg_005.ts',
+    ].join('\n');
+    expect(
+      measureHlsBandwidth(playlist, {
+        'seg_000.ts': 50_000,
+        'seg_001.ts': 50_000,
+        'seg_002.ts': 50_000,
+        'seg_003.ts': 50_000,
+        'seg_004.ts': 500_000,
+        'seg_005.ts': 50_000,
+      }),
+    ).toEqual({ bandwidth: 560_000, averageBandwidth: 500_000 });
+  });
+
   it('uses the whole-rendition average when it is shorter than the window', () => {
     const playlist = '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n#EXTINF:1.5,\nseg_001.ts\n';
     expect(
