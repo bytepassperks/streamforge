@@ -253,13 +253,21 @@ describe('chunked video uploads', () => {
       uploadId: string;
       parts: Map<number, ArrayBuffer>;
       completed?: ArrayBuffer;
+      forcedSize?: number;
       aborted: boolean;
+      deleted: boolean;
     };
     const uploads = new Map<string, UploadRecord>();
     const media = {
       async createMultipartUpload(key: string) {
         const uploadId = `upload-${uploads.size + 1}`;
-        const record: UploadRecord = { key, uploadId, parts: new Map<number, ArrayBuffer>(), aborted: false };
+        const record: UploadRecord = {
+          key,
+          uploadId,
+          parts: new Map<number, ArrayBuffer>(),
+          aborted: false,
+          deleted: false,
+        };
         uploads.set(uploadId, record);
         return {
           key,
@@ -317,6 +325,18 @@ describe('chunked video uploads', () => {
       async get(key: string) {
         const record = [...uploads.values()].find((upload) => upload.key === key);
         return record?.completed ? { async arrayBuffer() { return record.completed as ArrayBuffer; } } : null;
+      },
+      async head(key: string) {
+        const record = [...uploads.values()].find((upload) => upload.key === key);
+        if (!record?.completed || record.deleted) return null;
+        return { size: record.forcedSize ?? record.completed.byteLength };
+      },
+      async delete(key: string) {
+        const record = [...uploads.values()].find((upload) => upload.key === key);
+        if (record) {
+          record.deleted = true;
+          record.completed = undefined;
+        }
       },
     };
     return { env: hlsEnv(media), uploads };
@@ -454,5 +474,125 @@ describe('chunked video uploads', () => {
     );
     expect(abort.status).toBe(200);
     expect(uploads.get(created.uploadId)).toMatchObject({ aborted: true, parts: new Map() });
+  });
+
+  it('returns 400 for missing upload sessions and keeps abort idempotent', async () => {
+    const { env, uploads } = multipartEnv();
+    const part = new FormData();
+    part.append('key', 'usr_1/random.mp4');
+    part.append('uploadId', 'missing');
+    part.append('partNumber', '1');
+    part.append('file', new File(['part'], 'part'));
+    const partResponse = await api.request(
+      new Request('https://videokr.com/uploads/part', { method: 'POST', headers: sessionHeaders, body: part }),
+      {},
+      env,
+    );
+    expect(partResponse.status).toBe(400);
+    expect(await partResponse.json()).toEqual({ error: 'upload session not found or expired' });
+
+    const completeResponse = await api.request(
+      new Request('https://videokr.com/uploads/complete', {
+        method: 'POST',
+        headers: { ...sessionHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          key: 'usr_1/random.mp4',
+          uploadId: 'missing',
+          parts: [{ partNumber: 1, etag: 'etag-1' }],
+        }),
+      }),
+      {},
+      env,
+    );
+    expect(completeResponse.status).toBe(400);
+    expect(await completeResponse.json()).toEqual({ error: 'upload session not found or expired' });
+
+    const abortResponse = await api.request(
+      new Request('https://videokr.com/uploads/abort', {
+        method: 'POST',
+        headers: { ...sessionHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({ key: 'usr_1/random.mp4', uploadId: 'missing' }),
+      }),
+      {},
+      env,
+    );
+    expect(abortResponse.status).toBe(400);
+    expect(await abortResponse.json()).toEqual({ error: 'upload session not found or expired' });
+
+    const create = await api.request(
+      new Request('https://videokr.com/uploads/create', {
+        method: 'POST',
+        headers: { ...sessionHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({ filename: 'movie.mp4', size: 3 }),
+      }),
+      {},
+      env,
+    );
+    const created = await create.json<{ key: string; uploadId: string }>();
+    const firstAbort = await api.request(
+      new Request('https://videokr.com/uploads/abort', {
+        method: 'POST',
+        headers: { ...sessionHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({ key: created.key, uploadId: created.uploadId }),
+      }),
+      {},
+      env,
+    );
+    const secondAbort = await api.request(
+      new Request('https://videokr.com/uploads/abort', {
+        method: 'POST',
+        headers: { ...sessionHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({ key: created.key, uploadId: created.uploadId }),
+      }),
+      {},
+      env,
+    );
+    expect(firstAbort.status).toBe(200);
+    expect(secondAbort.status).toBe(200);
+    expect(uploads.get(created.uploadId)?.aborted).toBe(true);
+  });
+
+  it('rejects an over-cap completed object and deletes it', async () => {
+    const { env, uploads } = multipartEnv();
+    const create = await api.request(
+      new Request('https://videokr.com/uploads/create', {
+        method: 'POST',
+        headers: { ...sessionHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({ filename: 'movie.mp4', size: 3 }),
+      }),
+      {},
+      env,
+    );
+    const created = await create.json<{ key: string; uploadId: string }>();
+    const part = new FormData();
+    part.append('key', created.key);
+    part.append('uploadId', created.uploadId);
+    part.append('partNumber', '1');
+    part.append('file', new File(['abc'], 'part'));
+    await api.request(
+      new Request('https://videokr.com/uploads/part', { method: 'POST', headers: sessionHeaders, body: part }),
+      {},
+      env,
+    );
+
+    const record = uploads.get(created.uploadId);
+    expect(record).toBeDefined();
+    record!.forcedSize = 200 * 1024 * 1024 + 1;
+    const complete = await api.request(
+      new Request('https://videokr.com/uploads/complete', {
+        method: 'POST',
+        headers: { ...sessionHeaders, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          key: created.key,
+          uploadId: created.uploadId,
+          parts: [{ partNumber: 1, etag: 'etag-1' }],
+        }),
+      }),
+      {},
+      env,
+    );
+    expect(complete.status).toBe(413);
+    expect(await env.MEDIA.get(created.key)).toBeNull();
+    expect(record!.deleted).toBe(true);
   });
 });

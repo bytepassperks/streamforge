@@ -1108,9 +1108,13 @@ api.post('/uploads/part', async (c) => {
   }
   if (!(entry instanceof File)) return c.json({ error: 'file is required' }, 400);
   if (entry.size > MULTIPART_PART_LIMIT) return c.json({ error: 'upload parts must be 10 MB or smaller' }, 413);
-  const upload = c.env.MEDIA.resumeMultipartUpload(key as string, uploadId);
-  const part = await upload.uploadPart(partNumber, entry.stream());
-  return c.json({ etag: part.etag });
+  try {
+    const upload = c.env.MEDIA.resumeMultipartUpload(key as string, uploadId);
+    const part = await upload.uploadPart(partNumber, entry.stream());
+    return c.json({ etag: part.etag });
+  } catch {
+    return c.json({ error: 'upload session not found or expired' }, 400);
+  }
 });
 
 api.post('/uploads/complete', async (c) => {
@@ -1141,8 +1145,17 @@ api.post('/uploads/complete', async (c) => {
     previous = part.partNumber as number;
     parts.push({ partNumber: previous, etag: part.etag });
   }
-  const upload = c.env.MEDIA.resumeMultipartUpload(body.key as string, body.uploadId);
-  await upload.complete(parts);
+  try {
+    const upload = c.env.MEDIA.resumeMultipartUpload(body.key as string, body.uploadId);
+    await upload.complete(parts);
+  } catch {
+    return c.json({ error: 'upload session not found or expired' }, 400);
+  }
+  const object = await c.env.MEDIA.head(body.key as string);
+  if (object && object.size > UPLOAD_LIMITS.video) {
+    await c.env.MEDIA.delete(body.key as string);
+    return c.json({ error: `file is larger than ${uploadLimitFor('mp4').label}` }, 413);
+  }
   return c.json({ key: body.key, url: `/media/${body.key}` }, 201);
 });
 
@@ -1151,9 +1164,13 @@ api.post('/uploads/abort', async (c) => {
   const invalidKey = multipartError(c, body.key, c.get('user').id);
   if (invalidKey) return invalidKey;
   if (typeof body.uploadId !== 'string' || !body.uploadId) return c.json({ error: 'upload id is required' }, 400);
-  const upload = c.env.MEDIA.resumeMultipartUpload(body.key as string, body.uploadId);
-  await upload.abort();
-  return c.json({ ok: true });
+  try {
+    const upload = c.env.MEDIA.resumeMultipartUpload(body.key as string, body.uploadId);
+    await upload.abort();
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ error: 'upload session not found or expired' }, 400);
+  }
 });
 
 api.post('/uploads', async (c) => {
