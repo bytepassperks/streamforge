@@ -183,24 +183,21 @@ async function encode(video) {
     const maps = [];
     const codecs = [];
     variants.forEach((variant, stream) => {
-      if (variant === 0 || variant === 1) {
-        const targetHeight = variant === 0 ? 360 : 720;
+      if (variant === 0 || variant === 1 || variant === 2) {
+        const targetHeight = variant === 0 ? 360 : variant === 1 ? 720 : height;
         filters.push(`[0:v]scale=-2:${targetHeight}[v${variant}]`);
         maps.push('-map', `[v${variant}]`, '-map', '0:a:0');
         codecs.push(
           `-c:v:${stream}`, 'libx264',
           `-preset:v:${stream}`, 'veryfast',
-          `-crf:v:${stream}`, variant === 0 ? '26' : '24',
-          `-maxrate:v:${stream}`, variant === 0 ? '800k' : '2500k',
-          `-bufsize:v:${stream}`, variant === 0 ? '1600k' : '5000k',
+          `-crf:v:${stream}`, variant === 0 ? '26' : variant === 1 ? '24' : '21',
+          `-maxrate:v:${stream}`, variant === 0 ? '800k' : variant === 1 ? '2500k' : '4500k',
+          `-bufsize:v:${stream}`, variant === 0 ? '1600k' : variant === 1 ? '5000k' : '9000k',
           `-c:a:${stream}`, 'aac',
           `-b:a:${stream}`, variant === 0 ? '96k' : '128k',
           `-g:v:${stream}`, '60',
           `-force_key_frames:v:${stream}`, 'expr:gte(t,n_forced*2)',
         );
-      } else {
-        maps.push('-map', '0:v:0', '-map', '0:a:0');
-        codecs.push(`-c:v:${stream}`, 'copy', `-c:a:${stream}`, 'aac', `-b:a:${stream}`, '128k');
       }
     });
     if (filters.length) args.push('-filter_complex', filters.join(';'));
