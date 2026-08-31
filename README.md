@@ -68,6 +68,11 @@ already using HLS, so it is safe to re-run. Add `--force` to re-process an HLS v
 preserved progressive fallback. The agent keeps the original progressive source as a fallback,
 uploads a three-rung VOD ladder, and never prints the API key.
 
+Browser-optimised videos keep an uncapped copied top rung because encoding 1080p in
+ffmpeg.wasm is substantially slower. Auto may therefore stay on 720p for those videos,
+while viewers can still select 1080p manually; the native PC encoder produces a capped
+source-resolution top rung for more reliable automatic switching.
+
 ## Note on YouTube sources
 
 Hiding YouTube's controls/branding on embedded videos conflicts with YouTube's Terms of

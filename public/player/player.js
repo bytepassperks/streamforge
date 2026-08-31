@@ -453,6 +453,7 @@
             var hls = new window.Hls({
               // Choose the first fragment from the assumed estimate instead of a probe fragment.
               abrEwmaDefaultEstimate: 2500000,
+              abrBandWidthUpFactor: 0.8,
               testBandwidth: false,
               startLevel: -1
             });

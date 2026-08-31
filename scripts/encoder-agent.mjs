@@ -102,29 +102,6 @@ async function jsonFetch(url, options = {}) {
   return response.json();
 }
 
-function longestSegment(playlist) {
-  let longest = 0;
-  for (const match of playlist.matchAll(/#EXTINF:([\d.]+)/g)) longest = Math.max(longest, Number(match[1]));
-  return longest;
-}
-
-function filterMaster(master, keepCount) {
-  const lines = master.split(/\r?\n/);
-  const output = [];
-  let rendition = -1;
-  for (let i = 0; i < lines.length; i += 1) {
-    if (lines[i].startsWith('#EXT-X-STREAM-INF:')) {
-      rendition += 1;
-      if (rendition >= keepCount) {
-        i += 1;
-        continue;
-      }
-    }
-    output.push(lines[i]);
-  }
-  return output.join('\n');
-}
-
 async function filesUnder(root, directory = root) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
@@ -177,30 +154,31 @@ async function encode(video) {
     await writeFile(input, new Uint8Array(await response.arrayBuffer()));
     const height = await sourceHeight(input);
     const encoded = encodedVariantIndexes(height);
+    if (encoded.length === 0) {
+      console.log(`Skipped ${video.id}: already small enough to stream`);
+      return;
+    }
     const variants = [...encoded, 2];
     const args = ['-y', '-i', input];
     const filters = [];
     const maps = [];
     const codecs = [];
     variants.forEach((variant, stream) => {
-      if (variant === 0 || variant === 1) {
-        const targetHeight = variant === 0 ? 360 : 720;
+      if (variant === 0 || variant === 1 || variant === 2) {
+        const targetHeight = variant === 0 ? 360 : variant === 1 ? 720 : Math.min(height, 1080);
         filters.push(`[0:v]scale=-2:${targetHeight}[v${variant}]`);
         maps.push('-map', `[v${variant}]`, '-map', '0:a:0');
         codecs.push(
           `-c:v:${stream}`, 'libx264',
           `-preset:v:${stream}`, 'veryfast',
-          `-crf:v:${stream}`, variant === 0 ? '26' : '24',
-          `-maxrate:v:${stream}`, variant === 0 ? '800k' : '2500k',
-          `-bufsize:v:${stream}`, variant === 0 ? '1600k' : '5000k',
+          `-crf:v:${stream}`, variant === 0 ? '26' : variant === 1 ? '24' : '21',
+          `-maxrate:v:${stream}`, variant === 0 ? '800k' : variant === 1 ? '2500k' : '4500k',
+          `-bufsize:v:${stream}`, variant === 0 ? '1600k' : variant === 1 ? '5000k' : '9000k',
           `-c:a:${stream}`, 'aac',
           `-b:a:${stream}`, variant === 0 ? '96k' : '128k',
           `-g:v:${stream}`, '60',
           `-force_key_frames:v:${stream}`, 'expr:gte(t,n_forced*2)',
         );
-      } else {
-        maps.push('-map', '0:v:0', '-map', '0:a:0');
-        codecs.push(`-c:v:${stream}`, 'copy', `-c:a:${stream}`, 'aac', `-b:a:${stream}`, '128k');
       }
     });
     if (filters.length) args.push('-filter_complex', filters.join(';'));
@@ -214,17 +192,7 @@ async function encode(video) {
       join(output, 'v%v', 'index.m3u8'),
     );
     await run('ffmpeg', args);
-    let master = await readFile(join(output, 'master.m3u8'), 'utf8');
-    const copyDirectory = `v${variants.length - 1}`;
-    const v2 = await readFile(join(output, copyDirectory, 'index.m3u8'), 'utf8');
-    const dropV2 = longestSegment(v2) > 12;
-    if (dropV2 && encoded.length === 0) {
-      console.log(`Skipped ${video.id}: already small enough to stream`);
-      return;
-    }
-    if (dropV2) master = filterMaster(master, encoded.length);
-    await writeFile(join(output, 'master.m3u8'), master);
-    const paths = (await filesUnder(output)).filter((path) => !dropV2 || !path.includes(`/${copyDirectory}/`));
+    const paths = await filesUnder(output);
     await uploadAll(video.id, output, paths);
     await jsonFetch(`${baseUrl}/api/videos/${encodeURIComponent(video.id)}/hls/complete`, { method: 'POST' });
     console.log(`Optimised ${video.id}`);
