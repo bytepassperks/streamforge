@@ -9,7 +9,7 @@
 
   /* Shipped skins, plus the retired names still stored on older videos. Kept in
      step with PLAYER_SKINS on the server so an old config never renders unstyled. */
-  var SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave'];
+  var SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate'];
   var LEGACY_SKINS = {
     'forge-dark': 'videokr',
     'forge-light': 'studio',
@@ -92,6 +92,14 @@
     if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
     if (value.indexOf('/') === 0 || value.indexOf('#') === 0) return value;
     return 'https://' + value;
+  }
+
+  function ctaClassName(cta) {
+    var classes = 'sf-cta sf-cta-' + cta.kind + ' sf-cta-style-' + (cta.style || 'card');
+    if (cta.kind !== 'banner' && cta.style !== 'bar' && cta.style !== 'ribbon' && cta.style !== 'spotlight') {
+      classes += ' sf-pos-' + (cta.position || 'bottom-right');
+    }
+    return classes;
   }
 
   function fmtTime(seconds) {
@@ -1421,7 +1429,7 @@
     var self = this;
     var node = el(
       'div',
-      'sf-cta sf-cta-' + cta.kind + ' sf-cta-style-' + (cta.style || 'card') + ' sf-pos-' + (cta.position || 'bottom-right'),
+      ctaClassName(cta),
     );
     node.setAttribute('data-cta', cta.id);
     if (cta.headline) node.appendChild(el('div', 'sf-cta-headline', null)).textContent = cta.headline;
@@ -1524,7 +1532,7 @@
 
   Player.prototype._renderGate = function (cta, position) {
     var self = this;
-    var node = el('div', 'sf-gate');
+    var node = el('div', 'sf-gate sf-gate-style-' + (cta.style || 'card'));
     node.setAttribute('data-cta', cta.id);
     node.setAttribute('data-sf', 'gate');
     var card = el('div', 'sf-gate-card');
@@ -1687,7 +1695,7 @@
       this._showRelated();
       return;
     }
-    var node = el('div', 'sf-endscreen');
+    var node = el('div', 'sf-endscreen sf-endscreen-style-' + (end.style || 'card'));
     node.setAttribute('data-sf', 'endscreen');
     var card = el('div', 'sf-endscreen-card');
     card.appendChild(el('h3', null, null)).textContent = end.headline || 'Thanks for watching';
@@ -2236,6 +2244,7 @@
     },
     Player: Player,
     formatTime: fmtTime,
+    ctaClassName: ctaClassName,
   };
 
   // `Videokr` is the current name; `StreamForge` stays for embeds already in the wild.

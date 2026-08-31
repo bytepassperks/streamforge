@@ -662,7 +662,7 @@ api.put('/videos/:id/ctas', async (c) => {
         String(cta.fields ?? 'email'),
         cta.skippable === false ? 0 : 1,
         String(cta.position ?? 'bottom-right'),
-        normalizeCtaStyle(cta.style),
+        normalizeCtaStyle(cta.style, cta.kind),
       ),
     );
   }

@@ -7,6 +7,7 @@ import {
   escapeHtml,
   hostnameAllowed,
   mergePlayerConfig,
+  GATE_STYLES,
   normalizeCtaStyle,
   normalizeCtaUrl,
   normalizeSkin,
@@ -139,11 +140,16 @@ describe('CTA normalization', () => {
   });
 
   it('normalizes unknown CTA styles to the default card', () => {
-    CTA_STYLES.forEach((style) => expect(normalizeCtaStyle(style)).toBe(style));
-    expect(normalizeCtaStyle('unknown')).toBe('card');
-    expect(normalizeCtaStyle('')).toBe('card');
-    expect(normalizeCtaStyle(undefined)).toBe('card');
-    expect(normalizeCtaStyle(42)).toBe('card');
+    CTA_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'overlay')).toBe(style));
+    GATE_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'gate')).toBe(style));
+    GATE_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'endscreen')).toBe(style));
+    expect(normalizeCtaStyle('unknown', 'overlay')).toBe('card');
+    expect(normalizeCtaStyle('unknown', 'gate')).toBe('card');
+    expect(normalizeCtaStyle('bar', 'gate')).toBe('card');
+    expect(normalizeCtaStyle('light', 'overlay')).toBe('card');
+    expect(normalizeCtaStyle('', 'overlay')).toBe('card');
+    expect(normalizeCtaStyle(undefined, 'gate')).toBe('card');
+    expect(normalizeCtaStyle(42, 'endscreen')).toBe('card');
   });
 });
 

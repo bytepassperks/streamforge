@@ -244,6 +244,23 @@ describe('CTA persistence', () => {
     ]);
   });
 
+  it('normalizes form styles by CTA kind', async () => {
+    const { env, inserts } = ctaEnv();
+    const response = await api.request(
+      ctaRequest([
+        { kind: 'gate', style: 'light' },
+        { kind: 'endscreen', style: 'split' },
+        { kind: 'overlay', style: 'light' },
+      ]),
+      {},
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(inserts[1][12]).toBe('light');
+    expect(inserts[2][12]).toBe('split');
+    expect(inserts[3][12]).toBe('card');
+  });
+
   it('preserves valid ids and regenerates invalid or duplicate ids', async () => {
     const { env, inserts } = ctaEnv();
     const response = await api.request(

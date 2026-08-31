@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import vm from 'node:vm';
 import type { Env, User, Video } from '../src/lib/types';
 import { embedBlocked, pub } from '../src/routes/public';
+
+const playerSource = readFileSync(join(import.meta.dirname, '..', 'public/player/player.js'), 'utf8');
 
 function request(
   headers: Record<string, string> = {},
@@ -193,6 +198,17 @@ describe('public video slugs', () => {
 });
 
 describe('embed payload badge', () => {
+  it('does not attach a position class to layout-owned CTAs', () => {
+    const context = { window: {} as Record<string, unknown> };
+    vm.runInNewContext(playerSource, context);
+    const streamForge = context.window.StreamForge as {
+      ctaClassName: (cta: Record<string, string>) => string;
+    };
+    expect(streamForge.ctaClassName({ kind: 'banner', style: 'card', position: 'top-left' })).not.toContain('sf-pos-');
+    expect(streamForge.ctaClassName({ kind: 'overlay', style: 'card', position: 'top-left' })).toContain('sf-pos-top-left');
+    expect(streamForge.ctaClassName({ kind: 'overlay', style: 'bar', position: 'top-left' })).not.toContain('sf-pos-');
+  });
+
   it('hides the player badge for paid and unlimited owners', async () => {
     expect((await embedPayload({ plan: 'starter' })).badge).toBe(false);
     expect((await embedPayload({ plan: 'agency' })).badge).toBe(false);

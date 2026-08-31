@@ -1309,6 +1309,11 @@
     pop: { accent: '#2f7d5b', background: '#0b1210', borderRadius: 12, bigPlayButton: true },
     studio: { accent: '#3f76ff', background: '#0d0f14', borderRadius: 8, bigPlayButton: true },
     wave: { accent: '#1b7459', background: '#050908', borderRadius: 0, bigPlayButton: false },
+    neon: { accent: '#7c3aed', background: '#08060f', borderRadius: 14, bigPlayButton: true },
+    cinema: { accent: '#e5b45b', background: '#000000', borderRadius: 0, bigPlayButton: true },
+    ghost: { accent: '#e6e8ee', background: '#101114', borderRadius: 10, bigPlayButton: false },
+    aurora: { accent: '#22d3ee', background: '#071018', borderRadius: 16, bigPlayButton: true },
+    slate: { accent: '#2563eb', background: '#0f172a', borderRadius: 10, bigPlayButton: true },
   };
 
   $('pc-skin').addEventListener('change', function () {
@@ -1629,27 +1634,45 @@
 
     grid.appendChild(field('Type', kind));
     grid.appendChild(field('Position', position));
-    if (!gate) {
-      var style = document.createElement('select');
-      [
-        ['card', 'Glass card'],
-        ['solid', 'Solid accent'],
-        ['minimal', 'Minimal button'],
-        ['outline', 'Outline'],
-        ['glass', 'Light glass'],
-        ['bar', 'Wide bar'],
-        ['ribbon', 'Top ribbon'],
-        ['toast', 'Toast'],
-        ['spotlight', 'Spotlight'],
-        ['gradient', 'Gradient pill'],
-      ].forEach(function (pair) {
+    var ctaStyleOptions = [
+      ['card', 'Glass card'],
+      ['solid', 'Solid accent'],
+      ['minimal', 'Minimal button'],
+      ['outline', 'Outline'],
+      ['glass', 'Light glass'],
+      ['bar', 'Wide bar'],
+      ['ribbon', 'Top ribbon'],
+      ['toast', 'Toast'],
+      ['spotlight', 'Spotlight'],
+      ['gradient', 'Gradient pill'],
+    ];
+    var gateStyleOptions = [
+      ['card', 'Card'],
+      ['light', 'Light'],
+      ['solid', 'Solid accent'],
+      ['outline', 'Outline'],
+      ['glass', 'Glass'],
+      ['sheet', 'Bottom sheet'],
+      ['spotlight', 'Spotlight'],
+      ['minimal', 'Minimal'],
+      ['split', 'Split'],
+      ['gradient', 'Gradient'],
+    ];
+    var style = document.createElement('select');
+    style.dataset.field = 'style';
+    function updateCtaOptions() {
+      var options = kind.value === 'gate' || kind.value === 'endscreen' ? gateStyleOptions : ctaStyleOptions;
+      var current = style.value || (cta && cta.style) || 'card';
+      style.textContent = '';
+      options.forEach(function (pair) {
         style.appendChild(new Option(pair[1], pair[0]));
       });
-      style.value = cta && cta.style ? cta.style : 'card';
-      if (!style.value) style.value = 'card';
-      style.dataset.field = 'style';
-      grid.appendChild(field('Style', style));
+      style.value = options.some(function (pair) { return pair[0] === current; }) ? current : 'card';
+      position.disabled = kind.value === 'banner';
     }
+    updateCtaOptions();
+    grid.appendChild(field('Style', style));
+    kind.addEventListener('change', updateCtaOptions);
     grid.appendChild(field('Start (s)', input('start_seconds', '0', cta ? cta.start_seconds : 0, 'number')));
     grid.appendChild(field('End (s)', input('end_seconds', '0 = until the end', cta ? cta.end_seconds : 0, 'number')));
     grid.appendChild(

@@ -49,8 +49,22 @@ export const CTA_STYLES = [
   'gradient',
 ] as const;
 
-export function normalizeCtaStyle(value: unknown): string {
-  return (CTA_STYLES as readonly string[]).includes(String(value ?? '')) ? String(value) : 'card';
+export const GATE_STYLES = [
+  'card',
+  'light',
+  'solid',
+  'outline',
+  'glass',
+  'sheet',
+  'spotlight',
+  'minimal',
+  'split',
+  'gradient',
+] as const;
+
+export function normalizeCtaStyle(value: unknown, kind: unknown): string {
+  const styles = kind === 'gate' || kind === 'endscreen' ? GATE_STYLES : CTA_STYLES;
+  return (styles as readonly string[]).includes(String(value ?? '')) ? String(value) : 'card';
 }
 
 export function escapeHtml(input: string): string {
@@ -144,7 +158,7 @@ export function retentionBucket(position: number, duration: number, buckets = 10
 }
 
 /** Shipped skins. The first is the default every new video and every surface uses. */
-export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave'] as const;
+export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate'] as const;
 
 /** Retired skin names still stored on old videos, mapped onto the shipped set. */
 const LEGACY_SKINS: Record<string, string> = {
