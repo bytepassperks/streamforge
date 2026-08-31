@@ -476,7 +476,7 @@ async function assertOwnedVideo(c: { env: Env }, videoId: string, userId: string
 }
 
 const HLS_PART_LIMIT = 20 * 1024 * 1024;
-const HLS_PART_COUNT_LIMIT = 900;
+const HLS_PART_COUNT_LIMIT = 3000;
 const HLS_PATH = /^[A-Za-z0-9][A-Za-z0-9_.-]*(\/[A-Za-z0-9][A-Za-z0-9_.-]*)*$/;
 const HLS_TYPES: Record<string, string> = {
   '.m3u8': 'application/vnd.apple.mpegurl',
@@ -538,7 +538,7 @@ api.post('/videos/:id/hls/parts', async (c) => {
   const key = `${prefix}/${path}`;
   const alreadyStored = (listed.objects ?? []).some((object) => object.key === key);
   if (!alreadyStored && (listed.objects?.length ?? 0) >= HLS_PART_COUNT_LIMIT) {
-    return c.json({ error: 'an HLS ladder cannot contain more than 900 parts' }, 413);
+    return c.json({ error: 'an HLS ladder cannot contain more than 3000 parts' }, 413);
   }
   await c.env.MEDIA.put(key, entry.stream(), { httpMetadata: { contentType: hlsPartType(path) } });
   return c.json({ ok: true, path, key });

@@ -195,8 +195,8 @@ async function encode(video) {
           `-bufsize:v:${stream}`, variant === 0 ? '1600k' : '5000k',
           `-c:a:${stream}`, 'aac',
           `-b:a:${stream}`, variant === 0 ? '96k' : '128k',
-          `-g:v:${stream}`, '120',
-          `-force_key_frames:v:${stream}`, 'expr:gte(t,n_forced*4)',
+          `-g:v:${stream}`, '60',
+          `-force_key_frames:v:${stream}`, 'expr:gte(t,n_forced*2)',
         );
       } else {
         maps.push('-map', '0:v:0', '-map', '0:a:0');
@@ -207,7 +207,7 @@ async function encode(video) {
     args.push(
       ...maps,
       ...codecs,
-      '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+      '-f', 'hls', '-hls_time', '2', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
       '-master_pl_name', 'master.m3u8',
       '-var_stream_map', variants.map((_, stream) => `v:${stream},a:${stream}`).join(' '),
       '-hls_segment_filename', join(output, 'v%v', 'seg_%03d.ts'),

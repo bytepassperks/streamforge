@@ -276,8 +276,8 @@
           var duration = info.duration || Number(knownDuration) || 0;
           var encoded = encodedHlsVariantIndexes(info.height);
           var variantCount = encoded.length + 1;
-          if (duration > 0 && Math.ceil(duration / 4) * variantCount + variantCount + 1 > 900) {
-            throw new Error('This video would create more than 900 HLS parts. Use the PC encoder instead.');
+          if (duration > 0 && Math.ceil(duration / 2) * variantCount + variantCount + 1 > 3000) {
+            throw new Error('This video would create more than 3000 HLS parts. Use the PC encoder instead.');
           }
           return {
             blob: blob,
@@ -320,8 +320,8 @@
                   return execute([
                     '-i', '/input.mp4', '-vf', 'scale=-2:360',
                     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-maxrate', '800k', '-bufsize', '1600k',
-                    '-c:a', 'aac', '-b:a', '96k', '-g', '120', '-force_key_frames', 'expr:gte(t,n_forced*4)',
-                    '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+                    '-c:a', 'aac', '-b:a', '96k', '-g', '60', '-force_key_frames', 'expr:gte(t,n_forced*2)',
+                    '-f', 'hls', '-hls_time', '2', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
                     '-hls_segment_filename', '/ladder/v0/seg_%03d.ts', '/ladder/v0/index.m3u8',
                   ]);
                 });
@@ -331,8 +331,8 @@
                   return execute([
                     '-i', '/input.mp4', '-vf', 'scale=-2:720',
                     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24', '-maxrate', '2500k', '-bufsize', '5000k',
-                    '-c:a', 'aac', '-b:a', '128k', '-g', '120', '-force_key_frames', 'expr:gte(t,n_forced*4)',
-                    '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+                    '-c:a', 'aac', '-b:a', '128k', '-g', '60', '-force_key_frames', 'expr:gte(t,n_forced*2)',
+                    '-f', 'hls', '-hls_time', '2', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
                     '-hls_segment_filename', '/ladder/v1/seg_%03d.ts', '/ladder/v1/index.m3u8',
                   ]);
                 });
@@ -340,7 +340,7 @@
               return chain.then(function () {
                 return execute([
                   '-i', '/input.mp4', '-map', '0:v:0', '-map', '0:a:0', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k',
-                  '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+                  '-f', 'hls', '-hls_time', '2', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
                   '-hls_segment_filename', '/ladder/v2/seg_%03d.ts', '/ladder/v2/index.m3u8',
                 ]);
               }).then(function () {
@@ -375,7 +375,7 @@
                 var parts = files.filter(function (path) {
                   return path !== '/ladder/master.m3u8' && (!dropV2 || path.indexOf('/ladder/v2/') !== 0);
                 });
-                if (parts.length + 1 > 900) throw new Error('This ladder exceeds the 900-part limit.');
+                if (parts.length + 1 > 3000) throw new Error('This ladder exceeds the 3000-part limit.');
                 setHlsProgress(prefix, 80, 'Uploading ladder parts…', true);
                 return uploadHlsParts(videoId, ffmpeg, parts, master, job, prefix);
               });
