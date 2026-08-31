@@ -50,6 +50,11 @@ export interface HlsVariantBandwidthInput {
   segmentSizes: Readonly<Record<string, number>>;
 }
 
+export interface HlsBandwidthMeasurement {
+  bandwidth: number;
+  averageBandwidth: number;
+}
+
 function hlsSegments(playlist: string): { uri: string; duration: number }[] {
   const lines = playlist.split(/\r?\n/);
   const segments: { uri: string; duration: number }[] = [];
@@ -68,28 +73,52 @@ function hlsSegments(playlist: string): { uri: string; duration: number }[] {
 }
 
 /**
- * Measures a rendition's peak segment bitrate from its playlist and R2 sizes.
+ * Measures a rendition's sliding-window peak and average bitrate from its
+ * playlist and R2 sizes.
  * A missing segment, invalid size, or non-positive duration makes the
  * measurement unusable so callers can preserve the encoder's declaration.
  */
-export function measureHlsPeakBandwidth(
+export function measureHlsBandwidth(
   playlist: string,
   segmentSizes: Readonly<Record<string, number>>,
-): number | null {
+): HlsBandwidthMeasurement | null {
   const segments = hlsSegments(playlist);
   if (!segments.length) return null;
   let totalBytes = 0;
   let totalDuration = 0;
-  let peak = 0;
+  const bitrates: { bytes: number; duration: number }[] = [];
   for (const segment of segments) {
     const size = Number(segmentSizes[segment.uri]);
     if (!Number.isFinite(size) || size <= 0 || !Number.isFinite(segment.duration) || segment.duration <= 0) return null;
     totalBytes += size;
     totalDuration += segment.duration;
-    peak = Math.max(peak, (size * 8) / segment.duration);
+    bitrates.push({ bytes: size, duration: segment.duration });
   }
-  if (totalBytes <= 0 || totalDuration <= 0 || !Number.isFinite(peak) || peak <= 0) return null;
-  return Math.round(peak);
+  if (totalBytes <= 0 || totalDuration <= 0 || !Number.isFinite(totalBytes) || !Number.isFinite(totalDuration)) return null;
+  const averageBandwidth = Math.round((totalBytes * 8) / totalDuration);
+  if (!Number.isFinite(averageBandwidth) || averageBandwidth <= 0) return null;
+
+  const minimumWindowDuration = 10;
+  let peakBandwidth = averageBandwidth;
+  if (totalDuration >= minimumWindowDuration) {
+    peakBandwidth = 0;
+    for (let start = 0; start < bitrates.length; start += 1) {
+      let windowBytes = 0;
+      let windowDuration = 0;
+      for (let end = start; end < bitrates.length; end += 1) {
+        windowBytes += bitrates[end].bytes;
+        windowDuration += bitrates[end].duration;
+        if (windowDuration >= minimumWindowDuration) {
+          peakBandwidth = Math.max(peakBandwidth, (windowBytes * 8) / windowDuration);
+        }
+      }
+    }
+  }
+  if (!Number.isFinite(peakBandwidth) || peakBandwidth <= 0) return null;
+  return {
+    bandwidth: Math.round(peakBandwidth),
+    averageBandwidth,
+  };
 }
 
 /** Returns the URI paired with each stream-inf line, preserving master order. */
@@ -126,14 +155,16 @@ export function rewriteHlsMasterBandwidth(
     }
     rendition += 1;
     const variant = variants[rendition];
-    const measured = variant
-      ? measureHlsPeakBandwidth(variant.playlist, variant.segmentSizes)
-      : null;
-    output.push(
-      measured === null
-        ? line
-        : line.replace(/\bBANDWIDTH=\d+(?=,|$)/, `BANDWIDTH=${measured}`),
-    );
+    const measured = variant ? measureHlsBandwidth(variant.playlist, variant.segmentSizes) : null;
+    const rewritten = measured
+      ? line
+        .replace(/,?AVERAGE-BANDWIDTH=\d+(?=,|$)/g, '')
+        .replace(
+          /\bBANDWIDTH=\d+(?=,|$)/,
+          `BANDWIDTH=${measured.bandwidth},AVERAGE-BANDWIDTH=${measured.averageBandwidth}`,
+        )
+      : line;
+    output.push(rewritten);
   }
   return output.join('\n');
 }
