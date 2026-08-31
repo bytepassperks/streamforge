@@ -161,4 +161,84 @@ describe('HLS API-key authentication scope', () => {
     expect((await request()).status).toBe(200);
     expect(writes).toBe(1);
   });
+
+  it('follows truncated listings when counting uploaded parts', async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, index) => ({
+      key: `usr_1/vid_1/hls/v0/old_${index}.ts`,
+      size: 1,
+    }));
+    const listCalls: Array<Record<string, unknown>> = [];
+    const env = hlsEnv({
+      async list(options: Record<string, unknown>) {
+        listCalls.push(options);
+        return options.cursor
+          ? { objects: Array.from({ length: 500 }, (_, index) => ({
+              key: `usr_1/vid_1/hls/v0/old_${index + 1000}.ts`,
+              size: 1,
+            })) }
+          : { objects: firstPage, truncated: true, cursor: 'page-2' };
+      },
+    });
+    const part = new FormData();
+    part.append('path', 'v0/new.ts');
+    part.append('file', new File(['part'], 'new.ts', { type: 'video/mp2t' }));
+
+    const response = await api.request(
+      new Request('https://videokr.com/videos/vid_1/hls/parts', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${key}` },
+        body: part,
+      }),
+      {},
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(listCalls).toEqual([
+      { prefix: 'usr_1/vid_1/hls', limit: 1000 },
+      { prefix: 'usr_1/vid_1/hls', limit: 1000, cursor: 'page-2' },
+    ]);
+  });
+
+  it('follows truncated listings when repairing segment measurements', async () => {
+    let master = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv0/index.m3u8\n';
+    const firstPage = [
+      { key: 'usr_1/vid_1/hls/v0/seg_000.ts', size: 100 },
+      ...Array.from({ length: 999 }, (_, index) => ({
+        key: `usr_1/vid_1/hls/v0/other_${index}.ts`,
+        size: 1,
+      })),
+    ];
+    const env = hlsEnv({
+      async get(path: string) {
+        return {
+          async text() {
+            return path.endsWith('/master.m3u8')
+              ? master
+              : '#EXTM3U\n#EXTINF:2,\nseg_000.ts\n#EXTINF:2,\nseg_001.ts\n';
+          },
+        };
+      },
+      async list(options: Record<string, unknown>) {
+        return options.cursor
+          ? { objects: [{ key: 'usr_1/vid_1/hls/v0/seg_001.ts', size: 100 }] }
+          : { objects: firstPage, truncated: true, cursor: 'page-2' };
+      },
+      async put(_path: string, body: string) {
+        master = body;
+      },
+    });
+
+    const response = await api.request(
+      new Request('https://videokr.com/videos/vid_1/hls/complete', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${key}` },
+      }),
+      {},
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(master).toContain('BANDWIDTH=400,AVERAGE-BANDWIDTH=400');
+  });
 });

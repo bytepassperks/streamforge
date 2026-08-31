@@ -494,6 +494,18 @@ function hlsPartType(path: string): string {
   return dot >= 0 ? HLS_TYPES[path.slice(dot).toLowerCase()] ?? '' : '';
 }
 
+async function listAllR2Objects(media: R2Bucket, prefix: string): Promise<R2Object[]> {
+  const objects: R2Object[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await media.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
+    objects.push(...page.objects);
+    if (!page.truncated) break;
+    cursor = page.cursor;
+  } while (cursor);
+  return objects;
+}
+
 async function repairedHlsMaster(media: R2Bucket, prefix: string, master: string): Promise<string> {
   const variants = await Promise.all(
     hlsMasterVariantUris(master).map(async (variantUri) => {
@@ -505,9 +517,9 @@ async function repairedHlsMaster(media: R2Bucket, prefix: string, master: string
       const slash = cleanVariantUri.lastIndexOf('/');
       const directory = slash >= 0 ? cleanVariantUri.slice(0, slash + 1) : '';
       const segmentPrefix = `${prefix}/${directory}`;
-      const listed = await media.list({ prefix: segmentPrefix, limit: 1000 });
+      const objects = await listAllR2Objects(media, segmentPrefix);
       const segmentSizes: Record<string, number> = {};
-      for (const object of listed.objects ?? []) {
+      for (const object of objects) {
         if (object.key.startsWith(segmentPrefix)) {
           segmentSizes[object.key.slice(segmentPrefix.length)] = object.size;
         }
@@ -534,10 +546,10 @@ api.post('/videos/:id/hls/parts', async (c) => {
   if (entry.size > HLS_PART_LIMIT) return c.json({ error: 'HLS parts must be 20MB or smaller' }, 413);
 
   const prefix = hlsPrefix(user.id, id);
-  const listed = await c.env.MEDIA.list({ prefix, limit: HLS_PART_COUNT_LIMIT + 1 });
+  const objects = await listAllR2Objects(c.env.MEDIA, prefix);
   const key = `${prefix}/${path}`;
-  const alreadyStored = (listed.objects ?? []).some((object) => object.key === key);
-  if (!alreadyStored && (listed.objects?.length ?? 0) >= HLS_PART_COUNT_LIMIT) {
+  const alreadyStored = objects.some((object) => object.key === key);
+  if (!alreadyStored && objects.length >= HLS_PART_COUNT_LIMIT) {
     return c.json({ error: 'an HLS ladder cannot contain more than 3000 parts' }, 413);
   }
   await c.env.MEDIA.put(key, entry.stream(), { httpMetadata: { contentType: hlsPartType(path) } });
