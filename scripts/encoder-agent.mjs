@@ -161,6 +161,7 @@ async function uploadAll(id, root, paths) {
 }
 
 async function encode(video) {
+  if (video.source_type === 'hls' || /\.m3u8(?:$|\?)/i.test(String(video.source_ref || ''))) return;
   if (video.source_type !== 'mp4' || !String(video.source_ref || '').startsWith('/media/')) return;
   const work = await mkdtemp(join(tmpdir(), 'videokr-hls-'));
   try {
@@ -230,7 +231,11 @@ async function encode(video) {
 }
 
 await assertFfmpeg();
-const videos = videoId
-  ? [{ id: videoId, source_type: 'mp4', source_ref: await jsonFetch(`${baseUrl}/api/videos/${encodeURIComponent(videoId)}`).then((r) => r.video.source_ref) }]
-  : (await jsonFetch(`${baseUrl}/api/v1/videos`)).videos;
+const listedVideos = (await jsonFetch(`${baseUrl}/api/v1/videos`)).videos;
+let videos = listedVideos;
+if (videoId) {
+  const video = listedVideos.find((candidate) => candidate.id === videoId);
+  if (!video) throw new Error('video not found or not owned by this key');
+  videos = [video];
+}
 for (const video of videos) await encode(video);

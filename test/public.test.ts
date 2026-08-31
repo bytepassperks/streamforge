@@ -183,12 +183,25 @@ describe('media delivery', () => {
     expect(await response.text()).toBe('llo');
   });
 
-  it('serves playlists with CORS and a short cache lifetime', async () => {
-    const response = await pub.request(new Request('https://videokr.com/media/usr_1/master.m3u8'), {}, mediaEnv());
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toBe('application/vnd.apple.mpegurl');
-    expect(response.headers.get('access-control-allow-origin')).toBe('*');
-    expect(response.headers.get('cache-control')).toBe('public, max-age=60');
+  it('serves playlists with CORS and a short cache lifetime without caching them', async () => {
+    const match = vi.fn();
+    const put = vi.fn();
+    vi.stubGlobal('caches', { default: { match, put } });
+    try {
+      const response = await pub.request(
+        new Request('https://videokr.com/media/usr_1/master.m3u8'),
+        {},
+        mediaEnv(),
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('application/vnd.apple.mpegurl');
+      expect(response.headers.get('access-control-allow-origin')).toBe('*');
+      expect(response.headers.get('cache-control')).toBe('public, max-age=60');
+      expect(match).not.toHaveBeenCalled();
+      expect(put).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('answers media CORS preflight requests', async () => {
