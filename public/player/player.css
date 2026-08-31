@@ -457,7 +457,7 @@
 }
 
 /* ---------------------------------------------------------------- skins ---
-   Four shipped presets. Each one only restyles the single control bar the
+   Five shipped presets. Each one only restyles the single control bar the
    player already builds, so every skin keeps every feature — a customer
    switching skins never loses captions, chapters, quality or analytics. */
 
@@ -603,3 +603,64 @@
 .sf-skin-studio .sf-time { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 .sf-skin-studio .sf-titlebar { display: none; }
 .sf-skin-studio .sf-btn:hover, .sf-skin-studio .sf-btn:focus-visible { background: rgba(255,255,255,.16); }
+
+/* "wave" — a flat, full-width dark bar with a decorative wave silhouette above
+   the transport row. The shape is a visual seek rail, not an audio waveform. */
+.sf-skin-wave { --sf-accent: #1b7459; }
+.sf-skin-wave .sf-controls {
+  --sf-inset: 0px; flex-wrap: wrap; gap: 2px; padding: 6px 10px 7px; padding-top: 28px;
+  background: linear-gradient(transparent, rgba(0,0,0,.82) 56%);
+  border-radius: 0;
+}
+.sf-skin-wave .sf-controls > * { margin-left: 0; }
+.sf-skin-wave .sf-progress-wrap {
+  order: -1; flex: 0 0 100%; width: 100%; min-width: 0; margin: 0 0 2px; padding: 0;
+}
+.sf-skin-wave .sf-progress { height: 20px; }
+.sf-skin-wave .sf-progress-rail {
+  height: 20px; border-radius: 0; background: rgba(255,255,255,.28);
+  overflow: hidden; mask-type: luminance;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 12C8 4 16 18 25 10S42 2 51 11s17 8 25 0 16-5 24 2v7H0z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M0 12C8 4 16 18 25 10S42 2 51 11s17 8 25 0 16-5 24 2v7H0z'/%3E%3C/svg%3E");
+  mask-size: 100% 100%; mask-position: center; mask-repeat: no-repeat;
+}
+.sf-skin-wave .sf-buffer { background: rgba(255,255,255,.46); border-radius: 0; }
+.sf-skin-wave .sf-played { background: var(--sf-accent); border-radius: 0; }
+.sf-skin-wave .sf-handle { width: 10px; height: 10px; }
+.sf-skin-wave .sf-play { order: 1; }
+.sf-skin-wave .sf-badge { order: 1; }
+.sf-skin-wave .sf-time-current { order: 2; margin-left: auto; }
+.sf-skin-wave .sf-time-duration { display: none; }
+.sf-skin-wave .sf-volume { order: 3; width: 92px; min-width: 92px; max-width: 92px; }
+.sf-skin-wave .sf-cc { order: 4; }
+.sf-skin-wave .sf-share { order: 5; }
+.sf-skin-wave .sf-rewind { order: 6; }
+.sf-skin-wave .sf-controls > .sf-forward { order: 7; }
+.sf-skin-wave .sf-settings { order: 8; }
+.sf-skin-wave .sf-pip { order: 9; }
+.sf-skin-wave .sf-fs { order: 10; }
+.sf-skin-wave .sf-btn {
+  padding: 6px; border-radius: 0; color: #fff;
+}
+.sf-skin-wave .sf-btn svg { width: 18px; height: 18px; }
+.sf-skin-wave .sf-btn:hover,
+.sf-skin-wave .sf-btn:focus-visible,
+.sf-skin-wave .sf-btn[aria-expanded="true"] {
+  background: transparent; color: var(--sf-accent); outline: 0;
+}
+.sf-skin-wave .sf-play svg,
+.sf-skin-wave .sf-mute svg { fill: #fff; }
+.sf-skin-wave .sf-play:hover svg,
+.sf-skin-wave .sf-play:focus-visible svg,
+.sf-skin-wave .sf-mute:hover svg,
+.sf-skin-wave .sf-mute:focus-visible svg { fill: var(--sf-accent); }
+.sf-skin-wave .sf-titlebar { display: none; }
+@container (max-width: 420px) {
+  .sf-skin-wave .sf-controls { gap: 0; padding: 4px; }
+  .sf-skin-wave .sf-btn { padding: 3px; }
+  .sf-skin-wave .sf-volume { width: 44px; min-width: 44px; max-width: 44px; }
+  .sf-skin-wave .sf-volume input[type="range"] { display: none; }
+  .sf-skin-wave .sf-pip,
+  .sf-skin-wave .sf-rewind,
+  .sf-skin-wave .sf-controls > .sf-forward { display: block; }
+}

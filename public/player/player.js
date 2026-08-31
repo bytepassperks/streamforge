@@ -9,7 +9,7 @@
 
   /* Shipped skins, plus the retired names still stored on older videos. Kept in
      step with PLAYER_SKINS on the server so an old config never renders unstyled. */
-  var SKINS = ['videokr', 'frame', 'pop', 'studio'];
+  var SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave'];
   var LEGACY_SKINS = {
     'forge-dark': 'videokr',
     'forge-light': 'studio',

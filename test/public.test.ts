@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Env, User, Video } from '../src/lib/types';
 import { embedBlocked, pub } from '../src/routes/public';
 
@@ -139,5 +139,74 @@ describe('embed payload badge', () => {
 
   it('keeps the player badge for Free owners', async () => {
     expect((await embedPayload({ plan: 'free' })).badge).toBe(true);
+  });
+});
+
+describe('media delivery', () => {
+  function mediaEnv(): Env {
+    return {
+      MEDIA: {
+        async get(_key: string, options?: unknown) {
+          const ranged = Boolean(options);
+          const body = new Response(ranged ? 'llo' : 'hello world').body;
+          return {
+            body,
+            size: 11,
+            range: ranged ? { offset: 2, length: 3 } : undefined,
+            httpEtag: '"media-etag"',
+            writeHttpMetadata(headers: Headers) {
+              headers.set('content-type', 'video/mp4');
+            },
+          };
+        },
+      },
+    } as unknown as Env;
+  }
+
+  it('returns a full media object with a 200 response', async () => {
+    const response = await pub.request(new Request('https://videokr.com/media/usr_1/video.mp4'), {}, mediaEnv());
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('video/mp4');
+    expect(response.headers.get('accept-ranges')).toBe('bytes');
+    expect(await response.text()).toBe('hello world');
+  });
+
+  it('returns ranged media with a 206 response and content range', async () => {
+    const response = await pub.request(
+      new Request('https://videokr.com/media/usr_1/video.mp4', { headers: { range: 'bytes=2-4' } }),
+      {},
+      mediaEnv(),
+    );
+    expect(response.status).toBe(206);
+    expect(response.headers.get('content-range')).toBe('bytes 2-4/11');
+    expect(await response.text()).toBe('llo');
+  });
+
+  it('serves a cache hit using the normalized GET key and range semantics', async () => {
+    const match = vi.fn(async (request: Request) => {
+      expect(request.method).toBe('GET');
+      expect(request.url).toBe('https://videokr.com/media/usr_1/video.mp4');
+      expect(request.headers.get('range')).toBe('bytes=2-4');
+      return new Response('llo', {
+        status: 206,
+        headers: { 'content-range': 'bytes 2-4/11', 'content-length': '3' },
+      });
+    });
+    const get = vi.fn();
+    vi.stubGlobal('caches', { default: { match, put: vi.fn() } });
+    const env = mediaEnv();
+    env.MEDIA = { get } as unknown as R2Bucket;
+
+    const response = await pub.request(
+      new Request('https://videokr.com/media/usr_1/video.mp4', { headers: { range: 'bytes=2-4' } }),
+      {},
+      env,
+    );
+
+    expect(response.status).toBe(206);
+    expect(response.headers.get('x-videokr-cache')).toBe('hit');
+    expect(await response.text()).toBe('llo');
+    expect(get).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });
