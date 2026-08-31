@@ -13,6 +13,18 @@ export function selectHlsVariantIndexes(longestCopiedSegmentSeconds: number, var
   return Array.from({ length: count - 1 }, (_, index) => index);
 }
 
+/**
+ * Returns the encoded renditions worth publishing for a source of the given
+ * height. The copied source rendition is handled separately, and the ladder
+ * intentionally starts adding encoded quality only when the source is at
+ * least the next standard rung up.
+ */
+export function selectHlsEncodedVariantIndexes(sourceHeight: number): number[] {
+  if (!Number.isFinite(sourceHeight) || sourceHeight < 720) return [];
+  if (sourceHeight < 1080) return [0];
+  return [0, 1];
+}
+
 /** Filters a generated master playlist without changing its rendition metadata. */
 export function selectHlsMasterPlaylist(master: string, indexes: number[]): string {
   const wanted = new Set(indexes);

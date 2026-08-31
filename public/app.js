@@ -144,18 +144,27 @@
     });
   }
 
-  function mediaDuration(blob) {
+  function encodedHlsVariantIndexes(height) {
+    if (!Number.isFinite(height) || height < 720) return [];
+    return height < 1080 ? [0] : [0, 1];
+  }
+
+  function mediaInfo(blob) {
     return new Promise(function (resolve) {
       var video = document.createElement('video');
       var url = URL.createObjectURL(blob);
       video.preload = 'metadata';
       video.onloadedmetadata = function () {
         URL.revokeObjectURL(url);
-        resolve(Number(video.duration) || 0);
+        resolve({
+          duration: Number(video.duration) || 0,
+          width: Number(video.videoWidth) || 0,
+          height: Number(video.videoHeight) || 0,
+        });
       };
       video.onerror = function () {
         URL.revokeObjectURL(url);
-        resolve(0);
+        resolve({ duration: 0, width: 0, height: 0 });
       };
       video.src = url;
     });
@@ -255,12 +264,20 @@
     setHlsProgress(prefix, 0, 'Preparing browser encoder…', true);
     return sourceBlob(source)
       .then(function (blob) {
-        return mediaDuration(blob).then(function (duration) {
-          duration = duration || Number(knownDuration) || 0;
-          if (duration > 0 && Math.ceil(duration / 4) * 3 + 4 > 900) {
+        return mediaInfo(blob).then(function (info) {
+          var duration = info.duration || Number(knownDuration) || 0;
+          var encoded = encodedHlsVariantIndexes(info.height);
+          var variantCount = encoded.length + 1;
+          if (duration > 0 && Math.ceil(duration / 4) * variantCount + variantCount + 1 > 900) {
             throw new Error('This video would create more than 900 HLS parts. Use the PC encoder instead.');
           }
-          return { blob: blob, duration: duration };
+          return {
+            blob: blob,
+            duration: duration,
+            width: info.width,
+            height: info.height,
+            encoded: encoded,
+          };
         });
       })
       .then(function (input) {
@@ -289,31 +306,48 @@
                   if (Number(code) > 0) throw new Error('Browser encoder failed with code ' + code);
                 });
               }
-              return execute([
-                '-i', '/input.mp4', '-vf', 'scale=-2:360',
-                '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-maxrate', '800k', '-bufsize', '1600k',
-                '-c:a', 'aac', '-b:a', '96k', '-g', '120', '-force_key_frames', 'expr:gte(t,n_forced*4)',
-                '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
-                '-hls_segment_filename', '/ladder/v0/seg_%03d.ts', '/ladder/v0/index.m3u8',
-              ]).then(function () {
-                return execute([
-                  '-i', '/input.mp4', '-vf', 'scale=-2:720',
-                  '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24', '-maxrate', '2500k', '-bufsize', '5000k',
-                  '-c:a', 'aac', '-b:a', '128k', '-g', '120', '-force_key_frames', 'expr:gte(t,n_forced*4)',
-                  '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
-                  '-hls_segment_filename', '/ladder/v1/seg_%03d.ts', '/ladder/v1/index.m3u8',
-                ]);
-              }).then(function () {
+              var chain = Promise.resolve();
+              if (input.encoded.indexOf(0) >= 0) {
+                chain = chain.then(function () {
+                  return execute([
+                    '-i', '/input.mp4', '-vf', 'scale=-2:360',
+                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-maxrate', '800k', '-bufsize', '1600k',
+                    '-c:a', 'aac', '-b:a', '96k', '-g', '120', '-force_key_frames', 'expr:gte(t,n_forced*4)',
+                    '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+                    '-hls_segment_filename', '/ladder/v0/seg_%03d.ts', '/ladder/v0/index.m3u8',
+                  ]);
+                });
+              }
+              if (input.encoded.indexOf(1) >= 0) {
+                chain = chain.then(function () {
+                  return execute([
+                    '-i', '/input.mp4', '-vf', 'scale=-2:720',
+                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24', '-maxrate', '2500k', '-bufsize', '5000k',
+                    '-c:a', 'aac', '-b:a', '128k', '-g', '120', '-force_key_frames', 'expr:gte(t,n_forced*4)',
+                    '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+                    '-hls_segment_filename', '/ladder/v1/seg_%03d.ts', '/ladder/v1/index.m3u8',
+                  ]);
+                });
+              }
+              return chain.then(function () {
                 return execute([
                   '-i', '/input.mp4', '-map', '0:v:0', '-map', '0:a:0', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k',
                   '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
                   '-hls_segment_filename', '/ladder/v2/seg_%03d.ts', '/ladder/v2/index.m3u8',
                 ]);
               }).then(function () {
-                var master = '#EXTM3U\n#EXT-X-VERSION:3\n'
-                  + '#EXT-X-STREAM-INF:BANDWIDTH=896000,RESOLUTION=640x360\nv0/index.m3u8\n'
-                  + '#EXT-X-STREAM-INF:BANDWIDTH=2628000,RESOLUTION=1280x720\nv1/index.m3u8\n'
-                  + '#EXT-X-STREAM-INF:BANDWIDTH=5000000\nv2/index.m3u8\n';
+                var lines = ['#EXTM3U', '#EXT-X-VERSION:3'];
+                if (input.encoded.indexOf(0) >= 0) {
+                  lines.push('#EXT-X-STREAM-INF:BANDWIDTH=896000,RESOLUTION=640x360', 'v0/index.m3u8');
+                }
+                if (input.encoded.indexOf(1) >= 0) {
+                  lines.push('#EXT-X-STREAM-INF:BANDWIDTH=2628000,RESOLUTION=1280x720', 'v1/index.m3u8');
+                }
+                lines.push(
+                  '#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=' + input.width + 'x' + input.height,
+                  'v2/index.m3u8',
+                );
+                var master = lines.join('\n') + '\n';
                 return ffmpeg.writeFile('/ladder/master.m3u8', new window.TextEncoder().encode(master));
               });
             })
@@ -325,7 +359,10 @@
               var master = decoder.decode(playlists[0]);
               var v2 = decoder.decode(playlists[1]);
               var dropV2 = longestSegment(v2) > 12;
-              if (dropV2) master = filterHlsMaster(master, 2);
+              if (dropV2 && input.encoded.length === 0) {
+                throw new Error('already small enough to stream');
+              }
+              if (dropV2) master = filterHlsMaster(master, input.encoded.length);
               return hlsFiles(ffmpeg, '/ladder', '/ladder').then(function (files) {
                 var parts = files.filter(function (path) {
                   return path !== '/ladder/master.m3u8' && (!dropV2 || path.indexOf('/ladder/v2/') !== 0);

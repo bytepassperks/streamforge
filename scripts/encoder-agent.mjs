@@ -47,12 +47,48 @@ function run(command, args) {
   });
 }
 
+function output(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve(stdout.trim());
+      else reject(new Error(`${command} failed with exit code ${code}: ${stderr.slice(-500)}`));
+    });
+  });
+}
+
 async function assertFfmpeg() {
   try {
     await run('ffmpeg', ['-version']);
   } catch {
     throw new Error('ffmpeg is not installed or is not available on PATH.');
   }
+}
+
+async function sourceHeight(input) {
+  try {
+    const height = Number(
+      await output('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=height', '-of', 'csv=p=0', input]),
+    );
+    if (Number.isFinite(height) && height > 0) return height;
+  } catch {
+    /* Fall through to the explicit message below. */
+  }
+  throw new Error('ffprobe is required to inspect the source video dimensions.');
+}
+
+function encodedVariantIndexes(height) {
+  if (!Number.isFinite(height) || height < 720) return [];
+  return height < 1080 ? [0] : [0, 1];
 }
 
 function authHeaders(extra = {}) {
@@ -135,30 +171,56 @@ async function encode(video) {
     const response = await fetch(source, { headers: authHeaders() });
     if (!response.ok || !response.body) throw new Error(`source download returned HTTP ${response.status}`);
     await writeFile(input, new Uint8Array(await response.arrayBuffer()));
-    await run('ffmpeg', [
-      '-y', '-i', input,
-      '-filter_complex', '[0:v]split=2[v360in][v720in];[v360in]scale=-2:360[v360];[v720in]scale=-2:720[v720]',
-      '-map', '[v360]', '-map', '0:a:0',
-      '-map', '[v720]', '-map', '0:a:0',
-      '-map', '0:v:0', '-map', '0:a:0',
-      '-c:v:0', 'libx264', '-preset:v:0', 'veryfast', '-crf:v:0', '26', '-maxrate:v:0', '800k', '-bufsize:v:0', '1600k',
-      '-c:a:0', 'aac', '-b:a:0', '96k',
-      '-c:v:1', 'libx264', '-preset:v:1', 'veryfast', '-crf:v:1', '24', '-maxrate:v:1', '2500k', '-bufsize:v:1', '5000k',
-      '-c:a:1', 'aac', '-b:a:1', '128k',
-      '-c:v:2', 'copy', '-c:a:2', 'aac', '-b:a:2', '128k',
-      '-g:v:0', '120', '-g:v:1', '120',
-      '-force_key_frames:v:0', 'expr:gte(t,n_forced*4)', '-force_key_frames:v:1', 'expr:gte(t,n_forced*4)',
+    const height = await sourceHeight(input);
+    const encoded = encodedVariantIndexes(height);
+    const variants = [...encoded, 2];
+    const args = ['-y', '-i', input];
+    const filters = [];
+    const maps = [];
+    const codecs = [];
+    variants.forEach((variant, stream) => {
+      if (variant === 0 || variant === 1) {
+        const targetHeight = variant === 0 ? 360 : 720;
+        filters.push(`[0:v]scale=-2:${targetHeight}[v${variant}]`);
+        maps.push('-map', `[v${variant}]`, '-map', '0:a:0');
+        codecs.push(
+          `-c:v:${stream}`, 'libx264',
+          `-preset:v:${stream}`, 'veryfast',
+          `-crf:v:${stream}`, variant === 0 ? '26' : '24',
+          `-maxrate:v:${stream}`, variant === 0 ? '800k' : '2500k',
+          `-bufsize:v:${stream}`, variant === 0 ? '1600k' : '5000k',
+          `-c:a:${stream}`, 'aac',
+          `-b:a:${stream}`, variant === 0 ? '96k' : '128k',
+          `-g:v:${stream}`, '120',
+          `-force_key_frames:v:${stream}`, 'expr:gte(t,n_forced*4)',
+        );
+      } else {
+        maps.push('-map', '0:v:0', '-map', '0:a:0');
+        codecs.push(`-c:v:${stream}`, 'copy', `-c:a:${stream}`, 'aac', `-b:a:${stream}`, '128k');
+      }
+    });
+    if (filters.length) args.push('-filter_complex', filters.join(';'));
+    args.push(
+      ...maps,
+      ...codecs,
       '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
-      '-master_pl_name', 'master.m3u8', '-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2',
+      '-master_pl_name', 'master.m3u8',
+      '-var_stream_map', variants.map((_, stream) => `v:${stream},a:${stream}`).join(' '),
       '-hls_segment_filename', join(output, 'v%v', 'seg_%03d.ts'),
       join(output, 'v%v', 'index.m3u8'),
-    ]);
+    );
+    await run('ffmpeg', args);
     let master = await readFile(join(output, 'master.m3u8'), 'utf8');
-    const v2 = await readFile(join(output, 'v2', 'index.m3u8'), 'utf8');
+    const copyDirectory = `v${variants.length - 1}`;
+    const v2 = await readFile(join(output, copyDirectory, 'index.m3u8'), 'utf8');
     const dropV2 = longestSegment(v2) > 12;
-    if (dropV2) master = filterMaster(master, 2);
+    if (dropV2 && encoded.length === 0) {
+      console.log(`Skipped ${video.id}: already small enough to stream`);
+      return;
+    }
+    if (dropV2) master = filterMaster(master, encoded.length);
     await writeFile(join(output, 'master.m3u8'), master);
-    const paths = (await filesUnder(output)).filter((path) => !dropV2 || !path.includes('/v2/'));
+    const paths = (await filesUnder(output)).filter((path) => !dropV2 || !path.includes(`/${copyDirectory}/`));
     await uploadAll(video.id, output, paths);
     await jsonFetch(`${baseUrl}/api/videos/${encodeURIComponent(video.id)}/hls/complete`, { method: 'POST' });
     console.log(`Optimised ${video.id}`);

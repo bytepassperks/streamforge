@@ -555,8 +555,9 @@
     if (this._hls && this._hls.levels && this._hls.levels.length > 1) {
       var list = [{ label: 'Auto', value: -1 }];
       this._hls.levels.forEach(function (level, index) {
+        var height = Number(level.height);
         list.push({
-          label: level.height ? level.height + 'p' : Math.round(level.bitrate / 1000) + 'k',
+          label: height > 0 ? height + 'p' : Math.round(level.bitrate / 1000) + 'k',
           value: index,
         });
       });

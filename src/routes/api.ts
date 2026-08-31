@@ -46,10 +46,16 @@ const OPEN_PATHS = new Set([
   '/auth/reset',
 ]);
 
+function apiKeyPath(path: string, method: string): boolean {
+  return method === 'POST' && /^\/videos\/[^/]+\/hls\/(?:parts|complete)$/.test(path);
+}
+
 api.use('*', async (c, next) => {
   const path = c.req.path.replace(/^\/api/, '');
   const match = /^Bearer\s+(.+)$/i.exec((c.req.header('authorization') ?? '').trim());
-  const keyUser = match?.[1] ? await userForApiKey(c.env, match[1].trim()) : null;
+  const keyUser = apiKeyPath(path, c.req.method) && match?.[1]
+    ? await userForApiKey(c.env, match[1].trim())
+    : null;
   const user = keyUser ?? (await currentUser(c));
   if (user) c.set('user', user);
   if (user && Number(user.suspended) === 1 && path !== '/auth/logout') {

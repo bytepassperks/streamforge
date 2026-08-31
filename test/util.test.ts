@@ -14,7 +14,7 @@ import {
   safeExternalUrl,
   slugify,
 } from '../src/lib/util';
-import { selectHlsMasterPlaylist, selectHlsVariantIndexes } from '../src/lib/hls';
+import { selectHlsEncodedVariantIndexes, selectHlsMasterPlaylist, selectHlsVariantIndexes } from '../src/lib/hls';
 
 describe('parseSource', () => {
   it('reads youtube watch, short, embed and shorts urls', () => {
@@ -165,6 +165,13 @@ describe('player config', () => {
 });
 
 describe('HLS variant selection', () => {
+  it('only adds encoded renditions below the source at standard ladder steps', () => {
+    expect(selectHlsEncodedVariantIndexes(1080)).toEqual([0, 1]);
+    expect(selectHlsEncodedVariantIndexes(720)).toEqual([0]);
+    expect(selectHlsEncodedVariantIndexes(480)).toEqual([]);
+    expect(selectHlsEncodedVariantIndexes(360)).toEqual([]);
+  });
+
   it('keeps the copied rendition when its segments are at most 12 seconds', () => {
     expect(selectHlsVariantIndexes(12)).toEqual([0, 1, 2]);
   });
