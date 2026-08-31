@@ -452,7 +452,7 @@
           if (window.Hls && window.Hls.isSupported()) {
             var hls = new window.Hls({
               // Choose the first fragment from the assumed estimate instead of a probe fragment.
-              abrEwmaDefaultEstimate: 1500000,
+              abrEwmaDefaultEstimate: 2500000,
               testBandwidth: false,
               startLevel: -1
             });

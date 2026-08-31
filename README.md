@@ -58,12 +58,15 @@ export VIDEOKR_API_KEY='vk_live_…'
 node scripts/encoder-agent.mjs --base-url https://videokr.com --video VIDEO_ID
 # Or process every progressive upload owned by that key:
 node scripts/encoder-agent.mjs --base-url https://videokr.com --all
+# Rebuild an existing HLS ladder from its preserved progressive fallback:
+node scripts/encoder-agent.mjs --base-url https://videokr.com --video VIDEO_ID --force
 ```
 
 `--video` resolves the ID through the key-authenticated library listing and refuses videos
 that are not owned by the key. `--all` processes progressive media uploads and skips videos
-already using HLS, so it is safe to re-run. The agent keeps the original progressive source as
-a fallback, uploads a three-rung VOD ladder, and never prints the API key.
+already using HLS, so it is safe to re-run. Add `--force` to re-process an HLS video from its
+preserved progressive fallback. The agent keeps the original progressive source as a fallback,
+uploads a three-rung VOD ladder, and never prints the API key.
 
 ## Note on YouTube sources
 

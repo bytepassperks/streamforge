@@ -44,3 +44,96 @@ export function selectHlsMasterPlaylist(master: string, indexes: number[]): stri
   }
   return output.join('\n');
 }
+
+export interface HlsVariantBandwidthInput {
+  playlist: string;
+  segmentSizes: Readonly<Record<string, number>>;
+}
+
+function hlsSegments(playlist: string): { uri: string; duration: number }[] {
+  const lines = playlist.split(/\r?\n/);
+  const segments: { uri: string; duration: number }[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = /^#EXTINF:([^,]+)/.exec(lines[index].trim());
+    if (!match) continue;
+    const duration = Number(match[1]);
+    let uriIndex = index + 1;
+    while (uriIndex < lines.length && (!lines[uriIndex].trim() || lines[uriIndex].trim().startsWith('#'))) {
+      uriIndex += 1;
+    }
+    if (uriIndex < lines.length) segments.push({ uri: lines[uriIndex].trim(), duration });
+    index = uriIndex;
+  }
+  return segments;
+}
+
+/**
+ * Measures a rendition's peak segment bitrate from its playlist and R2 sizes.
+ * A missing segment, invalid size, or non-positive duration makes the
+ * measurement unusable so callers can preserve the encoder's declaration.
+ */
+export function measureHlsPeakBandwidth(
+  playlist: string,
+  segmentSizes: Readonly<Record<string, number>>,
+): number | null {
+  const segments = hlsSegments(playlist);
+  if (!segments.length) return null;
+  let totalBytes = 0;
+  let totalDuration = 0;
+  let peak = 0;
+  for (const segment of segments) {
+    const size = Number(segmentSizes[segment.uri]);
+    if (!Number.isFinite(size) || size <= 0 || !Number.isFinite(segment.duration) || segment.duration <= 0) return null;
+    totalBytes += size;
+    totalDuration += segment.duration;
+    peak = Math.max(peak, (size * 8) / segment.duration);
+  }
+  if (totalBytes <= 0 || totalDuration <= 0 || !Number.isFinite(peak) || peak <= 0) return null;
+  return Math.round(peak);
+}
+
+/** Returns the URI paired with each stream-inf line, preserving master order. */
+export function hlsMasterVariantUris(master: string): string[] {
+  const lines = master.split(/\r?\n/);
+  const uris: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!lines[index].startsWith('#EXT-X-STREAM-INF:')) continue;
+    let uriIndex = index + 1;
+    while (uriIndex < lines.length && (!lines[uriIndex].trim() || lines[uriIndex].trim().startsWith('#'))) {
+      uriIndex += 1;
+    }
+    if (uriIndex < lines.length) uris.push(lines[uriIndex].trim());
+    index = uriIndex;
+  }
+  return uris;
+}
+
+/**
+ * Rewrites measured BANDWIDTH values without changing rendition metadata or
+ * the stream-inf/URI pairing. Invalid measurements leave their variants alone.
+ */
+export function rewriteHlsMasterBandwidth(
+  master: string,
+  variants: ReadonlyArray<HlsVariantBandwidthInput | null | undefined>,
+): string {
+  const lines = master.split(/\r?\n/);
+  const output = [];
+  let rendition = -1;
+  for (const line of lines) {
+    if (!line.startsWith('#EXT-X-STREAM-INF:')) {
+      output.push(line);
+      continue;
+    }
+    rendition += 1;
+    const variant = variants[rendition];
+    const measured = variant
+      ? measureHlsPeakBandwidth(variant.playlist, variant.segmentSizes)
+      : null;
+    output.push(
+      measured === null
+        ? line
+        : line.replace(/\bBANDWIDTH=\d+(?=,|$)/, `BANDWIDTH=${measured}`),
+    );
+  }
+  return output.join('\n');
+}

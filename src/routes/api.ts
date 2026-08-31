@@ -24,6 +24,7 @@ import { deliverTestWebhook } from '../lib/webhooks';
 import { generateApiKey, hashApiKey, keyPrefix } from '../lib/apikeys';
 import { sendMail } from '../lib/email';
 import { RESET_TTL_SECONDS, claimReset, generateResetToken, hashResetToken, resetUrl } from '../lib/resets';
+import { hlsMasterVariantUris, rewriteHlsMasterBandwidth } from '../lib/hls';
 import {
   defaultPlayerConfig,
   mergePlayerConfig,
@@ -493,6 +494,30 @@ function hlsPartType(path: string): string {
   return dot >= 0 ? HLS_TYPES[path.slice(dot).toLowerCase()] ?? '' : '';
 }
 
+async function repairedHlsMaster(media: R2Bucket, prefix: string, master: string): Promise<string> {
+  const variants = await Promise.all(
+    hlsMasterVariantUris(master).map(async (variantUri) => {
+      const cleanVariantUri = variantUri.split(/[?#]/, 1)[0];
+      if (!cleanVariantUri || cleanVariantUri.startsWith('/') || /^[a-z][a-z\d+.-]*:/i.test(cleanVariantUri)) return null;
+      const variantKey = `${prefix}/${cleanVariantUri}`;
+      const playlistObject = await media.get(variantKey);
+      if (!playlistObject) return null;
+      const slash = cleanVariantUri.lastIndexOf('/');
+      const directory = slash >= 0 ? cleanVariantUri.slice(0, slash + 1) : '';
+      const segmentPrefix = `${prefix}/${directory}`;
+      const listed = await media.list({ prefix: segmentPrefix, limit: 1000 });
+      const segmentSizes: Record<string, number> = {};
+      for (const object of listed.objects ?? []) {
+        if (object.key.startsWith(segmentPrefix)) {
+          segmentSizes[object.key.slice(segmentPrefix.length)] = object.size;
+        }
+      }
+      return { playlist: await playlistObject.text(), segmentSizes };
+    }),
+  );
+  return rewriteHlsMasterBandwidth(master, variants);
+}
+
 api.post('/videos/:id/hls/parts', async (c) => {
   const id = c.req.param('id');
   const user = c.get('user');
@@ -531,8 +556,15 @@ api.post('/videos/:id/hls/complete', async (c) => {
 
   const prefix = hlsPrefix(user.id, id);
   const masterKey = `${prefix}/master.m3u8`;
-  const master = await c.env.MEDIA.head(masterKey);
+  const master = await c.env.MEDIA.get(masterKey);
   if (!master) return c.json({ error: 'master.m3u8 has not been uploaded' }, 400);
+  const masterText = await master.text();
+  const repairedMaster = await repairedHlsMaster(c.env.MEDIA, prefix, masterText);
+  if (repairedMaster !== masterText) {
+    await c.env.MEDIA.put(masterKey, repairedMaster, {
+      httpMetadata: { contentType: 'application/vnd.apple.mpegurl' },
+    });
+  }
 
   const nextRef = `/media/${masterKey}`;
   const fallback =
