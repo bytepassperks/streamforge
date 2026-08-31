@@ -1588,6 +1588,7 @@
     var card = text('div', 'card');
     card.style.marginBottom = '12px';
     var grid = text('div', 'grid-2');
+    card.appendChild(input('id', '', cta ? cta.id : '', 'hidden'));
 
     function field(label, node) {
       var wrap = text('div', 'field');
@@ -1628,6 +1629,27 @@
 
     grid.appendChild(field('Type', kind));
     grid.appendChild(field('Position', position));
+    if (!gate) {
+      var style = document.createElement('select');
+      [
+        ['card', 'Glass card'],
+        ['solid', 'Solid accent'],
+        ['minimal', 'Minimal button'],
+        ['outline', 'Outline'],
+        ['glass', 'Light glass'],
+        ['bar', 'Wide bar'],
+        ['ribbon', 'Top ribbon'],
+        ['toast', 'Toast'],
+        ['spotlight', 'Spotlight'],
+        ['gradient', 'Gradient pill'],
+      ].forEach(function (pair) {
+        style.appendChild(new Option(pair[1], pair[0]));
+      });
+      style.value = cta && cta.style ? cta.style : 'card';
+      if (!style.value) style.value = 'card';
+      style.dataset.field = 'style';
+      grid.appendChild(field('Style', style));
+    }
     grid.appendChild(field('Start (s)', input('start_seconds', '0', cta ? cta.start_seconds : 0, 'number')));
     grid.appendChild(field('End (s)', input('end_seconds', '0 = until the end', cta ? cta.end_seconds : 0, 'number')));
     grid.appendChild(

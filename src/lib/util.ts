@@ -27,6 +27,32 @@ export function slugify(input: string, fallback = 'video'): string {
   return base || fallback;
 }
 
+export function normalizeCtaUrl(raw: unknown): string {
+  const value = String(raw ?? '').trim();
+  if (!value) return '';
+  if (/^(javascript|data|vbscript):/i.test(value)) return '';
+  if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
+  if (value.startsWith('/') || value.startsWith('#')) return value;
+  return 'https://' + value;
+}
+
+export const CTA_STYLES = [
+  'card',
+  'solid',
+  'minimal',
+  'outline',
+  'glass',
+  'bar',
+  'ribbon',
+  'toast',
+  'spotlight',
+  'gradient',
+] as const;
+
+export function normalizeCtaStyle(value: unknown): string {
+  return (CTA_STYLES as readonly string[]).includes(String(value ?? '')) ? String(value) : 'card';
+}
+
 export function escapeHtml(input: string): string {
   return input
     .replace(/&/g, '&amp;')

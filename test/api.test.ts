@@ -134,6 +134,53 @@ function editableSlugRequest(slug: string): Request {
   });
 }
 
+function ctaEnv(): { env: Env; inserts: unknown[][] } {
+  const inserts: unknown[][] = [];
+  const statement = (sql: string) => {
+    let values: unknown[] = [];
+    const chain = {
+      bind(...args: unknown[]) {
+        values = args;
+        return chain;
+      },
+      async first<T>() {
+        if (sql.includes('FROM sessions')) return { ...user, expires_at: 1_800_000_000 } as T;
+        if (sql === 'SELECT id FROM videos WHERE id = ? AND user_id = ?') return { id: 'vid_1' } as T;
+        return null;
+      },
+      async run() {
+        return {};
+      },
+      values() {
+        return values;
+      },
+    };
+    return chain;
+  };
+  const env = {
+    PUBLIC_BASE_URL: 'https://videokr.com',
+    DB: {
+      prepare(sql: string) {
+        return statement(sql);
+      },
+      async batch(statements: Array<{ values?: () => unknown[] }>) {
+        statements.forEach((item) => {
+          if (item.values) inserts.push(item.values());
+        });
+      },
+    },
+  } as unknown as Env;
+  return { env, inserts };
+}
+
+function ctaRequest(ctas: Record<string, unknown>[]): Request {
+  return new Request('https://videokr.com/videos/vid_1/ctas', {
+    method: 'PUT',
+    headers: { cookie: 'sf_session=session-1', 'content-type': 'application/json' },
+    body: JSON.stringify({ ctas }),
+  });
+}
+
 describe('editable video slugs', () => {
   it('normalizes and renames a video slug', async () => {
     const { env, video } = editableSlugEnv();
@@ -161,6 +208,60 @@ describe('editable video slugs', () => {
     const response = await api.request(editableSlugRequest('!!!'), {}, env);
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: 'slug must contain letters or numbers' });
+  });
+});
+
+describe('CTA persistence', () => {
+  it('normalizes scheme-less urls and unknown styles', async () => {
+    const { env, inserts } = ctaEnv();
+    const response = await api.request(
+      ctaRequest([
+        {
+          kind: 'overlay',
+          button_text: 'Book a demo',
+          button_url: 'example.com',
+          style: 'not-a-style',
+        },
+      ]),
+      {},
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(inserts[1]).toEqual([
+      expect.stringMatching(/^cta_[a-z0-9]+$/i),
+      'vid_1',
+      'overlay',
+      0,
+      0,
+      '',
+      '',
+      'Book a demo',
+      'https://example.com',
+      'email',
+      1,
+      'bottom-right',
+      'card',
+    ]);
+  });
+
+  it('preserves valid ids and regenerates invalid or duplicate ids', async () => {
+    const { env, inserts } = ctaEnv();
+    const response = await api.request(
+      ctaRequest([
+        { id: 'cta_keep123', kind: 'overlay' },
+        { id: 'not-an-id', kind: 'banner' },
+        { id: 'cta_keep123', kind: 'endscreen' },
+      ]),
+      {},
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(inserts[1][0]).toBe('cta_keep123');
+    expect(inserts[2][0]).toMatch(/^cta_[a-z0-9]+$/i);
+    expect(inserts[2][0]).not.toBe('not-an-id');
+    expect(inserts[3][0]).toMatch(/^cta_[a-z0-9]+$/i);
+    expect(inserts[3][0]).not.toBe('cta_keep123');
+    expect(inserts[3][0]).not.toBe(inserts[2][0]);
   });
 });
 

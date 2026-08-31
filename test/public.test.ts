@@ -46,7 +46,10 @@ function embedVideo(overrides: Partial<Video> = {}): Video {
   };
 }
 
-function embedEnv(owner: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>): Env {
+function embedEnv(
+  owner: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>,
+  ctas: Record<string, unknown>[] = [],
+): Env {
   const storedVideo = embedVideo();
   const storedOwner = { id: 'usr_1', plan: 'free', role: 'user', unlimited: 0, ...owner };
   const prepare = (sql: string) => {
@@ -61,7 +64,7 @@ function embedEnv(owner: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>): En
         return null;
       },
       async all<T>() {
-        return { results: [] as T[] };
+        return { results: (sql.includes('FROM ctas') ? ctas : []) as T[] };
       },
     };
     return statement;
@@ -113,6 +116,19 @@ async function embedPayload(owner: Partial<Pick<User, 'plan' | 'role' | 'unlimit
   );
   expect(response.status).toBe(200);
   return (await response.json()) as { badge: boolean };
+}
+
+async function embedPayloadWithCtas(
+  owner: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>,
+  ctas: Record<string, unknown>[],
+) {
+  const response = await pub.request(
+    new Request('https://videokr.com/api/embed/vid_1'),
+    {},
+    embedEnv(owner, ctas),
+  );
+  expect(response.status).toBe(200);
+  return (await response.json()) as { ctas: Record<string, unknown>[] };
 }
 
 describe('embedBlocked', () => {
@@ -187,6 +203,14 @@ describe('embed payload badge', () => {
 
   it('keeps the player badge for Free owners', async () => {
     expect((await embedPayload({ plan: 'free' })).badge).toBe(true);
+  });
+
+  it('includes CTA styles in the player payload', async () => {
+    const payload = await embedPayloadWithCtas(
+      { plan: 'free' },
+      [{ id: 'cta_1', kind: 'overlay', style: 'spotlight' }],
+    );
+    expect(payload.ctas).toEqual([{ id: 'cta_1', kind: 'overlay', style: 'spotlight' }]);
   });
 });
 

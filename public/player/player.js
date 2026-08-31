@@ -85,6 +85,15 @@
     );
   }
 
+  function normalizeUrl(raw) {
+    var value = String(raw == null ? '' : raw).trim();
+    if (!value) return '';
+    if (/^(javascript|data|vbscript):/i.test(value)) return '';
+    if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
+    if (value.indexOf('/') === 0 || value.indexOf('#') === 0) return value;
+    return 'https://' + value;
+  }
+
   function fmtTime(seconds) {
     if (!isFinite(seconds) || seconds < 0) seconds = 0;
     var s = Math.floor(seconds % 60);
@@ -1410,14 +1419,18 @@
 
   Player.prototype._renderCta = function (cta) {
     var self = this;
-    var node = el('div', 'sf-cta sf-cta-' + cta.kind + ' sf-pos-' + (cta.position || 'bottom-right'));
+    var node = el(
+      'div',
+      'sf-cta sf-cta-' + cta.kind + ' sf-cta-style-' + (cta.style || 'card') + ' sf-pos-' + (cta.position || 'bottom-right'),
+    );
     node.setAttribute('data-cta', cta.id);
     if (cta.headline) node.appendChild(el('div', 'sf-cta-headline', null)).textContent = cta.headline;
     if (cta.body) node.appendChild(el('div', 'sf-cta-body', null)).textContent = cta.body;
-    if (cta.button_text && cta.button_url) {
+    var buttonUrl = normalizeUrl(cta.button_url);
+    if (cta.button_text && buttonUrl) {
       var link = document.createElement('a');
       link.className = 'sf-cta-btn';
-      link.href = cta.button_url;
+      link.href = buttonUrl;
       link.target = '_blank';
       link.rel = 'noopener';
       link.textContent = cta.button_text;
@@ -1679,10 +1692,11 @@
     var card = el('div', 'sf-endscreen-card');
     card.appendChild(el('h3', null, null)).textContent = end.headline || 'Thanks for watching';
     if (end.body) card.appendChild(el('p', null, null)).textContent = end.body;
-    if (end.button_text && end.button_url) {
+    var buttonUrl = normalizeUrl(end.button_url);
+    if (end.button_text && buttonUrl) {
       var link = document.createElement('a');
       link.className = 'sf-cta-btn';
-      link.href = end.button_url;
+      link.href = buttonUrl;
       link.target = '_blank';
       link.rel = 'noopener';
       link.textContent = end.button_text;

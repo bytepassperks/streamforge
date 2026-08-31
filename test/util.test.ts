@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   canonicalRedirect,
+  CTA_STYLES,
   defaultPlayerConfig,
   deviceFromUserAgent,
   escapeHtml,
   hostnameAllowed,
   mergePlayerConfig,
+  normalizeCtaStyle,
+  normalizeCtaUrl,
   normalizeSkin,
   PLAYER_SKINS,
   newId,
@@ -118,6 +121,29 @@ describe('slugify', () => {
   it('falls back when nothing survives', () => {
     expect(slugify('!!!')).toBe('video');
     expect(slugify('', 'playlist')).toBe('playlist');
+  });
+});
+
+describe('CTA normalization', () => {
+  it('normalizes CTA urls without allowing executable schemes', () => {
+    expect(normalizeCtaUrl('example.com')).toBe('https://example.com');
+    expect(normalizeCtaUrl(' www.example.com ')).toBe('https://www.example.com');
+    expect(normalizeCtaUrl('javascript:alert(1)')).toBe('');
+    expect(normalizeCtaUrl('data:text/html,test')).toBe('');
+    expect(normalizeCtaUrl('vbscript:msgbox(1)')).toBe('');
+    expect(normalizeCtaUrl('mailto:hello@example.com')).toBe('mailto:hello@example.com');
+    expect(normalizeCtaUrl('tel:+15551234567')).toBe('tel:+15551234567');
+    expect(normalizeCtaUrl('/contact')).toBe('/contact');
+    expect(normalizeCtaUrl('#pricing')).toBe('#pricing');
+    expect(normalizeCtaUrl('')).toBe('');
+  });
+
+  it('normalizes unknown CTA styles to the default card', () => {
+    CTA_STYLES.forEach((style) => expect(normalizeCtaStyle(style)).toBe(style));
+    expect(normalizeCtaStyle('unknown')).toBe('card');
+    expect(normalizeCtaStyle('')).toBe('card');
+    expect(normalizeCtaStyle(undefined)).toBe('card');
+    expect(normalizeCtaStyle(42)).toBe('card');
   });
 });
 

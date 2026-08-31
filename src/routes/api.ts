@@ -31,6 +31,8 @@ import {
   mergePlayerConfig,
   newId,
   now,
+  normalizeCtaStyle,
+  normalizeCtaUrl,
   parseSource,
   slugify,
 } from '../lib/util';
@@ -636,14 +638,19 @@ api.put('/videos/:id/ctas', async (c) => {
   const allowedKinds = ['overlay', 'banner', 'endscreen', 'gate'];
   const rows = (ctas ?? []).filter((cta) => allowedKinds.includes(String(cta.kind)));
   const statements = [c.env.DB.prepare('DELETE FROM ctas WHERE video_id = ?').bind(id)];
+  const usedIds = new Set<string>();
   for (const cta of rows) {
+    const suppliedId = typeof cta.id === 'string' ? cta.id : '';
+    const ctaId =
+      /^cta_[a-z0-9]+$/i.test(suppliedId) && !usedIds.has(suppliedId) ? suppliedId : newId('cta');
+    usedIds.add(ctaId);
     statements.push(
       c.env.DB.prepare(
         `INSERT INTO ctas (id, video_id, kind, start_seconds, end_seconds, headline, body,
-                           button_text, button_url, fields, skippable, position)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                           button_text, button_url, fields, skippable, position, style)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
-        newId('cta'),
+        ctaId,
         id,
         String(cta.kind),
         Number(cta.start_seconds ?? 0) || 0,
@@ -651,10 +658,11 @@ api.put('/videos/:id/ctas', async (c) => {
         String(cta.headline ?? ''),
         String(cta.body ?? ''),
         String(cta.button_text ?? ''),
-        String(cta.button_url ?? ''),
+        normalizeCtaUrl(cta.button_url),
         String(cta.fields ?? 'email'),
         cta.skippable === false ? 0 : 1,
         String(cta.position ?? 'bottom-right'),
+        normalizeCtaStyle(cta.style),
       ),
     );
   }
