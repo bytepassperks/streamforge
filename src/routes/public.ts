@@ -578,11 +578,57 @@ pub.post('/api/leads/:videoId', async (c) => {
 
 /* ------------------------------------------------------------ delivery ----- */
 
+const MEDIA_CACHE_LIMIT = 200 * 1024 * 1024;
+
+async function fillMediaCache(cacheKey: Request, key: string, media: R2Bucket): Promise<void> {
+  try {
+    const metadata = await media.head(key);
+    if (!metadata || metadata.size > MEDIA_CACHE_LIMIT) return;
+    const object = await media.get(key);
+    if (!object) return;
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set('content-length', String(object.size));
+    headers.set('accept-ranges', 'bytes');
+    headers.set('cache-control', 'public, max-age=31536000, immutable');
+    headers.set('etag', object.httpEtag);
+    await caches.default.put(cacheKey, new Response(object.body, { headers }));
+  } catch {
+    /* Edge cache fill is an optimization; R2 delivery must remain authoritative. */
+  }
+}
+
 /** R2-backed media delivery with range support so seeking works in the player. */
 pub.get('/media/*', async (c) => {
   const key = decodeURIComponent(c.req.path.replace(/^\/media\//, ''));
   if (!key) return c.text('not found', 404);
   const range = c.req.header('range');
+  if (c.req.method === 'GET' && typeof caches !== 'undefined') {
+    const cacheKey = new Request(c.req.url, { method: 'GET' });
+    const cacheRequest = range
+      ? new Request(cacheKey, { headers: { range } })
+      : cacheKey;
+    try {
+      const cached = await caches.default.match(cacheRequest);
+      if (cached) {
+        const headers = new Headers(cached.headers);
+        headers.set('x-videokr-cache', 'hit');
+        return new Response(cached.body, {
+          status: cached.status,
+          statusText: cached.statusText,
+          headers,
+        });
+      }
+    } catch {
+      /* A cache API failure must not make an otherwise healthy R2 object fail. */
+    }
+    const startRange = !range || /^bytes=0-/i.test(range.trim());
+    if (startRange) {
+      c.executionCtx.waitUntil(
+        fillMediaCache(cacheKey, key, c.env.MEDIA).catch(() => undefined),
+      );
+    }
+  }
   const object = range
     ? await c.env.MEDIA.get(key, { range: c.req.raw.headers })
     : await c.env.MEDIA.get(key);

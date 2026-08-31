@@ -838,6 +838,7 @@
     frame: { accent: '#ff5a1f', background: '#000000', borderRadius: 12, bigPlayButton: true },
     pop: { accent: '#2f7d5b', background: '#0b1210', borderRadius: 12, bigPlayButton: true },
     studio: { accent: '#3f76ff', background: '#0d0f14', borderRadius: 8, bigPlayButton: true },
+    wave: { accent: '#1b7459', background: '#050908', borderRadius: 0, bigPlayButton: false },
   };
 
   $('pc-skin').addEventListener('change', function () {

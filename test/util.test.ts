@@ -147,6 +147,7 @@ describe('player config', () => {
 
   it('keeps a shipped skin and maps a retired one onto the shipped set', () => {
     PLAYER_SKINS.forEach((skin) => expect(normalizeSkin(skin)).toBe(skin));
+    expect(normalizeSkin('wave')).toBe('wave');
     expect(normalizeSkin('forge-dark')).toBe('videokr');
     expect(normalizeSkin('glass')).toBe('frame');
     expect(normalizeSkin('bold')).toBe('pop');

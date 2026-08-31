@@ -118,7 +118,7 @@ export function retentionBucket(position: number, duration: number, buckets = 10
 }
 
 /** Shipped skins. The first is the default every new video and every surface uses. */
-export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio'] as const;
+export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave'] as const;
 
 /** Retired skin names still stored on old videos, mapped onto the shipped set. */
 const LEGACY_SKINS: Record<string, string> = {
