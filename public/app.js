@@ -59,6 +59,352 @@
     );
   }
 
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var existing = document.querySelector('script[data-videokr-src="' + src + '"]');
+      if (existing) {
+        if (existing.dataset.loaded === 'true') resolve();
+        else {
+          existing.addEventListener('load', resolve, { once: true });
+          existing.addEventListener('error', reject, { once: true });
+        }
+        return;
+      }
+      var script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.dataset.videokrSrc = src;
+      script.addEventListener('load', function () {
+        script.dataset.loaded = 'true';
+        resolve();
+      }, { once: true });
+      script.addEventListener('error', reject, { once: true });
+      document.head.appendChild(script);
+    });
+  }
+
+  /* -------------------------------------------------------------- HLS ---- */
+
+  var activeHlsJob = null;
+  var ffmpegPromise = null;
+
+  function setHlsProgress(prefix, percent, message, visible) {
+    var box = $(prefix + '-hls-progress');
+    if (!box) return;
+    box.classList.toggle('hidden', visible === false);
+    var bar = $(prefix + '-hls-bar');
+    var status = $(prefix + '-hls-status');
+    if (bar) bar.value = Math.max(0, Math.min(100, percent || 0));
+    if (status) status.textContent = message || '';
+  }
+
+  function loadFfmpeg() {
+    if (ffmpegPromise) return ffmpegPromise;
+    ffmpegPromise = Promise.all([
+      loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js'),
+      loadScript('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js'),
+    ]).then(function () {
+      if (!window.FFmpegWASM || !window.FFmpegUtil) throw new Error('browser encoder failed to load');
+      var ffmpeg = new window.FFmpegWASM.FFmpeg();
+      var base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+      var workerSource = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js';
+      return Promise.all([
+        window.FFmpegUtil.toBlobURL(base + '/ffmpeg-core.js', 'text/javascript'),
+        window.FFmpegUtil.toBlobURL(base + '/ffmpeg-core.wasm', 'application/wasm'),
+        fetch(workerSource).then(function (response) {
+          if (!response.ok) throw new Error('browser encoder worker failed to load');
+          return response.text();
+        }).then(function (source) {
+          var worker = source
+            .replaceAll('./const.js', 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/const.js')
+            .replaceAll('./errors.js', 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/errors.js');
+          try {
+            return window.URL.createObjectURL(new Blob([worker], { type: 'text/javascript' }));
+          } catch {
+            throw new Error('browser encoder failed to prepare its worker');
+          }
+        }),
+      ]).then(function (workerAndCore) {
+        return ffmpeg.load({
+          coreURL: workerAndCore[0],
+          wasmURL: workerAndCore[1],
+          classWorkerURL: workerAndCore[2],
+        }).then(function () {
+          return ffmpeg;
+        }, function () {
+          throw new Error('browser encoder failed to load');
+        });
+      });
+    }).catch(function () {
+      ffmpegPromise = null;
+      throw new Error('browser encoder failed to load');
+    });
+    return ffmpegPromise;
+  }
+
+  function sourceBlob(source) {
+    if (source instanceof File) return Promise.resolve(source);
+    return fetch(new URL(source, location.href).toString()).then(function (res) {
+      if (!res.ok) throw new Error('could not read the original video');
+      return res.blob();
+    });
+  }
+
+  function encodedHlsVariantIndexes(height) {
+    if (!Number.isFinite(height) || height < 720) return [];
+    return height < 1080 ? [0] : [0, 1];
+  }
+
+  function mediaInfo(blob) {
+    return new Promise(function (resolve) {
+      var video = document.createElement('video');
+      var url = URL.createObjectURL(blob);
+      video.preload = 'metadata';
+      video.onloadedmetadata = function () {
+        URL.revokeObjectURL(url);
+        resolve({
+          duration: Number(video.duration) || 0,
+          width: Number(video.videoWidth) || 0,
+          height: Number(video.videoHeight) || 0,
+        });
+      };
+      video.onerror = function () {
+        URL.revokeObjectURL(url);
+        resolve({ duration: 0, width: 0, height: 0 });
+      };
+      video.src = url;
+    });
+  }
+
+  function hlsFiles(ffmpeg, dir, root) {
+    return ffmpeg.listDir(dir).then(function (entries) {
+      return Promise.all(
+        entries
+          .filter(function (entry) {
+            return entry.name !== '.' && entry.name !== '..';
+          })
+          .map(function (entry) {
+            var path = dir + '/' + entry.name;
+            var isFile = entry.isDir === false || entry.type === 1 || entry.type === 'file';
+            return isFile ? Promise.resolve([path]) : hlsFiles(ffmpeg, path, root);
+          }),
+      ).then(function (nested) {
+        return nested.reduce(function (all, part) {
+          return all.concat(part);
+        }, []);
+      });
+    });
+  }
+
+  function filterHlsMaster(master, keepCount) {
+    var lines = master.split(/\r?\n/);
+    var out = [];
+    var rendition = -1;
+    for (var i = 0; i < lines.length; i += 1) {
+      if (lines[i].indexOf('#EXT-X-STREAM-INF:') === 0) {
+        rendition += 1;
+        if (rendition >= keepCount) {
+          i += 1;
+          continue;
+        }
+      }
+      out.push(lines[i]);
+    }
+    return out.join('\n');
+  }
+
+  function longestSegment(playlist) {
+    var longest = 0;
+    var matches = playlist.matchAll ? playlist.matchAll(/#EXTINF:([\d.]+)/g) : [];
+    for (var match of matches) longest = Math.max(longest, Number(match[1]));
+    return longest;
+  }
+
+  function uploadHlsParts(videoId, ffmpeg, files, master, job, prefix) {
+    var work = files.slice();
+    var cursor = 0;
+    var completed = 0;
+    function upload(path) {
+      return ffmpeg.readFile(path).then(function (data) {
+        var relative = path.replace(/^\/ladder\//, '');
+        relative = relative.replace(/^stream_([0-9]+)\.m3u8$/, 'v$1/index.m3u8');
+        var form = new FormData();
+        form.append('path', relative);
+        form.append('file', new Blob([data]), relative);
+        return fetch('/api/videos/' + encodeURIComponent(videoId) + '/hls/parts', {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: form,
+        }).then(function (res) {
+          if (!res.ok) return res.json().catch(function () { return {}; }).then(function (body) {
+            throw new Error(body.error || 'HLS part upload failed');
+          });
+        });
+      });
+    }
+    function worker() {
+      if (job.cancelled) return Promise.reject(new Error('optimisation cancelled'));
+      if (cursor >= work.length) return Promise.resolve();
+      var path = work[cursor++];
+      return upload(path).then(function () {
+        completed += 1;
+        setHlsProgress(prefix, 82 + (completed / Math.max(files.length, 1)) * 16, 'Uploading ladder parts…', true);
+        return worker();
+      });
+    }
+    return Promise.all([0, 1, 2, 3].map(worker)).then(function () {
+      if (job.cancelled) throw new Error('optimisation cancelled');
+      var form = new FormData();
+      form.append('path', 'master.m3u8');
+      form.append('file', new Blob([master], { type: 'application/vnd.apple.mpegurl' }), 'master.m3u8');
+      return fetch('/api/videos/' + encodeURIComponent(videoId) + '/hls/parts', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: form,
+      });
+    });
+  }
+
+  function optimiseVideo(videoId, source, prefix, knownDuration) {
+    if (activeHlsJob) return Promise.reject(new Error('another optimisation is already running'));
+    var job = { cancelled: false, ffmpeg: null };
+    activeHlsJob = job;
+    setHlsProgress(prefix, 0, 'Preparing browser encoder…', true);
+    return sourceBlob(source)
+      .then(function (blob) {
+        return mediaInfo(blob).then(function (info) {
+          var duration = info.duration || Number(knownDuration) || 0;
+          var encoded = encodedHlsVariantIndexes(info.height);
+          var variantCount = encoded.length + 1;
+          if (duration > 0 && Math.ceil(duration / 4) * variantCount + variantCount + 1 > 900) {
+            throw new Error('This video would create more than 900 HLS parts. Use the PC encoder instead.');
+          }
+          return {
+            blob: blob,
+            duration: duration,
+            width: info.width,
+            height: info.height,
+            encoded: encoded,
+          };
+        });
+      })
+      .then(function (input) {
+        return loadFfmpeg().then(function (ffmpeg) {
+          job.ffmpeg = ffmpeg;
+          ffmpeg.on('progress', function (event) {
+            var progress = event && Number(event.progress);
+            if (Number.isFinite(progress)) {
+              var elapsed = (Date.now() - job.started) / 1000;
+              var remaining = progress > 0 ? Math.max(0, Math.round((elapsed / progress) * (1 - progress))) : 0;
+              setHlsProgress(prefix, progress * 70, 'Encoding… ' + Math.round(progress * 100) + '% (about ' + remaining + 's left)', true);
+            }
+          });
+          job.started = Date.now();
+          return input.blob.arrayBuffer().then(function (bytes) {
+            return ffmpeg.writeFile('/input.mp4', new Uint8Array(bytes));
+          })
+            .then(function () {
+              return Promise.all(['/ladder', '/ladder/v0', '/ladder/v1', '/ladder/v2'].map(function (dir) {
+                return ffmpeg.createDir(dir).catch(function () {});
+              }));
+            })
+            .then(function () {
+              function execute(args) {
+                return ffmpeg.exec(args).then(function (code) {
+                  if (Number(code) > 0) throw new Error('Browser encoder failed with code ' + code);
+                });
+              }
+              var chain = Promise.resolve();
+              if (input.encoded.indexOf(0) >= 0) {
+                chain = chain.then(function () {
+                  return execute([
+                    '-i', '/input.mp4', '-vf', 'scale=-2:360',
+                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-maxrate', '800k', '-bufsize', '1600k',
+                    '-c:a', 'aac', '-b:a', '96k', '-g', '120', '-force_key_frames', 'expr:gte(t,n_forced*4)',
+                    '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+                    '-hls_segment_filename', '/ladder/v0/seg_%03d.ts', '/ladder/v0/index.m3u8',
+                  ]);
+                });
+              }
+              if (input.encoded.indexOf(1) >= 0) {
+                chain = chain.then(function () {
+                  return execute([
+                    '-i', '/input.mp4', '-vf', 'scale=-2:720',
+                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24', '-maxrate', '2500k', '-bufsize', '5000k',
+                    '-c:a', 'aac', '-b:a', '128k', '-g', '120', '-force_key_frames', 'expr:gte(t,n_forced*4)',
+                    '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+                    '-hls_segment_filename', '/ladder/v1/seg_%03d.ts', '/ladder/v1/index.m3u8',
+                  ]);
+                });
+              }
+              return chain.then(function () {
+                return execute([
+                  '-i', '/input.mp4', '-map', '0:v:0', '-map', '0:a:0', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k',
+                  '-f', 'hls', '-hls_time', '4', '-hls_playlist_type', 'vod', '-hls_flags', 'independent_segments',
+                  '-hls_segment_filename', '/ladder/v2/seg_%03d.ts', '/ladder/v2/index.m3u8',
+                ]);
+              }).then(function () {
+                var lines = ['#EXTM3U', '#EXT-X-VERSION:3'];
+                if (input.encoded.indexOf(0) >= 0) {
+                  lines.push('#EXT-X-STREAM-INF:BANDWIDTH=896000,RESOLUTION=640x360', 'v0/index.m3u8');
+                }
+                if (input.encoded.indexOf(1) >= 0) {
+                  lines.push('#EXT-X-STREAM-INF:BANDWIDTH=2628000,RESOLUTION=1280x720', 'v1/index.m3u8');
+                }
+                lines.push(
+                  '#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=' + input.width + 'x' + input.height,
+                  'v2/index.m3u8',
+                );
+                var master = lines.join('\n') + '\n';
+                return ffmpeg.writeFile('/ladder/master.m3u8', new window.TextEncoder().encode(master));
+              });
+            })
+            .then(function () {
+              return Promise.all([ffmpeg.readFile('/ladder/master.m3u8'), ffmpeg.readFile('/ladder/v2/index.m3u8')]);
+            })
+            .then(function (playlists) {
+              var decoder = new window.TextDecoder();
+              var master = decoder.decode(playlists[0]);
+              var v2 = decoder.decode(playlists[1]);
+              var dropV2 = longestSegment(v2) > 12;
+              if (dropV2 && input.encoded.length === 0) {
+                throw new Error('already small enough to stream');
+              }
+              if (dropV2) master = filterHlsMaster(master, input.encoded.length);
+              return hlsFiles(ffmpeg, '/ladder', '/ladder').then(function (files) {
+                var parts = files.filter(function (path) {
+                  return path !== '/ladder/master.m3u8' && (!dropV2 || path.indexOf('/ladder/v2/') !== 0);
+                });
+                if (parts.length + 1 > 900) throw new Error('This ladder exceeds the 900-part limit.');
+                setHlsProgress(prefix, 80, 'Uploading ladder parts…', true);
+                return uploadHlsParts(videoId, ffmpeg, parts, master, job, prefix);
+              });
+            })
+            .then(function (res) {
+              if (!res.ok) throw new Error('HLS completion upload failed');
+              return api('/videos/' + encodeURIComponent(videoId) + '/hls/complete', { method: 'POST' });
+            });
+        });
+      })
+      .then(function () {
+        setHlsProgress(prefix, 100, 'Optimisation complete.', true);
+      })
+      .catch(function (err) {
+        if (job.cancelled) throw new Error('optimisation cancelled');
+        throw err;
+      })
+      .finally(function () {
+        if (activeHlsJob === job) activeHlsJob = null;
+      });
+  }
+
+  function cancelHls(prefix) {
+    if (!activeHlsJob) return;
+    activeHlsJob.cancelled = true;
+    if (activeHlsJob.ffmpeg) activeHlsJob.ffmpeg.terminate();
+    setHlsProgress(prefix, 0, 'Optimisation cancelled. Original video is unchanged.', true);
+  }
+
   /* Every blank pane says what would be here and how to fill it, rather than
      one grey line of prose. */
   function emptyState(title, hint, kind) {
@@ -753,6 +1099,10 @@
     window.open(source, '_blank', 'noopener');
   });
 
+  $('cv-hls-cancel').addEventListener('click', function () {
+    cancelHls('cv');
+  });
+
   $('cv-save').addEventListener('click', function () {
     var button = $('cv-save');
     var error = $('cv-error');
@@ -760,6 +1110,7 @@
     var file = $('cv-upload').files[0];
     var thumb = $('cv-thumb').files[0];
     var source = $('cv-source').value.trim();
+    var createdSource = source;
     if (!source && !file) {
       error.textContent = 'Paste a video link or choose a file to upload.';
       return;
@@ -776,6 +1127,7 @@
     }
     ready
       .then(function (resolvedSource) {
+        createdSource = resolvedSource;
         return api('/videos', {
           method: 'POST',
           body: {
@@ -786,10 +1138,12 @@
         });
       })
       .then(function (result) {
+        var optimise = $('cv-hls').checked;
         $('cv-title').value = '';
         $('cv-source').value = '';
         $('cv-upload').value = '';
         $('cv-thumb').value = '';
+        $('cv-hls').checked = false;
         syncComposer();
         toast('Video created');
         // A chosen thumbnail wins over the automatic frame grab. Where there is
@@ -807,6 +1161,15 @@
           loadVideos();
         });
         openEditor(result.video.id);
+        if (optimise) {
+          optimiseVideo(result.video.id, file || createdSource, 'cv', result.video.duration)
+            .then(function () {
+              return openEditorRefresh(result.video.id);
+            })
+            .catch(function (err) {
+              setHlsProgress('cv', 0, err && (err.message || String(err)) || 'Optimisation failed. Original video is unchanged.', true);
+            });
+        }
       })
       .catch(function (err) {
         button.disabled = false;
@@ -883,6 +1246,34 @@
       .catch(fail);
   }
 
+  function syncEditorHlsAction() {
+    var video = state.video;
+    var eligible = video && video.source_type === 'mp4' && /^\/media\/.+\.(?:mp4|webm)(?:$|\?)/i.test(video.source_ref || '');
+    $('ed-hls-start').classList.toggle('hidden', !eligible);
+    if (!eligible) {
+      $('ed-hls-status').textContent = '';
+      $('ed-hls-bar').value = 0;
+    }
+  }
+
+  $('ed-hls-start').addEventListener('click', function () {
+    if (!state.video) return;
+    $('ed-hls-start').disabled = true;
+    optimiseVideo(state.video.id, state.video.source_ref, 'ed', state.video.duration)
+      .then(function () {
+        $('ed-hls-start').classList.add('hidden');
+        return openEditorRefresh(state.video.id);
+      })
+      .catch(function (err) {
+        setHlsProgress('ed', 0, err && (err.message || String(err)) || 'Optimisation failed. Original video is unchanged.', true);
+        $('ed-hls-start').disabled = false;
+      });
+  });
+  $('ed-hls-cancel').addEventListener('click', function () {
+    cancelHls('ed');
+    $('ed-hls-start').disabled = false;
+  });
+
   function fillEditor(result) {
     var video = result.video;
     var config = result.player_config;
@@ -942,6 +1333,7 @@
         ? 'Takes the poster straight from the video'
         : 'Frames can only be grabbed from uploads and MP4 links';
     $('ed-form-export').href = '/api/leads.csv?video=' + video.id;
+    syncEditorHlsAction();
     setLoading($('ed-form-leads'), 'Loading submissions');
     renderSnippets(video);
   }

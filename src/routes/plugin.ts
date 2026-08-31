@@ -18,6 +18,7 @@ interface LibraryVideo {
   title: string;
   source_type: string;
   source_ref: string;
+  fallback_ref: string;
   thumbnail_url: string;
   visibility: string;
   duration: number;
@@ -57,6 +58,7 @@ interface TopVideo {
   title: string;
   source_type: string;
   source_ref: string;
+  fallback_ref: string;
   thumbnail_url: string;
   plays: number;
   completions: number;
@@ -133,7 +135,7 @@ plugin.get('/account', async (c) => {
 plugin.get('/videos', async (c) => {
   const search = (c.req.query('search') ?? '').trim().toLowerCase();
   const { results } = await c.env.DB.prepare(
-    `SELECT id, slug, title, source_type, source_ref, thumbnail_url, visibility, duration, created_at
+    `SELECT id, slug, title, source_type, source_ref, fallback_ref, thumbnail_url, visibility, duration, created_at
        FROM videos WHERE user_id = ? ORDER BY created_at DESC`,
   )
     .bind(c.get('user').id)
@@ -180,7 +182,7 @@ plugin.get('/insights', async (c) => {
     .bind(user.id, now() - 30 * 86400)
     .all<DailyPlays>();
   const top = await c.env.DB.prepare(
-    `SELECT v.id, v.slug, v.title, v.source_type, v.source_ref, v.thumbnail_url,
+    `SELECT v.id, v.slug, v.title, v.source_type, v.source_ref, v.fallback_ref, v.thumbnail_url,
             SUM(CASE WHEN e.kind = 'play' THEN 1 ELSE 0 END) AS plays,
             SUM(CASE WHEN e.kind = 'complete' THEN 1 ELSE 0 END) AS completions
        FROM videos v LEFT JOIN events e ON e.video_id = v.id

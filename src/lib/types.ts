@@ -107,6 +107,7 @@ export interface Video {
   description: string;
   source_type: SourceType;
   source_ref: string;
+  fallback_ref: string;
   duration: number;
   thumbnail_url: string;
   thumbnail_url_b: string;

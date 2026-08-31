@@ -1,0 +1,1 @@
+ALTER TABLE videos ADD COLUMN fallback_ref TEXT NOT NULL DEFAULT '';

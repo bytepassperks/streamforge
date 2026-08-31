@@ -29,6 +29,7 @@ function embedVideo(overrides: Partial<Video> = {}): Video {
     description: 'A film.',
     source_type: 'mp4',
     source_ref: '/media/usr_1/a.mp4',
+    fallback_ref: '',
     duration: 130,
     thumbnail_url: '/media/usr_1/a.jpg',
     thumbnail_url_b: '',
@@ -146,7 +147,7 @@ describe('media delivery', () => {
   function mediaEnv(): Env {
     return {
       MEDIA: {
-        async get(_key: string, options?: unknown) {
+        async get(key: string, options?: unknown) {
           const ranged = Boolean(options);
           const body = new Response(ranged ? 'llo' : 'hello world').body;
           return {
@@ -155,7 +156,7 @@ describe('media delivery', () => {
             range: ranged ? { offset: 2, length: 3 } : undefined,
             httpEtag: '"media-etag"',
             writeHttpMetadata(headers: Headers) {
-              headers.set('content-type', 'video/mp4');
+              headers.set('content-type', key.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp4');
             },
           };
         },
@@ -180,6 +181,24 @@ describe('media delivery', () => {
     expect(response.status).toBe(206);
     expect(response.headers.get('content-range')).toBe('bytes 2-4/11');
     expect(await response.text()).toBe('llo');
+  });
+
+  it('serves playlists with CORS and a short cache lifetime', async () => {
+    const response = await pub.request(new Request('https://videokr.com/media/usr_1/master.m3u8'), {}, mediaEnv());
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/vnd.apple.mpegurl');
+    expect(response.headers.get('access-control-allow-origin')).toBe('*');
+    expect(response.headers.get('cache-control')).toBe('public, max-age=60');
+  });
+
+  it('answers media CORS preflight requests', async () => {
+    const response = await pub.request(
+      new Request('https://videokr.com/media/usr_1/master.m3u8', { method: 'OPTIONS' }),
+      {},
+      mediaEnv(),
+    );
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-headers')).toContain('range');
   });
 
   it('serves a cache hit using the normalized GET key and range semantics', async () => {
