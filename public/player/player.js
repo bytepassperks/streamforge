@@ -450,7 +450,11 @@
       return loadScript('https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js')
         .then(function () {
           if (window.Hls && window.Hls.isSupported()) {
-            var hls = new window.Hls();
+            var hls = new window.Hls({
+              // Raise the estimate so the first fragment starts at broadband quality.
+              abrEwmaDefaultEstimate: 1500000,
+              startLevel: -1
+            });
             hls.loadSource(self._source);
             hls.attachMedia(video);
             self._hls = hls;
