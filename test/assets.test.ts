@@ -71,6 +71,6 @@ describe('asset stamps', () => {
     expect(html).toContain('Changing this URL breaks the old link.');
     expect(js).toContain("slug: $('ed-slug').value.trim()");
     expect(js).toContain('err && err.status === 409');
-    expect(js).toContain('That URL is already taken.');
+    expect(js).toContain('that URL is already taken');
   });
 });

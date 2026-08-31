@@ -1920,7 +1920,7 @@
       .catch(function (err) {
         button.disabled = false;
         if (err && err.status === 409) {
-          fail(new Error('That URL is already taken.'));
+          fail(new Error('that URL is already taken'));
           return;
         }
         fail(err);
