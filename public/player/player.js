@@ -451,8 +451,9 @@
         .then(function () {
           if (window.Hls && window.Hls.isSupported()) {
             var hls = new window.Hls({
-              // Raise the estimate so the first fragment starts at broadband quality.
+              // Choose the first fragment from the assumed estimate instead of a probe fragment.
               abrEwmaDefaultEstimate: 1500000,
+              testBandwidth: false,
               startLevel: -1
             });
             hls.loadSource(self._source);
