@@ -592,6 +592,7 @@ pub.post('/api/leads/:videoId', async (c) => {
 const MEDIA_CACHE_LIMIT = 200 * 1024 * 1024;
 
 async function fillMediaCache(cacheKey: Request, key: string, media: R2Bucket): Promise<void> {
+  if (/\.m3u8(?:$|\?)/i.test(key)) return;
   try {
     const metadata = await media.head(key);
     if (!metadata || metadata.size > MEDIA_CACHE_LIMIT) return;
@@ -601,10 +602,7 @@ async function fillMediaCache(cacheKey: Request, key: string, media: R2Bucket): 
     object.writeHttpMetadata(headers);
     headers.set('content-length', String(object.size));
     headers.set('accept-ranges', 'bytes');
-    headers.set(
-      'cache-control',
-      /\.m3u8(?:$|\?)/i.test(key) ? 'public, max-age=60' : 'public, max-age=31536000, immutable',
-    );
+    headers.set('cache-control', 'public, max-age=31536000, immutable');
     headers.set('etag', object.httpEtag);
     await caches.default.put(cacheKey, new Response(object.body, { headers }));
   } catch {
@@ -620,7 +618,8 @@ pub.get('/media/*', async (c) => {
   const cacheControl = /\.m3u8(?:$|\?)/i.test(key)
     ? 'public, max-age=60'
     : 'public, max-age=31536000, immutable';
-  if (c.req.method === 'GET' && typeof caches !== 'undefined') {
+  const cacheable = !/\.m3u8(?:$|\?)/i.test(key);
+  if (cacheable && c.req.method === 'GET' && typeof caches !== 'undefined') {
     const cacheKey = new Request(c.req.url, { method: 'GET' });
     const cacheRequest = range
       ? new Request(cacheKey, { headers: { range } })
