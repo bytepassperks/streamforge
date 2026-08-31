@@ -21,10 +21,11 @@ function arg(name) {
 const baseUrl = arg('--base-url').replace(/\/$/, '');
 const videoId = arg('--video');
 const all = process.argv.includes('--all');
+const force = process.argv.includes('--force');
 const apiKey = process.env.VIDEOKR_API_KEY || process.env.VIDEOKR_APIKEY || '';
 if (!baseUrl || (!videoId && !all) || (videoId && all)) {
-  console.error('Usage: encoder-agent.mjs --base-url https://videokr.com --video <id>');
-  console.error('   or: encoder-agent.mjs --base-url https://videokr.com --all');
+  console.error('Usage: encoder-agent.mjs --base-url https://videokr.com --video <id> [--force]');
+  console.error('   or: encoder-agent.mjs --base-url https://videokr.com --all [--force]');
   process.exit(2);
 }
 if (!apiKey) {
@@ -161,14 +162,16 @@ async function uploadAll(id, root, paths) {
 }
 
 async function encode(video) {
-  if (video.source_type === 'hls' || /\.m3u8(?:$|\?)/i.test(String(video.source_ref || ''))) return;
-  if (video.source_type !== 'mp4' || !String(video.source_ref || '').startsWith('/media/')) return;
+  const isHls = video.source_type === 'hls' || /\.m3u8(?:$|\?)/i.test(String(video.source_ref || ''));
+  if (isHls && !force) return;
+  const sourceRef = isHls ? String(video.fallback_ref || '') : String(video.source_ref || '');
+  if (!sourceRef.startsWith('/media/') || (!isHls && video.source_type !== 'mp4')) return;
   const work = await mkdtemp(join(tmpdir(), 'videokr-hls-'));
   try {
     const input = join(work, 'input.mp4');
     const output = join(work, 'ladder');
     for (const directory of ['v0', 'v1', 'v2']) await mkdir(join(output, directory), { recursive: true });
-    const source = new URL(video.source_ref, `${baseUrl}/`).toString();
+    const source = new URL(sourceRef, `${baseUrl}/`).toString();
     const response = await fetch(source, { headers: authHeaders() });
     if (!response.ok || !response.body) throw new Error(`source download returned HTTP ${response.status}`);
     await writeFile(input, new Uint8Array(await response.arrayBuffer()));

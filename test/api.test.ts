@@ -17,7 +17,7 @@ const user: User = {
   created_at: 1_700_000_000,
 };
 
-function hlsEnv(): Env {
+function hlsEnv(mediaOverrides: Record<string, unknown> = {}): Env {
   const statement = (sql: string) => {
     const chain = {
       bind: vi.fn(() => chain),
@@ -63,10 +63,22 @@ function hlsEnv(): Env {
       async list() {
         return { objects: [] };
       },
-      async put() {},
-      async head() {
-        return { size: 1 };
+      async get(key: string) {
+        if (key.endsWith('/master.m3u8')) {
+          return {
+            async text() {
+              return '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nv0/index.m3u8\n';
+            },
+          };
+        }
+        return {
+          async text() {
+            return '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n';
+          },
+        };
       },
+      async put() {},
+      ...mediaOverrides,
     },
   } as unknown as Env;
   return env;
@@ -111,5 +123,42 @@ describe('HLS API-key authentication scope', () => {
     );
     expect(completeResponse.status).toBe(200);
     expect(await completeResponse.json()).toMatchObject({ source_type: 'hls' });
+  });
+
+  it('repairs measured master bandwidth and is idempotent', async () => {
+    let master = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv0/index.m3u8\n';
+    let writes = 0;
+    const env = hlsEnv({
+      async get(path: string) {
+        return {
+          async text() {
+            return path.endsWith('/master.m3u8')
+              ? master
+              : '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n';
+          },
+        };
+      },
+      async list() {
+        return { objects: [{ key: 'usr_1/vid_1/hls/v0/seg_000.ts', size: 50_000 }] };
+      },
+      async put(_path: string, body: string) {
+        writes += 1;
+        master = body;
+      },
+    });
+    const request = () =>
+      api.request(
+        new Request('https://videokr.com/videos/vid_1/hls/complete', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${key}` },
+        }),
+        {},
+        env,
+      );
+
+    expect((await request()).status).toBe(200);
+    expect(master).toContain('BANDWIDTH=100000');
+    expect((await request()).status).toBe(200);
+    expect(writes).toBe(1);
   });
 });

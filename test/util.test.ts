@@ -14,7 +14,12 @@ import {
   safeExternalUrl,
   slugify,
 } from '../src/lib/util';
-import { selectHlsEncodedVariantIndexes, selectHlsMasterPlaylist, selectHlsVariantIndexes } from '../src/lib/hls';
+import {
+  rewriteHlsMasterBandwidth,
+  selectHlsEncodedVariantIndexes,
+  selectHlsMasterPlaylist,
+  selectHlsVariantIndexes,
+} from '../src/lib/hls';
 
 describe('parseSource', () => {
   it('reads youtube watch, short, embed and shorts urls', () => {
@@ -180,6 +185,41 @@ describe('HLS variant selection', () => {
     expect(selectHlsVariantIndexes(12.01)).toEqual([0, 1]);
     const master = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nv0/index.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=2\nv1/index.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=3\nv2/index.m3u8\n';
     expect(selectHlsMasterPlaylist(master, [0, 1])).not.toContain('v2/index.m3u8');
+  });
+
+  it('rewrites each variant to its measured peak segment bitrate', () => {
+    const master = [
+      '#EXTM3U',
+      '#EXT-X-STREAM-INF:BANDWIDTH=100,RESOLUTION=640x360',
+      'v0/index.m3u8',
+      '#EXT-X-STREAM-INF:BANDWIDTH=200,RESOLUTION=1280x720,CODECS="avc1"',
+      'v1/index.m3u8',
+    ].join('\n');
+    const playlist = '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n#EXTINF:1.5,\nseg_001.ts\n';
+    const rewritten = rewriteHlsMasterBandwidth(master, [
+      { playlist, segmentSizes: { 'seg_000.ts': 50_000, 'seg_001.ts': 100_000 } },
+      { playlist, segmentSizes: { 'seg_000.ts': 100_000, 'seg_001.ts': 10_000 } },
+    ]);
+    expect(rewritten).toContain('#EXT-X-STREAM-INF:BANDWIDTH=533333,RESOLUTION=640x360');
+    expect(rewritten).toContain('#EXT-X-STREAM-INF:BANDWIDTH=200000,RESOLUTION=1280x720,CODECS="avc1"');
+    expect(rewritten).toContain('v0/index.m3u8\n#EXT-X-STREAM-INF');
+  });
+
+  it('leaves invalid measurements and already-correct values unchanged', () => {
+    const master = [
+      '#EXTM3U',
+      '#EXT-X-STREAM-INF:BANDWIDTH=100000,CODECS="avc1"',
+      'v0/index.m3u8',
+      '#EXT-X-STREAM-INF:BANDWIDTH=200000,RESOLUTION=1280x720',
+      'v1/index.m3u8',
+    ].join('\n');
+    const playlist = '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n';
+    expect(
+      rewriteHlsMasterBandwidth(master, [
+        { playlist, segmentSizes: { 'seg_000.ts': 50_000 } },
+        { playlist, segmentSizes: {} },
+      ]),
+    ).toBe(master);
   });
 });
 
