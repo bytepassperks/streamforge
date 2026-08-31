@@ -86,7 +86,11 @@
   /* -------------------------------------------------------------- HLS ---- */
 
   var activeHlsJob = null;
+  var activeVideoUpload = null;
   var ffmpegPromise = null;
+  var VIDEO_UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024;
+  var VIDEO_UPLOAD_CONCURRENCY = 3;
+  var VIDEO_UPLOAD_ATTEMPTS = 3;
 
   function setHlsProgress(prefix, percent, message, visible) {
     var box = $(prefix + '-hls-progress');
@@ -96,6 +100,102 @@
     var status = $(prefix + '-hls-status');
     if (bar) bar.value = Math.max(0, Math.min(100, percent || 0));
     if (status) status.textContent = message || '';
+  }
+
+  function cancelVideoUpload() {
+    var upload = activeVideoUpload;
+    if (!upload) return;
+    upload.cancelled = true;
+    upload.abort();
+    setHlsProgress('cv', 0, 'Upload cancelled.', true);
+  }
+
+  function uploadVideoFile(file) {
+    var upload = {
+      cancelled: false,
+      key: '',
+      uploadId: '',
+      abortRequest: null,
+    };
+    activeVideoUpload = upload;
+    upload.abort = function () {
+      if (!upload.key || !upload.uploadId) return Promise.resolve();
+      if (!upload.abortRequest) {
+        upload.abortRequest = api('/uploads/abort', {
+          method: 'POST',
+          body: { key: upload.key, uploadId: upload.uploadId },
+        }).catch(function () {});
+      }
+      return upload.abortRequest;
+    };
+    setHlsProgress('cv', 0, 'Uploading video… 0%', true);
+
+    return api('/uploads/create', {
+      method: 'POST',
+      body: { filename: file.name, size: file.size },
+    })
+      .then(function (created) {
+        upload.key = created.key;
+        upload.uploadId = created.uploadId;
+        var partCount = Math.ceil(file.size / VIDEO_UPLOAD_CHUNK_BYTES);
+        var nextPart = 0;
+        var completedBytes = 0;
+        var parts = [];
+
+        function sendPart(index, attempt) {
+          if (upload.cancelled) return Promise.reject(new Error('upload cancelled'));
+          var start = index * VIDEO_UPLOAD_CHUNK_BYTES;
+          var chunk = file.slice(start, Math.min(start + VIDEO_UPLOAD_CHUNK_BYTES, file.size));
+          var form = new FormData();
+          form.append('key', upload.key);
+          form.append('uploadId', upload.uploadId);
+          form.append('partNumber', String(index + 1));
+          form.append('file', chunk, file.name);
+          return api('/uploads/part', { method: 'POST', form: form, timeout: 30000 })
+            .then(function (result) {
+              if (upload.cancelled) throw new Error('upload cancelled');
+              parts[index] = { partNumber: index + 1, etag: result.etag };
+              completedBytes += chunk.size;
+              var percent = Math.round((completedBytes / Math.max(file.size, 1)) * 100);
+              setHlsProgress('cv', percent, 'Uploading video… ' + percent + '%', true);
+            })
+            .catch(function (err) {
+              if (!upload.cancelled && attempt < VIDEO_UPLOAD_ATTEMPTS) {
+                return sendPart(index, attempt + 1);
+              }
+              throw err;
+            });
+        }
+
+        function worker() {
+          if (upload.cancelled) return Promise.reject(new Error('upload cancelled'));
+          var index = nextPart;
+          nextPart += 1;
+          if (index >= partCount) return Promise.resolve();
+          return sendPart(index, 1).then(worker);
+        }
+
+        return Promise.all(
+          Array.from({ length: Math.min(VIDEO_UPLOAD_CONCURRENCY, partCount) }, function () {
+            return worker();
+          }),
+        ).then(function () {
+          if (upload.cancelled) throw new Error('upload cancelled');
+          return api('/uploads/complete', {
+            method: 'POST',
+            body: { key: upload.key, uploadId: upload.uploadId, parts: parts },
+          });
+        });
+      })
+      .catch(function (err) {
+        return upload.abort().then(function () {
+          throw err;
+        });
+      })
+      .finally(function () {
+        if (activeVideoUpload === upload) activeVideoUpload = null;
+        setHlsProgress('cv', 0, '', false);
+      });
   }
 
   function loadFfmpeg() {
@@ -399,6 +499,10 @@
   }
 
   function cancelHls(prefix) {
+    if (activeVideoUpload) {
+      cancelVideoUpload();
+      return;
+    }
     if (!activeHlsJob) return;
     activeHlsJob.cancelled = true;
     if (activeHlsJob.ffmpeg) activeHlsJob.ffmpeg.terminate();
@@ -1082,6 +1186,7 @@
     $('cv-source').focus();
   });
   $('cv-clear').addEventListener('click', function () {
+    cancelVideoUpload();
     $('cv-title').value = '';
     $('cv-source').value = '';
     $('cv-upload').value = '';
@@ -1119,9 +1224,7 @@
 
     var ready = Promise.resolve(source);
     if (file) {
-      var form = new FormData();
-      form.append('file', file);
-      ready = api('/uploads', { method: 'POST', form: form }).then(function (result) {
+      ready = uploadVideoFile(file).then(function (result) {
         return result.url;
       });
     }
