@@ -157,7 +157,7 @@ describe('HLS API-key authentication scope', () => {
       );
 
     expect((await request()).status).toBe(200);
-    expect(master).toContain('BANDWIDTH=100000');
+    expect(master).toContain('BANDWIDTH=100000,AVERAGE-BANDWIDTH=100000');
     expect((await request()).status).toBe(200);
     expect(writes).toBe(1);
   });

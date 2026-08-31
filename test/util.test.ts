@@ -15,6 +15,7 @@ import {
   slugify,
 } from '../src/lib/util';
 import {
+  measureHlsBandwidth,
   rewriteHlsMasterBandwidth,
   selectHlsEncodedVariantIndexes,
   selectHlsMasterPlaylist,
@@ -187,28 +188,87 @@ describe('HLS variant selection', () => {
     expect(selectHlsMasterPlaylist(master, [0, 1])).not.toContain('v2/index.m3u8');
   });
 
-  it('rewrites each variant to its measured peak segment bitrate', () => {
+  it('measures a sliding-window peak below a single-segment spike', () => {
+    const playlist = [
+      '#EXTM3U',
+      '#EXTINF:4,',
+      'seg_000.ts',
+      '#EXTINF:4,',
+      'seg_001.ts',
+      '#EXTINF:4,',
+      'seg_002.ts',
+      '#EXTINF:4,',
+      'seg_003.ts',
+    ].join('\n');
+    expect(
+      measureHlsBandwidth(playlist, {
+        'seg_000.ts': 100_000,
+        'seg_001.ts': 100_000,
+        'seg_002.ts': 1_000_000,
+        'seg_003.ts': 100_000,
+      }),
+    ).toEqual({ bandwidth: 800_000, averageBandwidth: 650_000 });
+  });
+
+  it('uses the whole-rendition average when it is shorter than the window', () => {
+    const playlist = '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n#EXTINF:1.5,\nseg_001.ts\n';
+    expect(
+      measureHlsBandwidth(playlist, { 'seg_000.ts': 50_000, 'seg_001.ts': 100_000 }),
+    ).toEqual({ bandwidth: 218_182, averageBandwidth: 218_182 });
+  });
+
+  it('rewrites both measured attributes while preserving metadata and pairing', () => {
     const master = [
       '#EXTM3U',
-      '#EXT-X-STREAM-INF:BANDWIDTH=100,RESOLUTION=640x360',
+      '#EXT-X-STREAM-INF:BANDWIDTH=100,AVERAGE-BANDWIDTH=200,RESOLUTION=640x360',
       'v0/index.m3u8',
       '#EXT-X-STREAM-INF:BANDWIDTH=200,RESOLUTION=1280x720,CODECS="avc1"',
       'v1/index.m3u8',
     ].join('\n');
-    const playlist = '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n#EXTINF:1.5,\nseg_001.ts\n';
+    const playlist = [
+      '#EXTM3U',
+      '#EXTINF:4,',
+      'seg_000.ts',
+      '#EXTINF:4,',
+      'seg_001.ts',
+      '#EXTINF:4,',
+      'seg_002.ts',
+      '#EXTINF:4,',
+      'seg_003.ts',
+    ].join('\n');
     const rewritten = rewriteHlsMasterBandwidth(master, [
-      { playlist, segmentSizes: { 'seg_000.ts': 50_000, 'seg_001.ts': 100_000 } },
-      { playlist, segmentSizes: { 'seg_000.ts': 100_000, 'seg_001.ts': 10_000 } },
+      {
+        playlist,
+        segmentSizes: {
+          'seg_000.ts': 100_000,
+          'seg_001.ts': 100_000,
+          'seg_002.ts': 1_000_000,
+          'seg_003.ts': 100_000,
+        },
+      },
+      {
+        playlist,
+        segmentSizes: {
+          'seg_000.ts': 50_000,
+          'seg_001.ts': 50_000,
+          'seg_002.ts': 500_000,
+          'seg_003.ts': 50_000,
+        },
+      },
     ]);
-    expect(rewritten).toContain('#EXT-X-STREAM-INF:BANDWIDTH=533333,RESOLUTION=640x360');
-    expect(rewritten).toContain('#EXT-X-STREAM-INF:BANDWIDTH=200000,RESOLUTION=1280x720,CODECS="avc1"');
+    expect(rewritten).toContain(
+      '#EXT-X-STREAM-INF:BANDWIDTH=800000,AVERAGE-BANDWIDTH=650000,RESOLUTION=640x360',
+    );
+    expect(rewritten).toContain(
+      '#EXT-X-STREAM-INF:BANDWIDTH=400000,AVERAGE-BANDWIDTH=325000,RESOLUTION=1280x720,CODECS="avc1"',
+    );
     expect(rewritten).toContain('v0/index.m3u8\n#EXT-X-STREAM-INF');
   });
 
   it('leaves invalid measurements and already-correct values unchanged', () => {
     const master = [
       '#EXTM3U',
-      '#EXT-X-STREAM-INF:BANDWIDTH=100000,CODECS="avc1"',
+      '#EXT-X-STREAM-INF:BANDWIDTH=100000,AVERAGE-BANDWIDTH=100000,CODECS="avc1"',
       'v0/index.m3u8',
       '#EXT-X-STREAM-INF:BANDWIDTH=200000,RESOLUTION=1280x720',
       'v1/index.m3u8',
