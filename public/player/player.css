@@ -384,13 +384,20 @@
    reports a short picture as a class: the card then keeps clear of the control bar
    and drops its description rather than hiding its own last control behind the bar. */
 .sf-player.sf-short .sf-gate,
-.sf-player.sf-short .sf-endscreen,
-.sf-player.sf-short .sf-share-sheet { padding-bottom: 50px; }
+.sf-player.sf-short .sf-endscreen { padding-bottom: 50px; }
+.sf-player.sf-short .sf-share-sheet { padding: 6px; }
+.sf-player.sf-short .sf-share-card { padding: 10px 10px 8px; }
+.sf-player.sf-short .sf-share-row {
+  flex-wrap: nowrap; overflow-x: auto; gap: 5px; margin-bottom: 6px;
+}
+.sf-player.sf-short .sf-share-target { flex: 0 0 auto; }
 .sf-player.sf-short .sf-gate-card p,
 .sf-player.sf-short .sf-endscreen-card p { display: none; }
 .sf-player.sf-short .sf-share-card h4 { font-size: 13px; margin-bottom: 6px; }
 .sf-player.sf-short .sf-share-target { padding: 4px 7px; font-size: 10px; }
-.sf-player.sf-short .sf-share-copy { margin-top: 4px; padding: 6px 9px; font-size: 11px; }
+.sf-player.sf-short .sf-share-copy {
+  display: inline-block; width: calc(50% - 3px); margin-top: 4px; padding: 6px 9px; font-size: 11px;
+}
 
 /* share sheet */
 .sf-share-sheet {
