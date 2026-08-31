@@ -450,7 +450,12 @@
       return loadScript('https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js')
         .then(function () {
           if (window.Hls && window.Hls.isSupported()) {
-            var hls = new window.Hls();
+            var hls = new window.Hls({
+              // Choose the first fragment from the assumed estimate instead of a probe fragment.
+              abrEwmaDefaultEstimate: 1500000,
+              testBandwidth: false,
+              startLevel: -1
+            });
             hls.loadSource(self._source);
             hls.attachMedia(video);
             self._hls = hls;
