@@ -37,6 +37,7 @@ type ObjectRow = {
 };
 
 const PAID_PLANS = new Set(['starter', 'agency', 'lifetime']);
+const R2_FALLBACK_LIMIT = 24 * 1024 * 1024;
 
 function db(env: Env): D1Database {
   return env.DB;
@@ -80,6 +81,13 @@ async function rememberFailure(env: Env, bucketId: string, error: unknown): Prom
   await database
     .prepare('UPDATE storage_buckets SET last_error = ? WHERE id = ?')
     .bind(message.slice(0, 500), bucketId)
+    .run();
+}
+
+async function rememberSuccess(env: Env, bucketId: string): Promise<void> {
+  await db(env)
+    .prepare("UPDATE storage_buckets SET last_error = '', last_probe_at = ? WHERE id = ? AND last_error != ''")
+    .bind(Math.floor(Date.now() / 1000), bucketId)
     .run();
 }
 
@@ -291,16 +299,50 @@ export async function putMedia(
     r2Body = opts.body;
     b2Body = opts.body;
   }
+  const knownSize =
+    b2Body instanceof ArrayBuffer
+      ? b2Body.byteLength
+      : opts.size !== undefined
+        ? opts.size
+        : null;
+  let b2Target: Parameters<typeof s3Fetch>[0] | null = null;
+  let b2Written = false;
   try {
-    const { target } = await targetForBucket(env, bucket.id);
-    const response = await putB2Object(target, opts.key, b2Body, opts.contentType);
+    const destination = await targetForBucket(env, bucket.id);
+    b2Target = destination.target;
+    const response = await putB2Object(destination.target, opts.key, b2Body, opts.contentType);
     if (!response.ok) throw new Error(`B2 put failed with HTTP ${response.status}`);
-    const metadata = await headB2Object(target, opts.key);
-    if (!metadata) throw new Error('B2 object is missing after upload');
-    await recordObject(env, opts.key, opts.userId, 'b2', bucket.id, metadata.size, opts.contentType);
+    b2Written = true;
+    const size = knownSize ?? (await headB2ObjectWithRetry(destination.target, opts.key)).size;
+    await recordObject(env, opts.key, opts.userId, 'b2', bucket.id, size, opts.contentType);
+    await rememberSuccess(env, bucket.id);
     return 'b2';
   } catch (error) {
     await rememberFailure(env, bucket.id, error);
+    if (b2Written && b2Target && !r2Body) {
+      try {
+        const response = await s3Fetch(b2Target, { method: 'GET', key: opts.key });
+        const size = Number(response.headers.get('content-length') ?? -1);
+        if (response.ok && response.body && Number.isSafeInteger(size) && size >= 0 && size <= R2_FALLBACK_LIMIT) {
+          const body = await response.arrayBuffer();
+          const deleted = await deleteB2Object(b2Target, opts.key);
+          if (deleted.ok) {
+            const object = await r2(env).put(opts.key, body, { httpMetadata: { contentType: opts.contentType } });
+            await recordObject(env, opts.key, opts.userId, 'r2', '', r2Size(object), opts.contentType);
+            return 'r2';
+          }
+        }
+      } catch {
+        /* An unknown-size body cannot safely fall back without a bounded copy. */
+      }
+    }
+    if (b2Written && b2Target) {
+      try {
+        await deleteB2Object(b2Target, opts.key);
+      } catch {
+        /* A failed cleanup must not hide the original upload error. */
+      }
+    }
     if (!r2Body) throw new Error('upload could not be completed, please retry');
     const object = await r2(env).put(opts.key, r2Body, { httpMetadata: { contentType: opts.contentType } });
     const size = r2Size(object);
@@ -362,6 +404,23 @@ async function headB2Object(
     contentType: response.headers.get('content-type') ?? '',
     etag: response.headers.get('etag') ?? '',
   };
+}
+
+async function headB2ObjectWithRetry(
+  target: Parameters<typeof s3Fetch>[0],
+  key: string,
+): Promise<{ size: number; contentType: string; etag: string }> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await headB2Object(target, key);
+      if (result) return result;
+    } catch (error) {
+      const status = error instanceof Error && /HTTP (403|404)$/.test(error.message);
+      if (!status || attempt === 2) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 250 : 500));
+    }
+  }
+  throw new Error('B2 media head failed after retries');
 }
 
 export async function headMedia(env: Env, key: string): Promise<{ size: number; contentType: string; etag: string } | null> {
