@@ -1095,6 +1095,12 @@
 .sf-skin-ghost .sf-cc, .sf-skin-ghost .sf-pip, .sf-skin-ghost .sf-badge { display: none; }
 .sf-skin-ghost .sf-titlebar { display: none; }
 
+/* Frame, studio and ghost put the progress on its own row; split the transport
+   row so the trailing icons sit at the right edge like every other skin. */
+.sf-skin-frame .sf-volume,
+.sf-skin-studio .sf-volume,
+.sf-skin-ghost .sf-volume { margin-right: auto; }
+
 .sf-skin-cinema { --sf-accent: #fff; }
 .sf-skin-cinema .sf-controls {
   position: absolute; inset: 0;
