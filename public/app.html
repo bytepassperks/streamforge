@@ -177,6 +177,7 @@
             <input type="checkbox" id="cv-hls">
             <span>Optimise for slow connections</span>
           </label>
+          <p class="tiny muted" id="cv-hls-reason"></p>
           <p class="tiny muted">Encoding runs in this browser tab and takes roughly five times the video's length. Keep this tab open. For long videos, the PC encoder is preferable.</p>
           <div class="hls-progress hidden" id="cv-hls-progress">
             <progress id="cv-hls-bar" max="100" value="0"></progress>
@@ -380,6 +381,7 @@
             <button class="btn btn-ghost btn-sm" id="ed-hls-start" type="button">Optimise for slow connections</button>
             <progress id="ed-hls-bar" max="100" value="0"></progress>
             <span class="tiny muted" id="ed-hls-status"></span>
+            <span class="tiny muted" id="ed-hls-reason"></span>
             <button class="btn btn-ghost btn-sm hidden" id="ed-hls-cancel" type="button">Cancel</button>
           </div>
         </div>
@@ -419,6 +421,11 @@
                 <option value="pop">Pop</option>
                 <option value="studio">Studio</option>
                 <option value="wave">Wave</option>
+                <option value="neon">Neon</option>
+                <option value="cinema">Cinema</option>
+                <option value="ghost">Ghost</option>
+                <option value="aurora">Aurora</option>
+                <option value="slate">Slate</option>
               </select>
               <span class="tiny">Picking a skin loads its colours; every setting stays yours to change.</span></div>
             <div class="field"><label for="pc-logo">Logo image url</label><input id="pc-logo">

@@ -1,0 +1,1 @@
+ALTER TABLE ctas ADD COLUMN button_style TEXT NOT NULL DEFAULT 'solid';

@@ -9,7 +9,7 @@
 
   /* Shipped skins, plus the retired names still stored on older videos. Kept in
      step with PLAYER_SKINS on the server so an old config never renders unstyled. */
-  var SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave'];
+  var SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate'];
   var LEGACY_SKINS = {
     'forge-dark': 'videokr',
     'forge-light': 'studio',
@@ -17,6 +17,7 @@
     bold: 'pop',
     glass: 'frame',
   };
+  var CTA_BUTTON_STYLES = ['solid', 'pill', 'chunky', 'raised', 'framed', 'arrow', 'gradient', 'glow', 'ghost', 'white'];
 
   function skinName(skin) {
     if (SKINS.indexOf(skin) !== -1) return skin;
@@ -83,6 +84,78 @@
       (ICONS[name] || '') +
       '</svg>'
     );
+  }
+
+  function normalizeUrl(raw) {
+    var value = String(raw == null ? '' : raw).trim();
+    if (!value) return '';
+    if (/^(javascript|data|vbscript):/i.test(value)) return '';
+    if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
+    if (value.indexOf('/') === 0 || value.indexOf('#') === 0) return value;
+    return 'https://' + value;
+  }
+
+  function parseColor(value) {
+    var text = String(value == null ? '' : value).trim();
+    var hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(text);
+    if (hex) {
+      var digits = hex[1];
+      if (digits.length === 3) {
+        return [
+          parseInt(digits.charAt(0) + digits.charAt(0), 16),
+          parseInt(digits.charAt(1) + digits.charAt(1), 16),
+          parseInt(digits.charAt(2) + digits.charAt(2), 16),
+        ];
+      }
+      return [
+        parseInt(digits.slice(0, 2), 16),
+        parseInt(digits.slice(2, 4), 16),
+        parseInt(digits.slice(4, 6), 16),
+      ];
+    }
+    var rgb = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i.exec(text);
+    return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : null;
+  }
+
+  function relativeLuminance(rgb) {
+    var channel = function (value) {
+      var normalized = value / 255;
+      return normalized <= 0.03928
+        ? normalized / 12.92
+        : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+  }
+
+  function contrastRatio(first, second) {
+    var firstLuminance = relativeLuminance(first);
+    var secondLuminance = relativeLuminance(second);
+    return (Math.max(firstLuminance, secondLuminance) + 0.05) /
+      (Math.min(firstLuminance, secondLuminance) + 0.05);
+  }
+
+  function accentInk(value) {
+    var rgb = parseColor(value);
+    if (!rgb) return '#fff';
+    var darkInk = [17, 24, 39];
+    var lightInk = [255, 255, 255];
+    return contrastRatio(darkInk, rgb) >= contrastRatio(lightInk, rgb) ? '#111827' : '#fff';
+  }
+
+  function ctaClassName(cta) {
+    var classes = 'sf-cta sf-cta-' + cta.kind + ' sf-cta-style-' + (cta.style || 'card');
+    if (cta.kind !== 'banner' && cta.style !== 'bar' && cta.style !== 'ribbon' && cta.style !== 'spotlight') {
+      classes += ' sf-pos-' + (cta.position || 'bottom-right');
+    }
+    return classes;
+  }
+
+  function ctaButtonStyle(value) {
+    return CTA_BUTTON_STYLES.indexOf(value) !== -1 ? value : 'solid';
+  }
+
+  function ctaButtonClass(value) {
+    return 'sf-cta-btn sf-btnstyle-' + ctaButtonStyle(value);
   }
 
   function fmtTime(seconds) {
@@ -783,8 +856,10 @@
   Player.prototype.mount = function () {
     var self = this;
     var cfg = this.config;
+    var accent = cfg.accent || '#ff6106';
     this.root.classList.add('sf-player', 'sf-skin-' + skinName(cfg.skin));
-    this.root.style.setProperty('--sf-accent', cfg.accent || '#ff6106');
+    this.root.style.setProperty('--sf-accent', accent);
+    this.root.style.setProperty('--sf-on-accent', accentInk(accent));
     this.root.style.setProperty('--sf-bg', cfg.background || '#0b0908');
     this.root.style.setProperty('--sf-radius', (cfg.borderRadius || 0) + 'px');
     this.root.innerHTML = '';
@@ -1410,17 +1485,29 @@
 
   Player.prototype._renderCta = function (cta) {
     var self = this;
-    var node = el('div', 'sf-cta sf-cta-' + cta.kind + ' sf-pos-' + (cta.position || 'bottom-right'));
+    var node = el(
+      'div',
+      ctaClassName(cta),
+    );
     node.setAttribute('data-cta', cta.id);
     if (cta.headline) node.appendChild(el('div', 'sf-cta-headline', null)).textContent = cta.headline;
     if (cta.body) node.appendChild(el('div', 'sf-cta-body', null)).textContent = cta.body;
-    if (cta.button_text && cta.button_url) {
+    var buttonUrl = normalizeUrl(cta.button_url);
+    if (cta.button_text && buttonUrl) {
       var link = document.createElement('a');
-      link.className = 'sf-cta-btn';
-      link.href = cta.button_url;
+      link.className = ctaButtonClass(cta.button_style);
+      link.href = buttonUrl;
       link.target = '_blank';
       link.rel = 'noopener';
-      link.textContent = cta.button_text;
+      if (ctaButtonStyle(cta.button_style) === 'arrow') {
+        link.appendChild(document.createTextNode(cta.button_text));
+        var arrow = document.createElement('span');
+        arrow.className = 'sf-btn-arrow';
+        arrow.textContent = '↗';
+        link.appendChild(arrow);
+      } else {
+        link.textContent = cta.button_text;
+      }
       link.setAttribute('data-sf', 'cta-click');
       link.addEventListener('click', function () {
         self.track('cta_click', self.adapter.currentTime(), self.adapter.duration(), cta.id);
@@ -1465,7 +1552,7 @@
     });
     var submit = document.createElement('button');
     submit.type = 'submit';
-    submit.className = 'sf-gate-submit';
+    submit.className = 'sf-gate-submit ' + ctaButtonClass(cta.button_style);
     submit.textContent = cta.button_text || 'Continue';
     submit.setAttribute('data-sf', 'gate-submit');
     form.appendChild(submit);
@@ -1511,7 +1598,7 @@
 
   Player.prototype._renderGate = function (cta, position) {
     var self = this;
-    var node = el('div', 'sf-gate');
+    var node = el('div', 'sf-gate sf-gate-style-' + (cta.style || 'card'));
     node.setAttribute('data-cta', cta.id);
     node.setAttribute('data-sf', 'gate');
     var card = el('div', 'sf-gate-card');
@@ -1674,18 +1761,27 @@
       this._showRelated();
       return;
     }
-    var node = el('div', 'sf-endscreen');
+    var node = el('div', 'sf-endscreen sf-endscreen-style-' + (end.style || 'card'));
     node.setAttribute('data-sf', 'endscreen');
     var card = el('div', 'sf-endscreen-card');
     card.appendChild(el('h3', null, null)).textContent = end.headline || 'Thanks for watching';
     if (end.body) card.appendChild(el('p', null, null)).textContent = end.body;
-    if (end.button_text && end.button_url) {
+    var buttonUrl = normalizeUrl(end.button_url);
+    if (end.button_text && buttonUrl) {
       var link = document.createElement('a');
-      link.className = 'sf-cta-btn';
-      link.href = end.button_url;
+      link.className = ctaButtonClass(end.button_style);
+      link.href = buttonUrl;
       link.target = '_blank';
       link.rel = 'noopener';
-      link.textContent = end.button_text;
+      if (ctaButtonStyle(end.button_style) === 'arrow') {
+        link.appendChild(document.createTextNode(end.button_text));
+        var endArrow = document.createElement('span');
+        endArrow.className = 'sf-btn-arrow';
+        endArrow.textContent = '↗';
+        link.appendChild(endArrow);
+      } else {
+        link.textContent = end.button_text;
+      }
       link.addEventListener('click', function () {
         self.track('cta_click', self.adapter.duration(), self.adapter.duration(), end.id);
       });
@@ -2222,6 +2318,7 @@
     },
     Player: Player,
     formatTime: fmtTime,
+    ctaClassName: ctaClassName,
   };
 
   // `Videokr` is the current name; `StreamForge` stays for embeds already in the wild.

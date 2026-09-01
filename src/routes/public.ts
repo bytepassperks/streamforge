@@ -288,7 +288,7 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     .all<Pick<Chapter, 'start_seconds' | 'title'>>();
   const ctas = await env.DB.prepare(
     `SELECT id, kind, start_seconds, end_seconds, headline, body, button_text, button_url, fields,
-            skippable, position
+            skippable, position, style, button_style
        FROM ctas WHERE video_id = ? ORDER BY start_seconds`,
   )
     .bind(video.id)

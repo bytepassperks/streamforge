@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   canonicalRedirect,
+  CTA_BUTTON_STYLES,
+  CTA_STYLES,
   defaultPlayerConfig,
   deviceFromUserAgent,
   escapeHtml,
   hostnameAllowed,
   mergePlayerConfig,
+  GATE_STYLES,
+  normalizeCtaStyle,
+  normalizeCtaButtonStyle,
+  normalizeCtaUrl,
   normalizeSkin,
   PLAYER_SKINS,
   newId,
@@ -121,6 +127,46 @@ describe('slugify', () => {
   });
 });
 
+describe('CTA normalization', () => {
+  it('normalizes CTA urls without allowing executable schemes', () => {
+    expect(normalizeCtaUrl('example.com')).toBe('https://example.com');
+    expect(normalizeCtaUrl(' www.example.com ')).toBe('https://www.example.com');
+    expect(normalizeCtaUrl('javascript:alert(1)')).toBe('');
+    expect(normalizeCtaUrl('data:text/html,test')).toBe('');
+    expect(normalizeCtaUrl('vbscript:msgbox(1)')).toBe('');
+    expect(normalizeCtaUrl('mailto:hello@example.com')).toBe('mailto:hello@example.com');
+    expect(normalizeCtaUrl('tel:+15551234567')).toBe('tel:+15551234567');
+    expect(normalizeCtaUrl('/contact')).toBe('/contact');
+    expect(normalizeCtaUrl('#pricing')).toBe('#pricing');
+    expect(normalizeCtaUrl('')).toBe('');
+  });
+
+  it('normalizes unknown CTA styles to the default card', () => {
+    expect(GATE_STYLES).toContain('fullbleed');
+    expect(GATE_STYLES).not.toContain('minimal');
+    CTA_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'overlay')).toBe(style));
+    GATE_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'gate')).toBe(style));
+    GATE_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'endscreen')).toBe(style));
+    expect(normalizeCtaStyle('unknown', 'overlay')).toBe('card');
+    expect(normalizeCtaStyle('unknown', 'gate')).toBe('card');
+    expect(normalizeCtaStyle('bar', 'gate')).toBe('card');
+    expect(normalizeCtaStyle('light', 'overlay')).toBe('card');
+    expect(normalizeCtaStyle('', 'overlay')).toBe('card');
+    expect(normalizeCtaStyle(undefined, 'gate')).toBe('card');
+    expect(normalizeCtaStyle(42, 'endscreen')).toBe('card');
+  });
+
+  it('normalizes CTA button styles and preserves the declared vocabulary', () => {
+    expect(CTA_BUTTON_STYLES).toEqual([
+      'solid', 'pill', 'chunky', 'raised', 'framed',
+      'arrow', 'gradient', 'glow', 'ghost', 'white',
+    ]);
+    CTA_BUTTON_STYLES.forEach((style) => expect(normalizeCtaButtonStyle(style)).toBe(style));
+    expect(normalizeCtaButtonStyle('unknown')).toBe('solid');
+    expect(normalizeCtaButtonStyle(undefined)).toBe('solid');
+  });
+});
+
 describe('escapeHtml + safeExternalUrl', () => {
   it('escapes html control characters', () => {
     expect(escapeHtml('<img src=x onerror="a">')).toBe('&lt;img src=x onerror=&quot;a&quot;&gt;');
@@ -134,6 +180,10 @@ describe('escapeHtml + safeExternalUrl', () => {
 });
 
 describe('player config', () => {
+  it('normalizes every player skin and defaults unknown skins to videokr', () => {
+    PLAYER_SKINS.forEach((skin) => expect(normalizeSkin(skin)).toBe(skin));
+    expect(normalizeSkin('unknown')).toBe('videokr');
+  });
   it('merges partial stored config over defaults', () => {
     const merged = mergePlayerConfig(JSON.stringify({ accent: '#ff0000', controls: { pip: false } }));
     expect(merged.accent).toBe('#ff0000');

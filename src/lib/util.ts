@@ -27,6 +27,65 @@ export function slugify(input: string, fallback = 'video'): string {
   return base || fallback;
 }
 
+export function normalizeCtaUrl(raw: unknown): string {
+  const value = String(raw ?? '').trim();
+  if (!value) return '';
+  if (/^(javascript|data|vbscript):/i.test(value)) return '';
+  if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
+  if (value.startsWith('/') || value.startsWith('#')) return value;
+  return 'https://' + value;
+}
+
+export const CTA_STYLES = [
+  'card',
+  'solid',
+  'minimal',
+  'outline',
+  'glass',
+  'bar',
+  'ribbon',
+  'toast',
+  'spotlight',
+  'gradient',
+] as const;
+
+export const GATE_STYLES = [
+  'card',
+  'light',
+  'solid',
+  'outline',
+  'glass',
+  'sheet',
+  'spotlight',
+  'fullbleed',
+  'split',
+  'gradient',
+] as const;
+
+export function normalizeCtaStyle(value: unknown, kind: unknown): string {
+  const styles = kind === 'gate' || kind === 'endscreen' ? GATE_STYLES : CTA_STYLES;
+  return (styles as readonly string[]).includes(String(value ?? '')) ? String(value) : 'card';
+}
+
+export const CTA_BUTTON_STYLES = [
+  'solid',
+  'pill',
+  'chunky',
+  'raised',
+  'framed',
+  'arrow',
+  'gradient',
+  'glow',
+  'ghost',
+  'white',
+] as const;
+
+export function normalizeCtaButtonStyle(value: unknown): string {
+  return (CTA_BUTTON_STYLES as readonly string[]).includes(String(value ?? ''))
+    ? String(value)
+    : 'solid';
+}
+
 export function escapeHtml(input: string): string {
   return input
     .replace(/&/g, '&amp;')
@@ -118,7 +177,7 @@ export function retentionBucket(position: number, duration: number, buckets = 10
 }
 
 /** Shipped skins. The first is the default every new video and every surface uses. */
-export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave'] as const;
+export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate'] as const;
 
 /** Retired skin names still stored on old videos, mapped onto the shipped set. */
 const LEGACY_SKINS: Record<string, string> = {

@@ -142,4 +142,6 @@ export interface Cta {
   fields: string;
   skippable: number;
   position: string;
+  style: string;
+  button_style: string;
 }
