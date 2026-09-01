@@ -6,6 +6,14 @@ import type { OverageRow } from '../lib/overage';
 import { closePeriod, collectOverage, previousPeriod, recordOverage } from '../lib/overage';
 import { siteTargets, submitChanged } from '../lib/indexnow';
 import { syncLifetimePricing } from '../lib/pricing-sync';
+import { headBucket, listObjects } from '../lib/s3';
+import {
+  bucketView,
+  encryptSecret,
+  regionFromEndpoint,
+  targetFor,
+  type StorageBucketRow,
+} from '../lib/storage';
 import { newId, now } from '../lib/util';
 
 type Vars = { user: User };
@@ -15,6 +23,7 @@ export const admin = new Hono<{ Bindings: Env; Variables: Vars }>();
 const ASSIGNABLE_PLANS = new Set(Object.keys(PLANS));
 const ROLES = new Set(['user', 'admin']);
 const PURCHASE_STATUSES = new Set(['pending', 'paid', 'refunded', 'failed']);
+const STORAGE_STATUSES = new Set(['active', 'disabled', 'draining']);
 
 async function audit(
   env: Env,
@@ -34,6 +43,214 @@ admin.use('*', async (c, next) => {
   const user = c.get('user');
   if (!user || !isAdmin(user)) return c.json({ error: 'forbidden' }, 403);
   await next();
+});
+
+/* --------------------------------------------------------- storage pool ---- */
+
+function storageError(error: unknown, secrets: string[] = []): string {
+  let message = error instanceof Error ? error.message : 'storage provider request failed';
+  for (const secret of secrets) {
+    if (secret) message = message.split(secret).join('[redacted]');
+  }
+  return message.slice(0, 300);
+}
+
+async function probeStorageTarget(
+  target: Parameters<typeof headBucket>[0],
+  full = false,
+): Promise<{ used: number; objects: number }> {
+  const head = await headBucket(target);
+  if (!head.ok) {
+    const message = await head.text().catch(() => '');
+    const providerMessage = /<Message>([\s\S]*?)<\/Message>/i.exec(message)?.[1]?.trim();
+    throw new Error(providerMessage || message || `provider returned ${head.status}`);
+  }
+  const objects = await listObjects(target, full ? {} : { maxKeys: 1, limit: 1 });
+  if (!full) return { used: 0, objects: 0 };
+  return {
+    used: objects.reduce((total, object) => total + object.size, 0),
+    objects: objects.length,
+  };
+}
+
+async function storageRow(env: Env, id: string): Promise<StorageBucketRow | null> {
+  return env.DB.prepare(
+    `SELECT id, label, provider, endpoint, region, bucket_name, bucket_id, key_id, secret_cipher,
+            capacity_bytes, used_bytes, object_count, status, last_probe_at, last_error, created_at
+       FROM storage_buckets WHERE id = ?`,
+  )
+    .bind(id)
+    .first<StorageBucketRow>();
+}
+
+admin.get('/storage', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, label, provider, endpoint, region, bucket_name, bucket_id, key_id, secret_cipher,
+            capacity_bytes, used_bytes, object_count, status, last_probe_at, last_error, created_at
+       FROM storage_buckets ORDER BY created_at DESC`,
+  ).all<StorageBucketRow>();
+  const rows = results ?? [];
+  return c.json({
+    buckets: rows.map(bucketView),
+    totals: {
+      capacity_bytes: rows.reduce((total, row) => total + (Number(row.capacity_bytes) || 0), 0),
+      used_bytes: rows.reduce((total, row) => total + (Number(row.used_bytes) || 0), 0),
+      object_count: rows.reduce((total, row) => total + (Number(row.object_count) || 0), 0),
+    },
+  });
+});
+
+admin.post('/storage', async (c) => {
+  const body = await c.req.json<{
+    label?: string;
+    endpoint?: string;
+    bucket_name?: string;
+    bucket_id?: string;
+    key_id?: string;
+    application_key?: string;
+    capacity_bytes?: number;
+  }>();
+  const label = (body.label ?? '').trim();
+  const endpoint = (body.endpoint ?? '').trim();
+  const bucketName = (body.bucket_name ?? '').trim();
+  const bucketId = (body.bucket_id ?? '').trim();
+  const keyId = (body.key_id ?? '').trim();
+  const applicationKey = body.application_key ?? '';
+  if (!endpoint || !bucketName || !keyId || !applicationKey) {
+    return c.json({ error: 'endpoint, bucket name, key id and application key are required' }, 400);
+  }
+  let region: string;
+  try {
+    region = regionFromEndpoint(endpoint);
+  } catch (error) {
+    return c.json({ error: storageError(error) }, 400);
+  }
+  const capacity = body.capacity_bytes === undefined ? 0 : Number(body.capacity_bytes);
+  if (!Number.isFinite(capacity) || capacity < 0) return c.json({ error: 'capacity must be a non-negative number' }, 400);
+  try {
+    await probeStorageTarget({ endpoint, region, bucket: bucketName, keyId, secret: applicationKey });
+    const secretCipher = await encryptSecret(c.env, applicationKey);
+    const id = newId('bucket');
+    const created = now();
+    await c.env.DB.prepare(
+      `INSERT INTO storage_buckets
+       (id, label, provider, endpoint, region, bucket_name, bucket_id, key_id, secret_cipher,
+        capacity_bytes, used_bytes, object_count, status, last_probe_at, last_error, created_at)
+       VALUES (?, ?, 'b2', ?, ?, ?, ?, ?, ?, ?, 0, 0, 'active', ?, '', ?)`,
+    )
+      .bind(id, label, endpoint, region, bucketName, bucketId, keyId, secretCipher, Math.floor(capacity), created, created)
+      .run();
+    await audit(c.env, c.get('user'), 'storage.create', id, { label, endpoint, bucket: bucketName });
+    const row = await storageRow(c.env, id);
+    return c.json({ bucket: row ? bucketView(row) : null }, 201);
+  } catch (error) {
+    const message = storageError(error, [applicationKey]);
+    if (message === 'storage encryption key is not configured') return c.json({ error: message }, 503);
+    if (message.includes('UNIQUE') || message.includes('unique')) return c.json({ error: 'that storage bucket is already registered' }, 409);
+    return c.json({ error: message }, 400);
+  }
+});
+
+admin.post('/storage/:id/probe', async (c) => {
+  const id = c.req.param('id');
+  const row = await storageRow(c.env, id);
+  if (!row) return c.json({ error: 'no such storage bucket' }, 404);
+  const probedAt = now();
+  try {
+    const target = await targetFor(c.env, row);
+    const stats = await probeStorageTarget(target, true);
+    await c.env.DB.prepare(
+      'UPDATE storage_buckets SET used_bytes = ?, object_count = ?, last_probe_at = ?, last_error = ? WHERE id = ?',
+    )
+      .bind(stats.used, stats.objects, probedAt, '', id)
+      .run();
+    await audit(c.env, c.get('user'), 'storage.probe', id, { endpoint: row.endpoint, objects: stats.objects });
+    const updated = await storageRow(c.env, id);
+    return c.json({ bucket: updated ? bucketView(updated) : null });
+  } catch (error) {
+    const message = storageError(error);
+    await c.env.DB.prepare('UPDATE storage_buckets SET last_probe_at = ?, last_error = ? WHERE id = ?')
+      .bind(probedAt, message, id)
+      .run();
+    await audit(c.env, c.get('user'), 'storage.probe', id, { endpoint: row.endpoint, error: message });
+    if (message === 'storage encryption key is not configured') return c.json({ error: message }, 503);
+    return c.json({ error: message }, 400);
+  }
+});
+
+admin.patch('/storage/:id', async (c) => {
+  const id = c.req.param('id');
+  const row = await storageRow(c.env, id);
+  if (!row) return c.json({ error: 'no such storage bucket' }, 404);
+  const body = await c.req.json<{ label?: string; capacity_bytes?: number; status?: string }>();
+  const sets: string[] = [];
+  const values: (string | number)[] = [];
+  if (body.label !== undefined) {
+    sets.push('label = ?');
+    values.push(body.label.trim());
+  }
+  if (body.capacity_bytes !== undefined) {
+    const capacity = Number(body.capacity_bytes);
+    if (!Number.isFinite(capacity) || capacity < 0) return c.json({ error: 'capacity must be a non-negative number' }, 400);
+    sets.push('capacity_bytes = ?');
+    values.push(Math.floor(capacity));
+  }
+  if (body.status !== undefined) {
+    if (!STORAGE_STATUSES.has(body.status)) return c.json({ error: 'status must be active, disabled or draining' }, 400);
+    sets.push('status = ?');
+    values.push(body.status);
+  }
+  if (!sets.length) return c.json({ error: 'nothing to update' }, 400);
+  values.push(id);
+  await c.env.DB.prepare(`UPDATE storage_buckets SET ${sets.join(', ')} WHERE id = ?`).bind(...values).run();
+  await audit(c.env, c.get('user'), 'storage.update', id, { label: body.label, capacity_bytes: body.capacity_bytes, status: body.status });
+  const updated = await storageRow(c.env, id);
+  return c.json({ bucket: updated ? bucketView(updated) : null });
+});
+
+admin.post('/storage/:id/rotate', async (c) => {
+  const id = c.req.param('id');
+  const row = await storageRow(c.env, id);
+  if (!row) return c.json({ error: 'no such storage bucket' }, 404);
+  const body = await c.req.json<{ key_id?: string; application_key?: string }>();
+  const keyId = (body.key_id ?? '').trim();
+  const applicationKey = body.application_key ?? '';
+  if (!keyId || !applicationKey) return c.json({ error: 'key id and application key are required' }, 400);
+  try {
+    await probeStorageTarget({
+      endpoint: row.endpoint,
+      region: row.region,
+      bucket: row.bucket_name,
+      keyId,
+      secret: applicationKey,
+    });
+    const secretCipher = await encryptSecret(c.env, applicationKey);
+    await c.env.DB.prepare('UPDATE storage_buckets SET key_id = ?, secret_cipher = ?, last_error = ? WHERE id = ?')
+      .bind(keyId, secretCipher, '', id)
+      .run();
+    await audit(c.env, c.get('user'), 'storage.rotate', id, { endpoint: row.endpoint, bucket: row.bucket_name });
+    const updated = await storageRow(c.env, id);
+    return c.json({ bucket: updated ? bucketView(updated) : null });
+  } catch (error) {
+    const message = storageError(error, [applicationKey]);
+    if (message === 'storage encryption key is not configured') return c.json({ error: message }, 503);
+    return c.json({ error: message }, 400);
+  }
+});
+
+admin.delete('/storage/:id', async (c) => {
+  const id = c.req.param('id');
+  const row = await storageRow(c.env, id);
+  if (!row) return c.json({ error: 'no such storage bucket' }, 404);
+  const objects = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM media_objects WHERE bucket_id = ?')
+    .bind(id)
+    .first<{ n: number }>();
+  if (Number(row.object_count) > 0 || Number(objects?.n ?? 0) > 0) {
+    return c.json({ error: 'storage bucket is not empty; drain it before deleting' }, 409);
+  }
+  await c.env.DB.prepare('DELETE FROM storage_buckets WHERE id = ?').bind(id).run();
+  await audit(c.env, c.get('user'), 'storage.delete', id, { endpoint: row.endpoint, bucket: row.bucket_name });
+  return c.json({ ok: true });
 });
 
 /* ------------------------------------------------------------- overview ---- */
