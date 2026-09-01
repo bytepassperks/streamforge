@@ -549,7 +549,7 @@
 .sf-endscreen-style-light .sf-endscreen-replay { color: #64748b; }
 .sf-gate-style-light .sf-gate-submit.sf-btnstyle-ghost,
 .sf-endscreen-style-light .sf-gate-submit.sf-btnstyle-ghost {
-  background: #111827; border-color: #111827; color: #fff;
+  background: transparent; border-color: #111827; color: #111827;
 }
 
 .sf-gate-style-solid .sf-gate-card,
@@ -595,11 +595,6 @@
   border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.12); color: #fff;
 }
 .sf-gate-style-glass .sf-gate-form input::placeholder { color: rgba(255,255,255,.75); }
-.sf-gate-style-glass .sf-gate-submit.sf-btnstyle-ghost,
-.sf-endscreen-style-glass .sf-gate-submit.sf-btnstyle-ghost {
-  background: var(--sf-accent); color: var(--sf-on-accent, #fff);
-}
-
 .sf-gate.sf-gate-style-sheet { align-items: end; }
 .sf-gate-style-sheet .sf-gate-card,
 .sf-endscreen-style-sheet .sf-endscreen-card {

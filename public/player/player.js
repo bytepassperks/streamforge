@@ -1552,7 +1552,7 @@
     });
     var submit = document.createElement('button');
     submit.type = 'submit';
-    submit.className = 'sf-gate-submit sf-cta-btn ' + ctaButtonClass(cta.button_style);
+    submit.className = 'sf-gate-submit ' + ctaButtonClass(cta.button_style);
     if (ctaButtonStyle(cta.button_style) === 'arrow') {
       submit.appendChild(document.createTextNode(cta.button_text || 'Continue'));
       var submitArrow = document.createElement('span');
