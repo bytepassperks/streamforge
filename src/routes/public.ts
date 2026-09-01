@@ -14,6 +14,7 @@ import { verifyPassword } from '../lib/auth';
 import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
 import { sendMail } from '../lib/email';
+import { getMedia, headMedia } from '../lib/media-store';
 import {
   SITE,
   absoluteUrl,
@@ -591,19 +592,19 @@ pub.post('/api/leads/:videoId', async (c) => {
 
 const MEDIA_CACHE_LIMIT = 200 * 1024 * 1024;
 
-async function fillMediaCache(cacheKey: Request, key: string, media: R2Bucket): Promise<void> {
+async function fillMediaCache(cacheKey: Request, key: string, env: Env): Promise<void> {
   if (/\.m3u8(?:$|\?)/i.test(key)) return;
   try {
-    const metadata = await media.head(key);
+    const metadata = await headMedia(env, key);
     if (!metadata || metadata.size > MEDIA_CACHE_LIMIT) return;
-    const object = await media.get(key);
+    const object = await getMedia(env, key);
     if (!object) return;
     const headers = new Headers();
-    object.writeHttpMetadata(headers);
+    if (object.contentType) headers.set('content-type', object.contentType);
     headers.set('content-length', String(object.size));
     headers.set('accept-ranges', 'bytes');
     headers.set('cache-control', 'public, max-age=31536000, immutable');
-    headers.set('etag', object.httpEtag);
+    headers.set('etag', object.etag);
     await caches.default.put(cacheKey, new Response(object.body, { headers }));
   } catch {
     /* Edge cache fill is an optimization; R2 delivery must remain authoritative. */
@@ -643,25 +644,28 @@ pub.get('/media/*', async (c) => {
     const startRange = !range || /^bytes=0-/i.test(range.trim());
     if (startRange) {
       c.executionCtx.waitUntil(
-        fillMediaCache(cacheKey, key, c.env.MEDIA).catch(() => undefined),
+        fillMediaCache(cacheKey, key, c.env).catch(() => undefined),
       );
     }
   }
-  const object = range
-    ? await c.env.MEDIA.get(key, { range: c.req.raw.headers })
-    : await c.env.MEDIA.get(key);
+  let object: Awaited<ReturnType<typeof getMedia>>;
+  try {
+    object = await getMedia(c.env, key, range);
+  } catch {
+    return c.text('media backend unavailable', 500);
+  }
   if (!object) return c.text('not found', 404);
 
   const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set('etag', object.httpEtag);
+  if (object.contentType) headers.set('content-type', object.contentType);
+  headers.set('etag', object.etag);
   headers.set('accept-ranges', 'bytes');
   headers.set('cache-control', cacheControl);
   headers.set('access-control-allow-origin', '*');
   headers.set('access-control-allow-headers', 'content-type, range');
-  if (range && object.range && 'offset' in object.range) {
-    const offset = object.range.offset ?? 0;
-    const length = object.range.length ?? object.size - offset;
+  if (range && object.range) {
+    const offset = object.range.offset;
+    const length = object.range.length;
     headers.set('content-range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
     return new Response(object.body, { status: 206, headers });
   }
