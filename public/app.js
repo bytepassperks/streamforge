@@ -1363,7 +1363,7 @@
     studio: { accent: '#3f76ff', background: '#0d0f14', borderRadius: 8, bigPlayButton: true },
     wave: { accent: '#1b7459', background: '#050908', borderRadius: 0, bigPlayButton: false },
     neon: { accent: '#7c3aed', background: '#08060f', borderRadius: 14, bigPlayButton: true },
-    cinema: { accent: '#ffffff', background: '#000000', borderRadius: 16, bigPlayButton: false },
+    cinema: { accent: '#e5b45b', background: '#000000', borderRadius: 16, bigPlayButton: false },
     ghost: { accent: '#22c1b3', background: '#101114', borderRadius: 10, bigPlayButton: false },
     aurora: { accent: '#22d3ee', background: '#071018', borderRadius: 16, bigPlayButton: true },
     slate: { accent: '#2563eb', background: '#0f172a', borderRadius: 10, bigPlayButton: true },
@@ -1703,6 +1703,7 @@
       ['spotlight', 'Spotlight'],
       ['gradient', 'Gradient pill'],
     ];
+    var FIXED_POSITION_STYLES = ['bar', 'ribbon', 'spotlight'];
     var gateStyleOptions = [
       ['card', 'Card'],
       ['light', 'Light'],
@@ -1746,12 +1747,14 @@
         style.appendChild(new Option(pair[1], pair[0]));
       });
       style.value = options.some(function (pair) { return pair[0] === current; }) ? current : 'card';
-      position.disabled = kind.value === 'banner';
+      position.disabled =
+        kind.value === 'banner' || FIXED_POSITION_STYLES.indexOf(style.value) !== -1;
     }
     updateCtaOptions();
     grid.appendChild(field('Style', style));
     grid.appendChild(field('Button style', buttonStyle));
     kind.addEventListener('change', updateCtaOptions);
+    style.addEventListener('change', updateCtaOptions);
     grid.appendChild(field('Start (s)', input('start_seconds', '0', cta ? cta.start_seconds : 0, 'number')));
     grid.appendChild(field('End (s)', input('end_seconds', '0 = until the end', cta ? cta.end_seconds : 0, 'number')));
     grid.appendChild(
