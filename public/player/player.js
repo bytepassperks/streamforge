@@ -95,6 +95,53 @@
     return 'https://' + value;
   }
 
+  function parseColor(value) {
+    var text = String(value == null ? '' : value).trim();
+    var hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(text);
+    if (hex) {
+      var digits = hex[1];
+      if (digits.length === 3) {
+        return [
+          parseInt(digits.charAt(0) + digits.charAt(0), 16),
+          parseInt(digits.charAt(1) + digits.charAt(1), 16),
+          parseInt(digits.charAt(2) + digits.charAt(2), 16),
+        ];
+      }
+      return [
+        parseInt(digits.slice(0, 2), 16),
+        parseInt(digits.slice(2, 4), 16),
+        parseInt(digits.slice(4, 6), 16),
+      ];
+    }
+    var rgb = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i.exec(text);
+    return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : null;
+  }
+
+  function relativeLuminance(rgb) {
+    var channel = function (value) {
+      var normalized = value / 255;
+      return normalized <= 0.03928
+        ? normalized / 12.92
+        : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+  }
+
+  function contrastRatio(first, second) {
+    var firstLuminance = relativeLuminance(first);
+    var secondLuminance = relativeLuminance(second);
+    return (Math.max(firstLuminance, secondLuminance) + 0.05) /
+      (Math.min(firstLuminance, secondLuminance) + 0.05);
+  }
+
+  function accentInk(value) {
+    var rgb = parseColor(value);
+    if (!rgb) return '#fff';
+    var darkInk = [17, 24, 39];
+    var lightInk = [255, 255, 255];
+    return contrastRatio(darkInk, rgb) >= contrastRatio(lightInk, rgb) ? '#111827' : '#fff';
+  }
+
   function ctaClassName(cta) {
     var classes = 'sf-cta sf-cta-' + cta.kind + ' sf-cta-style-' + (cta.style || 'card');
     if (cta.kind !== 'banner' && cta.style !== 'bar' && cta.style !== 'ribbon' && cta.style !== 'spotlight') {
@@ -809,8 +856,10 @@
   Player.prototype.mount = function () {
     var self = this;
     var cfg = this.config;
+    var accent = cfg.accent || '#ff6106';
     this.root.classList.add('sf-player', 'sf-skin-' + skinName(cfg.skin));
-    this.root.style.setProperty('--sf-accent', cfg.accent || '#ff6106');
+    this.root.style.setProperty('--sf-accent', accent);
+    this.root.style.setProperty('--sf-on-accent', accentInk(accent));
     this.root.style.setProperty('--sf-bg', cfg.background || '#0b0908');
     this.root.style.setProperty('--sf-radius', (cfg.borderRadius || 0) + 'px');
     this.root.innerHTML = '';

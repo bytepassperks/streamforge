@@ -108,7 +108,7 @@
   text-decoration: none; line-height: 1; opacity: .85; transition: opacity .3s ease, background .3s ease;
 }
 .sf-badge img { width: 14px; height: 14px; display: block; }
-.sf-badge:hover { opacity: 1; background: var(--sf-accent); }
+.sf-badge:hover { opacity: 1; background: var(--sf-accent); color: var(--sf-on-accent, #fff); }
 
 /* Control layer. Metrics, colours and motion follow the reference player the product
    is measured against: 10px control spacing, 18px icons, 3px control radius, 5px range
@@ -117,7 +117,7 @@
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%) scale(var(--sf-ui, 1));
   border: 0; border-radius: 100%; cursor: pointer; z-index: 3; padding: 15px;
-  background: var(--sf-accent); color: #fff; opacity: .9; transition: .3s;
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff); opacity: .9; transition: .3s;
   display: grid; place-items: center;
 }
 .sf-bigplay svg { width: 18px; height: 18px; fill: currentColor; display: block; position: relative; left: 2px; }
@@ -160,7 +160,9 @@
   display: block; line-height: 0;
 }
 .sf-btn svg { fill: currentColor; display: block; height: 18px; width: 18px; pointer-events: none; }
-.sf-btn:hover, .sf-btn:focus-visible, .sf-btn[aria-expanded="true"] { background: var(--sf-accent); color: #fff; outline: 0; }
+.sf-btn:hover, .sf-btn:focus-visible, .sf-btn[aria-expanded="true"] {
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff); outline: 0;
+}
 .sf-btn.sf-off svg { fill-opacity: .5; }
 
 /* Hover labels, white on dark like the reference player. The player clips its own
@@ -273,7 +275,7 @@
   padding: 4.66667px 10.5px; font-size: 13px; margin-top: 2px; position: relative;
 }
 .sf-menu-item:first-child { margin-top: 0; }
-.sf-menu-item:hover { background: var(--sf-accent); color: #fff; }
+.sf-menu-item:hover { background: var(--sf-accent); color: var(--sf-on-accent, #fff); }
 /* radio rows, forward rows and the back row of the settings panel */
 .sf-menu-item.sf-radio { padding-left: 7px; }
 .sf-menu-item.sf-radio::before {
@@ -327,43 +329,45 @@
 .sf-cta-headline { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
 .sf-cta-body { font-size: 13px; opacity: .85; margin-bottom: 10px; }
 .sf-cta-btn {
-  display: inline-block; background: var(--sf-accent); color: #fff; text-decoration: none;
+  display: inline-block; background: var(--sf-accent); color: var(--sf-on-accent, #fff); text-decoration: none;
   padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
   pointer-events: auto; box-sizing: border-box;
 }
-.sf-cta-btn.sf-btnstyle-solid { background: var(--sf-accent); color: #fff; border-radius: 8px; }
-.sf-cta-btn.sf-btnstyle-pill { background: var(--sf-accent); color: #fff; border-radius: 999px; padding: 10px 22px; font-weight: 700; }
+.sf-cta-btn.sf-btnstyle-solid { background: var(--sf-accent); color: var(--sf-on-accent, #fff); border-radius: 8px; }
+.sf-cta-btn.sf-btnstyle-pill { background: var(--sf-accent); color: var(--sf-on-accent, #fff); border-radius: 999px; padding: 10px 22px; font-weight: 700; }
 .sf-cta-btn.sf-btnstyle-chunky {
-  background: var(--sf-accent); color: #fff; border-radius: 999px; padding: 13px 28px;
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff); border-radius: 999px; padding: 13px 28px;
   font-size: 17px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
 }
 .sf-cta-btn.sf-btnstyle-raised {
-  background: var(--sf-accent); color: #fff; border-radius: 12px;
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff); border-radius: 12px;
   box-shadow: 0 4px 0 rgba(0,0,0,.38);
 }
 .sf-cta-btn.sf-btnstyle-raised:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.38); }
 .sf-cta-btn.sf-btnstyle-framed {
-  background: var(--sf-accent); color: #fff; border-radius: 14px; padding: 10px 20px;
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff); border-radius: 14px; padding: 10px 20px;
   box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px var(--sf-accent);
 }
 .sf-cta-btn.sf-btnstyle-arrow {
-  display: inline-flex; align-items: center; gap: 8px; background: var(--sf-accent); color: #fff; border-radius: 8px;
+  display: inline-flex; align-items: center; gap: 8px; background: var(--sf-accent); color: var(--sf-on-accent, #fff); border-radius: 8px;
 }
 .sf-btn-arrow { display: inline-block; line-height: 1; }
 .sf-cta-btn.sf-btnstyle-gradient {
-  background: linear-gradient(135deg, var(--sf-accent), #7c3aed); color: #fff;
+  background: linear-gradient(135deg, var(--sf-accent), #7c3aed); color: var(--sf-on-accent, #fff);
   border-radius: 999px; font-weight: 700;
 }
 .sf-cta-btn.sf-btnstyle-glow {
-  background: var(--sf-accent); color: #fff; border-radius: 999px;
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff); border-radius: 999px;
   box-shadow: 0 0 0 4px rgba(255,255,255,.18);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--sf-accent) 45%, transparent);
 }
 .sf-cta-btn.sf-btnstyle-ghost {
-  background: transparent; border: 2px solid var(--sf-accent); color: var(--sf-accent);
+  background: transparent; border: 2px solid var(--sf-accent); color: #fff;
 }
 .sf-cta-btn.sf-btnstyle-ghost:hover,
-.sf-cta-btn.sf-btnstyle-ghost:focus-visible { background: var(--sf-accent); color: #fff; }
+.sf-cta-btn.sf-btnstyle-ghost:focus-visible {
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff);
+}
 .sf-cta-btn.sf-btnstyle-white {
   background: #fff; color: #111827; border-radius: 999px; font-weight: 700;
   box-shadow: inset 0 0 0 1px var(--sf-accent);
@@ -375,7 +379,7 @@
 .sf-cta-close:hover { opacity: 1; }
 
 .sf-cta.sf-cta-style-solid {
-  background: var(--sf-accent); border: 0; color: #fff; border-radius: 12px;
+  background: var(--sf-accent); border: 0; color: var(--sf-on-accent, #fff); border-radius: 12px;
   box-shadow: 0 10px 26px rgba(0,0,0,.35);
 }
 .sf-cta-style-solid .sf-cta-btn {
@@ -396,14 +400,14 @@
 .sf-cta-style-outline .sf-cta-btn {
   background: transparent; border: 1px solid var(--sf-accent); color: var(--sf-accent);
 }
-.sf-cta-style-outline .sf-cta-btn:hover { background: var(--sf-accent); color: #fff; }
+.sf-cta-style-outline .sf-cta-btn:hover { background: var(--sf-accent); color: var(--sf-on-accent, #fff); }
 
 .sf-cta.sf-cta-style-glass {
   background: rgba(255,255,255,.92); border: 1px solid rgba(0,0,0,.06); color: #111827;
   backdrop-filter: blur(10px);
 }
 .sf-cta-style-glass .sf-cta-body { color: #4b5563; opacity: 1; }
-.sf-cta-style-glass .sf-cta-btn { background: var(--sf-accent); color: #fff; }
+.sf-cta-style-glass .sf-cta-btn { background: var(--sf-accent); color: var(--sf-on-accent, #fff); }
 .sf-cta-style-glass .sf-cta-close { color: #111827; }
 
 .sf-cta.sf-cta-style-bar {
@@ -448,7 +452,7 @@
   padding: 9px 32px 9px 14px; background: var(--sf-accent);
 
   background: linear-gradient(90deg, var(--sf-accent), color-mix(in srgb, var(--sf-accent) 55%, #fff));
-  color: #fff;
+  color: var(--sf-on-accent, #fff);
 }
 .sf-cta-style-gradient .sf-cta-body { margin-bottom: 6px; }
 .sf-cta-style-gradient .sf-cta-btn {
@@ -510,7 +514,7 @@
   background: rgba(255,255,255,.06); color: #fff; font-size: 14px; box-sizing: border-box;
 }
 .sf-gate-submit, .sf-lock-card button[type="submit"] {
-  background: var(--sf-accent); color: #fff; border: 0; padding: 11px 14px; border-radius: 9px;
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff); border: 0; padding: 11px 14px; border-radius: 9px;
   font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .sf-gate-skip, .sf-endscreen-replay {
@@ -538,10 +542,10 @@
 
 .sf-gate-style-solid .sf-gate-card,
 .sf-endscreen-style-solid .sf-endscreen-card {
-  background: var(--sf-accent); border-color: transparent; color: #fff;
+  background: var(--sf-accent); border-color: transparent; color: var(--sf-on-accent, #fff);
 }
 .sf-gate-style-solid .sf-gate-card p,
-.sf-endscreen-style-solid .sf-endscreen-card p { color: #fff; opacity: .9; }
+.sf-endscreen-style-solid .sf-endscreen-card p { color: var(--sf-on-accent, #fff); opacity: .9; }
 .sf-gate-style-solid .sf-gate-form input,
 .sf-endscreen-style-solid .sf-gate-form input {
   border-color: #d1d5db; background: #fff; color: #111827;
@@ -564,7 +568,9 @@
 }
 .sf-gate-style-outline .sf-gate-form input::placeholder { color: rgba(255,255,255,.72); }
 .sf-gate-style-outline .sf-gate-submit,
-.sf-endscreen-style-outline .sf-gate-submit { background: var(--sf-accent); color: #fff; }
+.sf-endscreen-style-outline .sf-gate-submit {
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff);
+}
 .sf-endscreen-style-outline .sf-cta-btn { background: transparent; border: 1px solid var(--sf-accent); color: var(--sf-accent); }
 
 .sf-gate-style-glass .sf-gate-card,
@@ -826,7 +832,9 @@
   border-radius: 10px; color: var(--sf-accent);
 }
 .sf-rail .sf-btn svg { width: 20px; height: 20px; }
-.sf-rail .sf-btn:hover, .sf-rail .sf-btn:focus-visible { background: var(--sf-accent); color: #fff; }
+.sf-rail .sf-btn:hover, .sf-rail .sf-btn:focus-visible {
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff);
+}
 /* The rail sits in the corner, so a label above the top plate would be clipped by
    the player and the ones below would cover the plate above. They read leftwards. */
 .sf-rail .sf-btn[data-tip]::after {
@@ -862,7 +870,7 @@
   --sf-inset: 10px;
 
   padding: 8px 12px; padding-top: 8px;
-  background: var(--sf-accent); border-radius: 12px;
+  background: var(--sf-accent); border-radius: 12px; color: var(--sf-on-accent, #fff);
 }
 .sf-skin-pop .sf-rewind, .sf-skin-pop .sf-controls > .sf-forward, .sf-skin-pop .sf-pip { display: none; }
 .sf-skin-pop .sf-btn svg { width: 22px; height: 22px; }
@@ -982,7 +990,9 @@
   width: 30px; height: 30px; padding: 6px; border-radius: 100%; color: #fff;
 }
 .sf-skin-neon .sf-btn svg { width: 18px; height: 18px; }
-.sf-skin-neon .sf-btn:hover, .sf-skin-neon .sf-btn:focus-visible { background: var(--sf-accent); }
+.sf-skin-neon .sf-btn:hover, .sf-skin-neon .sf-btn:focus-visible {
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff);
+}
 .sf-skin-neon .sf-progress-wrap { padding: 0 2px; }
 .sf-skin-neon .sf-progress { height: 18px; }
 .sf-skin-neon .sf-progress-rail { height: 4px; border-radius: 2px; background: rgba(255,255,255,.24); }
@@ -1101,7 +1111,6 @@
 .sf-skin-studio .sf-volume,
 .sf-skin-ghost .sf-volume { margin-right: auto; }
 
-.sf-skin-cinema { --sf-accent: #fff; }
 .sf-skin-cinema .sf-controls {
   position: absolute; inset: 0;
   --sf-inset: 0px;
