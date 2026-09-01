@@ -248,14 +248,21 @@
 
   function sourceBlob(source) {
     if (source instanceof File) return Promise.resolve(source);
-    return fetch(new URL(source, location.href).toString()).then(function (res) {
-      if (!res.ok) throw new Error("Only uploaded videos can be optimised — this video's host does not allow it.");
+    var url;
+    try {
+      url = new URL(source, location.href);
+    } catch (e) {
+      return Promise.reject(new Error('Could not read the video file. Please try again.'));
+    }
+    var message = url.origin === location.origin
+      ? 'Could not read the video file. Please try again.'
+      : "Only uploaded videos can be optimised — this video's host does not allow it.";
+    return fetch(url.toString()).then(function (res) {
+      if (!res.ok) throw new Error(message);
       return res.blob();
     }).catch(function (err) {
-      if (err && err.message === "Only uploaded videos can be optimised — this video's host does not allow it.") {
-        throw err;
-      }
-      throw new Error("Only uploaded videos can be optimised — this video's host does not allow it.");
+      if (err && err.message === message) throw err;
+      throw new Error(message);
     });
   }
 
@@ -1406,7 +1413,8 @@
 
   function syncEditorHlsAction() {
     var video = state.video;
-    var eligible = video && video.source_type === 'mp4' && isOptimisableSource(null, video.source_ref || '');
+    var source = $('ed-source').value.trim() || (video && video.source_ref) || '';
+    var eligible = video && video.source_type === 'mp4' && isOptimisableSource(null, source);
     $('ed-hls-start').classList.toggle('hidden', !eligible);
     $('ed-hls-reason').textContent = eligible ? '' : 'Only videos uploaded to Videokr can be optimised.';
     if (!eligible) {
@@ -1419,7 +1427,8 @@
   $('ed-hls-start').addEventListener('click', function () {
     if (!state.video) return;
     $('ed-hls-start').disabled = true;
-    optimiseVideo(state.video.id, state.video.source_ref, 'ed', state.video.duration)
+    var source = $('ed-source').value.trim() || state.video.source_ref;
+    optimiseVideo(state.video.id, source, 'ed', state.video.duration)
       .then(function () {
         $('ed-hls-start').classList.add('hidden');
         return openEditorRefresh(state.video.id);
@@ -1619,9 +1628,7 @@
     });
     row.appendChild(start);
     row.appendChild(title);
-    var foot = text('div', 'row-foot');
-    foot.appendChild(remove);
-    row.appendChild(foot);
+    row.appendChild(remove);
     return row;
   }
 

@@ -538,9 +538,10 @@
 .sf-endscreen-style-solid .sf-endscreen-card p { color: #fff; opacity: .9; }
 .sf-gate-style-solid .sf-gate-form input,
 .sf-endscreen-style-solid .sf-gate-form input {
-  border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.16); color: #fff;
+  border-color: #d1d5db; background: #fff; color: #111827;
 }
-.sf-gate-style-solid .sf-gate-form input::placeholder { color: rgba(255,255,255,.82); }
+.sf-gate-style-solid .sf-gate-form input::placeholder,
+.sf-endscreen-style-solid .sf-gate-form input::placeholder { color: #475569; }
 .sf-gate-style-solid .sf-gate-submit,
 .sf-endscreen-style-solid .sf-gate-submit { background: #fff; color: var(--sf-accent); }
 .sf-endscreen-style-solid .sf-cta-btn { background: #fff; color: var(--sf-accent); }
@@ -616,14 +617,6 @@
 .sf-gate-style-fullbleed .sf-gate-skip { display: block; margin: 12px auto 0; color: #fff; }
 .sf-gate-style-fullbleed .sf-gate-error,
 .sf-endscreen-style-fullbleed .sf-gate-error { color: #ffb4b4; }
-
-.sf-gate-style-minimal .sf-gate-card,
-.sf-endscreen-style-minimal .sf-endscreen-card {
-  background: transparent; border: 0; box-shadow: none; color: #fff;
-}
-.sf-gate-style-minimal .sf-gate-card h3,
-.sf-endscreen-style-minimal .sf-endscreen-card h3 { text-shadow: 0 1px 5px rgba(0,0,0,.8); }
-.sf-gate-style-minimal .sf-gate-form { grid-template-columns: minmax(0,1fr) auto; }
 
 .sf-gate-style-split .sf-gate-card,
 .sf-endscreen-style-split .sf-endscreen-card {
@@ -1084,7 +1077,7 @@
 .sf-skin-ghost .sf-rewind { order: 1; }
 .sf-skin-ghost .sf-play { order: 2; }
 .sf-skin-ghost .sf-controls > .sf-forward { order: 3; }
-.sf-skin-ghost .sf-time { order: 4; color: #fff; font-size: 12px; }
+.sf-skin-ghost .sf-time { display: block; order: 4; color: #fff; font-size: 12px; }
 .sf-skin-ghost .sf-volume { order: 5; width: 104px; min-width: 104px; max-width: 104px; }
 .sf-skin-ghost .sf-volume input[type="range"] { display: block; width: 70px; }
 .sf-skin-ghost .sf-settings { order: 6; }
@@ -1095,8 +1088,8 @@
 
 .sf-skin-cinema { --sf-accent: #fff; }
 .sf-skin-cinema .sf-controls {
-  position: static; --sf-inset: 0px; width: auto; margin: 0; padding: 0;
-  background: transparent; border-radius: 0; transform: none; opacity: 1; pointer-events: none;
+  position: absolute; inset: 0; --sf-inset: 0px; width: auto; margin: 0; padding: 0;
+  background: transparent; border-radius: 0; transform: none !important; opacity: 1; pointer-events: none;
 }
 .sf-skin-cinema .sf-controls > * { margin: 0; }
 .sf-skin-cinema .sf-rewind,
