@@ -233,6 +233,22 @@ describe('embed payload badge', () => {
 describe('media delivery', () => {
   function mediaEnv(): Env {
     return {
+      DB: {
+        prepare() {
+          const statement = {
+            bind() {
+              return statement;
+            },
+            async first() {
+              return null;
+            },
+            async all() {
+              return { results: [] };
+            },
+          };
+          return statement;
+        },
+      },
       MEDIA: {
         async get(key: string, options?: unknown) {
           const ranged = Boolean(options);
@@ -242,10 +258,11 @@ describe('media delivery', () => {
             size: 11,
             range: ranged ? { offset: 2, length: 3 } : undefined,
             httpEtag: '"media-etag"',
-            writeHttpMetadata(headers: Headers) {
-              headers.set('content-type', key.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp4');
-            },
+            httpMetadata: { contentType: key.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp4' },
           };
+        },
+        async head() {
+          return null;
         },
       },
     } as unknown as Env;

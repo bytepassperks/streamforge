@@ -16,11 +16,13 @@ export interface S3Object {
 export interface ListObjectsOptions {
   maxKeys?: number;
   limit?: number;
+  prefix?: string;
 }
 
 export interface ListObjectsPageOptions {
   maxKeys?: number;
   token?: string;
+  prefix?: string;
 }
 
 export interface ListObjectsPage {
@@ -194,7 +196,7 @@ export async function listObjects(target: S3Target, options: ListObjectsOptions 
   const objects: S3Object[] = [];
   let token = '';
   do {
-    const page = await listObjectsPage(target, { maxKeys: Number(maxKeys), token });
+    const page = await listObjectsPage(target, { maxKeys: Number(maxKeys), token, prefix: options.prefix });
     objects.push(...page.objects);
     if (options.limit !== undefined && objects.length >= options.limit) {
       return objects.slice(0, options.limit);
@@ -210,6 +212,7 @@ export async function listObjectsPage(
 ): Promise<ListObjectsPage> {
   const maxKeys = String(Math.max(1, Math.min(1000, Math.floor(options.maxKeys ?? 1000))));
   const query: Record<string, string> = { 'list-type': '2', 'max-keys': maxKeys };
+  if (options.prefix) query.prefix = options.prefix;
   if (options.token) query['continuation-token'] = options.token;
   const response = await s3Fetch(target, { method: 'GET', query });
   if (!response.ok) await throwS3Error(response);

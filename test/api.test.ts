@@ -17,6 +17,15 @@ const user: User = {
   created_at: 1_700_000_000,
 };
 
+function r2ObjectFor(body: BodyInit) {
+  return {
+    body: new Response(body).body,
+    size: typeof body === 'string' ? new TextEncoder().encode(body).byteLength : 0,
+    httpEtag: '"hls-etag"',
+    httpMetadata: { contentType: 'application/vnd.apple.mpegurl' },
+  };
+}
+
 function hlsEnv(mediaOverrides: Record<string, unknown> = {}): Env {
   const statement = (sql: string) => {
     const chain = {
@@ -44,6 +53,9 @@ function hlsEnv(mediaOverrides: Record<string, unknown> = {}): Env {
       async run() {
         return {};
       },
+      async all<T>() {
+        return { results: [] as T[] };
+      },
     };
     return chain;
   };
@@ -61,6 +73,9 @@ function hlsEnv(mediaOverrides: Record<string, unknown> = {}): Env {
         }
         return statement(sql);
       },
+      async batch(statements: Array<{ run: () => Promise<unknown> }>) {
+        for (const item of statements) await item.run();
+      },
     },
     MEDIA: {
       async list() {
@@ -68,19 +83,16 @@ function hlsEnv(mediaOverrides: Record<string, unknown> = {}): Env {
       },
       async get(key: string) {
         if (key.endsWith('/master.m3u8')) {
-          return {
-            async text() {
-              return '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nv0/index.m3u8\n';
-            },
-          };
+          return r2ObjectFor('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nv0/index.m3u8\n');
         }
-        return {
-          async text() {
-            return '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n';
-          },
-        };
+        return r2ObjectFor('#EXTM3U\n#EXTINF:4,\nseg_000.ts\n');
       },
-      async put() {},
+      async put(_key: string, body: BodyInit) {
+        return r2ObjectFor(body);
+      },
+      async head() {
+        return null;
+      },
       ...mediaOverrides,
     },
   } as unknown as Env;
@@ -358,18 +370,15 @@ describe('HLS API-key authentication scope', () => {
     }));
     const env = hlsEnv({
       async get(path: string) {
-        return {
-          async text() {
-            return path.endsWith('/master.m3u8')
-              ? master
-              : '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n';
-          },
-        };
+        return r2ObjectFor(
+          path.endsWith('/master.m3u8') ? master : '#EXTM3U\n#EXTINF:4,\nseg_000.ts\n',
+        );
       },
       list,
       async put(_path: string, body: string) {
         writes += 1;
         master = body;
+          return r2ObjectFor(body);
       },
     });
     const request = () =>
@@ -396,6 +405,7 @@ describe('HLS API-key authentication scope', () => {
       list,
       async put() {
         puts += 1;
+        return r2ObjectFor(new ArrayBuffer(0));
       },
     });
     for (const value of ['first', 'second']) {
@@ -452,13 +462,11 @@ describe('HLS API-key authentication scope', () => {
     ];
     const env = hlsEnv({
       async get(path: string) {
-        return {
-          async text() {
-            return path.endsWith('/master.m3u8')
-              ? master
-              : '#EXTM3U\n#EXTINF:2,\nseg_000.ts\n#EXTINF:2,\nseg_001.ts\n';
-          },
-        };
+        return r2ObjectFor(
+          path.endsWith('/master.m3u8')
+            ? master
+            : '#EXTM3U\n#EXTINF:2,\nseg_000.ts\n#EXTINF:2,\nseg_001.ts\n',
+        );
       },
       async list(options: Record<string, unknown>) {
         return options.cursor
@@ -467,6 +475,7 @@ describe('HLS API-key authentication scope', () => {
       },
       async put(_path: string, body: string) {
         master = body;
+        return r2ObjectFor(body);
       },
     });
 
