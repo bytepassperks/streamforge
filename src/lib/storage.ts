@@ -76,7 +76,7 @@ export function bucketView(row: StorageBucketRow): StorageBucketView {
     region: row.region,
     bucket_name: row.bucket_name,
     bucket_id: row.bucket_id,
-    key_id_masked: keyId.length > 4 ? `${'*'.repeat(Math.max(4, keyId.length - 4))}${keyId.slice(-4)}` : '****',
+    key_id_masked: keyId.length > 4 ? `****${keyId.slice(-4)}` : '****',
     capacity_bytes: Number(row.capacity_bytes) || 0,
     used_bytes: Number(row.used_bytes) || 0,
     object_count: Number(row.object_count) || 0,

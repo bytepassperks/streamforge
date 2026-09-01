@@ -858,34 +858,35 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 #storage-body .storage-table th,
 #storage-body .storage-table td { padding: 9px 8px; }
 #storage-body .storage-table th {
-  white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
+  white-space: nowrap; overflow-wrap: normal; line-height: 1.2;
 }
 #storage-body .storage-table td {
   overflow-wrap: anywhere; word-break: break-word; vertical-align: top;
 }
 #storage-body .storage-table th:nth-child(1),
-#storage-body .storage-table td:nth-child(1) { width: 10%; }
+#storage-body .storage-table td:nth-child(1) { width: 9%; }
 #storage-body .storage-table th:nth-child(2),
-#storage-body .storage-table td:nth-child(2) { width: 17%; }
+#storage-body .storage-table td:nth-child(2) { width: 13%; }
 #storage-body .storage-table th:nth-child(3),
-#storage-body .storage-table td:nth-child(3) { width: 12%; }
+#storage-body .storage-table td:nth-child(3) { width: 10%; }
 #storage-body .storage-table th:nth-child(4),
-#storage-body .storage-table td:nth-child(4) { width: 9%; }
+#storage-body .storage-table td:nth-child(4) { width: 7%; }
 #storage-body .storage-table th:nth-child(5),
-#storage-body .storage-table td:nth-child(5) { width: 14%; }
+#storage-body .storage-table td:nth-child(5) { width: 13%; }
 #storage-body .storage-table th:nth-child(6),
-#storage-body .storage-table td:nth-child(6) { width: 7%; }
+#storage-body .storage-table td:nth-child(6) { width: 8%; }
 #storage-body .storage-table th:nth-child(7),
-#storage-body .storage-table td:nth-child(7) { width: 11%; }
+#storage-body .storage-table td:nth-child(7) { width: 9%; }
 #storage-body .storage-table th:nth-child(8),
-#storage-body .storage-table td:nth-child(8) { width: 13%; }
+#storage-body .storage-table td:nth-child(8) { width: 9%; }
 #storage-body .storage-table th:nth-child(9),
-#storage-body .storage-table td:nth-child(9) { width: 7%; }
+#storage-body .storage-table td:nth-child(9) { width: 22%; }
 #storage-body .storage-actions {
-  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  display: table-cell; vertical-align: top;
 }
 #storage-body .storage-actions .btn {
-  width: 100%; min-height: 26px; padding: 0 3px; font-size: 10.5px; white-space: nowrap;
+  display: inline-flex; width: auto; min-height: 28px; margin: 0 2px 4px 0;
+  padding: 0 8px; font-size: 11px; white-space: nowrap;
 }
 
 @media (max-width: 900px) {
@@ -913,7 +914,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   #storage-body .storage-actions {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;
   }
-  #storage-body .storage-actions .btn { min-height: 32px; font-size: 12px; }
+  #storage-body .storage-actions .btn { width: 100%; min-height: 32px; font-size: 12px; }
 }
 
 .thumb-cell { width: 96px; }

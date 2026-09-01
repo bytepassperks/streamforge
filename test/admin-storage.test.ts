@@ -134,7 +134,7 @@ describe('admin storage pool routes', () => {
     expect(serialised).not.toContain(APP_KEY);
     expect(serialised).not.toContain(String(rows[0].secret_cipher));
     expect(serialised).not.toContain(payload.key_id);
-    expect(body.bucket.key_id_masked).toMatch(/\*+2345$/);
+    expect(body.bucket.key_id_masked).toBe('****2345');
     expect(rows).toHaveLength(1);
     expect(rows[0].region).toBe('us-east-005');
     expect(String(rows[0].secret_cipher)).not.toContain(APP_KEY);
