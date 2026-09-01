@@ -4,7 +4,7 @@ export const ASSET_STAMPS: Record<string, string> = {
   '/landing.css': 'eb93c380f9',
   '/landing.js': '350ae46818',
   '/fonts/fonts.css': '5a6b738f06',
-  '/player/player.css': '01b2913765',
+  '/player/player.css': '18afd9c8dd',
   '/player/player.js': '2cfcc9ac04',
   '/app.js': 'fd78d4b960',
   '/admin.js': '9a591505db',

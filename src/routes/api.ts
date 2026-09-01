@@ -638,12 +638,20 @@ api.put('/videos/:id/ctas', async (c) => {
   const { ctas } = await c.req.json<{ ctas?: Record<string, unknown>[] }>();
   const allowedKinds = ['overlay', 'banner', 'endscreen', 'gate'];
   const rows = (ctas ?? []).filter((cta) => allowedKinds.includes(String(cta.kind)));
+  const existing = await c.env.DB.prepare('SELECT id FROM ctas WHERE video_id = ?')
+    .bind(id)
+    .all<{ id: string }>();
+  const existingIds = new Set((existing.results ?? []).map((cta) => cta.id));
   const statements = [c.env.DB.prepare('DELETE FROM ctas WHERE video_id = ?').bind(id)];
   const usedIds = new Set<string>();
   for (const cta of rows) {
     const suppliedId = typeof cta.id === 'string' ? cta.id : '';
     const ctaId =
-      /^cta_[a-z0-9]+$/i.test(suppliedId) && !usedIds.has(suppliedId) ? suppliedId : newId('cta');
+      /^cta_[a-z0-9]+$/i.test(suppliedId) &&
+      !usedIds.has(suppliedId) &&
+      existingIds.has(suppliedId)
+        ? suppliedId
+        : newId('cta');
     usedIds.add(ctaId);
     statements.push(
       c.env.DB.prepare(

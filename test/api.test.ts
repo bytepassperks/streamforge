@@ -134,7 +134,7 @@ function editableSlugRequest(slug: string): Request {
   });
 }
 
-function ctaEnv(): { env: Env; inserts: unknown[][] } {
+function ctaEnv(existingIds: string[] = ['cta_keep123']): { env: Env; inserts: unknown[][] } {
   const inserts: unknown[][] = [];
   const statement = (sql: string) => {
     let values: unknown[] = [];
@@ -147,6 +147,12 @@ function ctaEnv(): { env: Env; inserts: unknown[][] } {
         if (sql.includes('FROM sessions')) return { ...user, expires_at: 1_800_000_000 } as T;
         if (sql === 'SELECT id FROM videos WHERE id = ? AND user_id = ?') return { id: 'vid_1' } as T;
         return null;
+      },
+      async all<T>() {
+        if (sql === 'SELECT id FROM ctas WHERE video_id = ?') {
+          return { results: existingIds.map((id) => ({ id })) } as T;
+        }
+        return { results: [] } as T;
       },
       async run() {
         return {};
@@ -281,6 +287,18 @@ describe('CTA persistence', () => {
     expect(inserts[3][0]).toMatch(/^cta_[a-z0-9]+$/i);
     expect(inserts[3][0]).not.toBe('cta_keep123');
     expect(inserts[3][0]).not.toBe(inserts[2][0]);
+  });
+
+  it('regenerates an id owned by another video', async () => {
+    const { env, inserts } = ctaEnv([]);
+    const response = await api.request(
+      ctaRequest([{ id: 'cta_owned_by_video', kind: 'overlay' }]),
+      {},
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(inserts[1][0]).toMatch(/^cta_[a-z0-9]+$/i);
+    expect(inserts[1][0]).not.toBe('cta_owned_by_video');
   });
 });
 
