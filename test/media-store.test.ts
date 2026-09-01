@@ -149,7 +149,16 @@ function memoryEnv(bucketValues: Bucket[] = [], r2Values: Record<string, Uint8Ar
           }
           return (buckets.find((row) => row.id === values[0]) ?? null) as T;
         }
-        if (sql.includes('FROM media_objects')) return (objects.get(String(values[0])) ?? null) as T;
+        if (sql.includes('FROM media_objects')) {
+          const value = String(values[0] ?? '');
+          if (sql.includes('key LIKE')) {
+            const prefix = value.replace(/%$/, '');
+            return ([...objects.values()].find(
+              (row) => String(row.key).startsWith(prefix) && row.backend === 'b2' && numeric(row, 'size_bytes') > 0,
+            ) ?? null) as T;
+          }
+          return (objects.get(value) ?? null) as T;
+        }
         return null;
       },
       async all<T>() {
@@ -313,6 +322,20 @@ describe('media store routing', () => {
     expect(state.r2.has('u/video.mp4')).toBe(true);
   });
 
+  it('does not create a location row for a new free-plan multipart upload', async () => {
+    const state = memoryEnv();
+    const upload = await createUpload(state.env, {
+      key: 'u/video.mp4',
+      userId: 'u',
+      plan: 'free',
+      contentType: 'video/mp4',
+    });
+    const part = await uploadPart(state.env, 'u/video.mp4', upload.uploadId, 1, bytes('video').buffer);
+    await completeUpload(state.env, 'u/video.mp4', upload.uploadId, [{ partNumber: 1, etag: part.etag }]);
+    expect(state.objects.has('u/video.mp4')).toBe(false);
+    expect(state.r2.has('u/video.mp4')).toBe(true);
+  });
+
   it('falls back to R2 when the pool has no eligible bucket', async () => {
     const state = memoryEnv([{ ...bucket(), status: 'draining' }]);
     expect(await backendFor(state.env, { id: 'u', plan: 'starter' })).toMatchObject({ backend: 'r2' });
@@ -357,7 +380,7 @@ describe('media store routing', () => {
     await expect(putMedia(state.env, { key: 'u/video.mp4', userId: 'u', plan: 'starter', body: bytes('video').buffer, contentType: 'video/mp4' })).resolves.toBe('r2');
     expect(state.r2.has('u/video.mp4')).toBe(true);
     expect(state.objects.get('u/video.mp4')).toMatchObject({ backend: 'r2' });
-    expect(state.buckets[0].last_error).toContain('HTTP 500');
+    expect(state.buckets[0].last_error).toContain('B2 put failed');
   });
 
   it('delivers B2 bytes and ranges without provider headers', async () => {
@@ -444,8 +467,11 @@ describe('media store routing', () => {
     state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
     installB2Fetch(state, new Set(['PUT:part']));
     const upload = await createUpload(state.env, { key: 'u/video.mp4', userId: 'u', plan: 'starter', contentType: 'video/mp4' });
-    await expect(uploadPart(state.env, 'u/video.mp4', upload.uploadId, 1, bytes('part').buffer)).rejects.toThrow('B2 multipart upload failed');
+    await expect(uploadPart(state.env, 'u/video.mp4', upload.uploadId, 1, bytes('part').buffer)).rejects.toThrow(
+      'upload could not be completed, please retry',
+    );
     expect(state.objects.has('u/video.mp4')).toBe(false);
+    expect(state.buckets[0].last_error).toContain('failure');
   });
 
   it('cleans up a failed B2 multipart completion', async () => {
@@ -454,9 +480,12 @@ describe('media store routing', () => {
     installB2Fetch(state, new Set(['POST:multipart']));
     const upload = await createUpload(state.env, { key: 'u/video.mp4', userId: 'u', plan: 'starter', contentType: 'video/mp4' });
     const part = await uploadPart(state.env, 'u/video.mp4', upload.uploadId, 1, bytes('part').buffer);
-    await expect(completeUpload(state.env, 'u/video.mp4', upload.uploadId, [{ partNumber: 1, etag: part.etag }])).rejects.toThrow('B2 multipart upload failed');
+    await expect(completeUpload(state.env, 'u/video.mp4', upload.uploadId, [{ partNumber: 1, etag: part.etag }])).rejects.toThrow(
+      'upload could not be completed, please retry',
+    );
     expect(state.objects.has('u/video.mp4')).toBe(false);
     expect(state.b2.has('u/video.mp4')).toBe(false);
+    expect(state.buckets[0].last_error).toContain('failure');
   });
 
   it('completes a mocked B2 multipart upload and records its size', async () => {
@@ -468,6 +497,137 @@ describe('media store routing', () => {
     await expect(completeUpload(state.env, 'u/video.mp4', upload.uploadId, [{ partNumber: 1, etag: part.etag }])).resolves.toEqual({ size: 4 });
     expect(state.objects.get('u/video.mp4')).toMatchObject({ backend: 'b2', size_bytes: 4 });
     expect(state.buckets[0]).toMatchObject({ used_bytes: 4, object_count: 1 });
+  });
+
+  it('keeps multipart accounting idempotent across retries', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state);
+    const first = await createUpload(state.env, {
+      key: 'u/video.mp4',
+      userId: 'u',
+      plan: 'starter',
+      contentType: 'video/mp4',
+    });
+    await createUpload(state.env, {
+      key: 'u/video.mp4',
+      userId: 'u',
+      plan: 'starter',
+      contentType: 'video/mp4',
+    });
+    const part = await uploadPart(state.env, 'u/video.mp4', first.uploadId, 1, bytes('part').buffer);
+    await completeUpload(state.env, 'u/video.mp4', first.uploadId, [{ partNumber: 1, etag: part.etag }]);
+    await completeUpload(state.env, 'u/video.mp4', first.uploadId, [{ partNumber: 1, etag: part.etag }]);
+    expect(state.objects.get('u/video.mp4')).toMatchObject({ size_bytes: 4 });
+    expect(state.buckets[0]).toMatchObject({ used_bytes: 4, object_count: 1 });
+  });
+
+  it('pins HLS placement to the first B2 bucket for the ladder prefix', async () => {
+    const firstBucket = bucket();
+    const secondBucket = { ...bucket(), id: 'bucket-2', bucket_id: 'bucket-id-2' };
+    const state = memoryEnv([firstBucket, secondBucket]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    state.buckets[1].secret_cipher = state.buckets[0].secret_cipher;
+    installB2Fetch(state);
+    await putMedia(state.env, {
+      key: 'u/video/hls/v0/000.ts',
+      userId: 'u',
+      plan: 'starter',
+      body: bytes('first').buffer,
+      contentType: 'video/mp2t',
+    });
+    state.buckets[0].used_bytes = 100;
+    await putMedia(state.env, {
+      key: 'u/video/hls/v1/000.ts',
+      userId: 'u',
+      plan: 'starter',
+      body: bytes('second').buffer,
+      contentType: 'video/mp2t',
+    });
+    expect(state.objects.get('u/video/hls/v1/000.ts')).toMatchObject({ bucket_id: 'bucket-1', backend: 'b2' });
+    expect(state.buckets[1].object_count).toBe(0);
+  });
+
+  it('does not retain an oversized stream for a failed B2 fallback', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state, new Set(['PUT:object']));
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes('video'));
+        controller.close();
+      },
+    });
+    await expect(
+      putMedia(state.env, {
+        key: 'u/large.mp4',
+        userId: 'u',
+        plan: 'starter',
+        body,
+        contentType: 'video/mp4',
+        size: 25 * 1024 * 1024,
+      }),
+    ).rejects.toThrow('upload could not be completed, please retry');
+    expect(state.r2.has('u/large.mp4')).toBe(false);
+    expect(state.buckets[0].last_error).toContain('B2 put failed');
+  });
+
+  it('buffers a small stream once for a failed B2 fallback', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state, new Set(['PUT:object']));
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes('video'));
+        controller.close();
+      },
+    });
+    await expect(
+      putMedia(state.env, {
+        key: 'u/small.mp4',
+        userId: 'u',
+        plan: 'starter',
+        body,
+        contentType: 'video/mp4',
+        size: 5,
+      }),
+    ).resolves.toBe('r2');
+    expect(state.r2.get('u/small.mp4')).toEqual(bytes('video'));
+  });
+
+  it('fills a B2 cache miss from the streamed body without a second provider GET', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state);
+    const providerFetch = globalThis.fetch;
+    const countedFetch = vi.fn(providerFetch);
+    vi.stubGlobal('fetch', countedFetch);
+    state.b2.set('u/video.mp4', bytes('abcdef'));
+    state.objects.set('u/video.mp4', {
+      key: 'u/video.mp4',
+      user_id: 'u',
+      backend: 'b2',
+      bucket_id: 'bucket-1',
+      size_bytes: 6,
+      content_type: 'video/mp4',
+    });
+    const match = vi.fn(async () => undefined);
+    const put = vi.fn(async () => undefined);
+    vi.stubGlobal('caches', { default: { match, put } });
+    try {
+      const response = await pub.request(
+        new Request('https://videokr.com/media/u/video.mp4'),
+        {},
+        state.env,
+        { waitUntil: vi.fn(), passThroughOnException: vi.fn() },
+      );
+      expect(await response.text()).toBe('abcdef');
+      expect(countedFetch).toHaveBeenCalledTimes(1);
+      expect(countedFetch.mock.calls[0][1]?.method).toBe('GET');
+      expect(put).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('does not turn a B2 credential decryption failure into a missing object', async () => {

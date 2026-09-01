@@ -570,6 +570,7 @@ api.post('/videos/:id/hls/parts', async (c) => {
     plan: user.plan,
     body: entry.stream(),
     contentType: hlsPartType(path),
+    size: entry.size,
   });
   return c.json({ ok: true, path, key });
 });
@@ -601,6 +602,7 @@ api.post('/videos/:id/hls/complete', async (c) => {
       plan: user.plan,
       body: repairedMaster,
       contentType: 'application/vnd.apple.mpegurl',
+      size: new TextEncoder().encode(repairedMaster).byteLength,
     });
   }
 
@@ -1155,7 +1157,7 @@ api.post('/uploads/part', async (c) => {
     const part = await uploadPart(c.env, key as string, uploadId, partNumber, entry.stream());
     return c.json({ etag: part.etag });
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith('B2 multipart upload failed:')) {
+    if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
       return c.json({ error: error.message }, 400);
     }
     return c.json({ error: 'upload session not found or expired' }, 400);
@@ -1193,7 +1195,7 @@ api.post('/uploads/complete', async (c) => {
   try {
     await completeUpload(c.env, body.key as string, body.uploadId, parts);
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith('B2 multipart upload failed:')) {
+    if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
       return c.json({ error: error.message }, 400);
     }
     return c.json({ error: 'upload session not found or expired' }, 400);
@@ -1238,6 +1240,7 @@ api.post('/uploads', async (c) => {
     plan: c.get('user').plan,
     body: file.stream(),
     contentType: declared,
+    size: file.size,
   });
   return c.json({ key, url: `/media/${key}` }, 201);
 });

@@ -14,7 +14,7 @@ import { verifyPassword } from '../lib/auth';
 import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
 import { sendMail } from '../lib/email';
-import { getMedia, headMedia } from '../lib/media-store';
+import { getMedia } from '../lib/media-store';
 import {
   SITE,
   absoluteUrl,
@@ -592,25 +592,6 @@ pub.post('/api/leads/:videoId', async (c) => {
 
 const MEDIA_CACHE_LIMIT = 200 * 1024 * 1024;
 
-async function fillMediaCache(cacheKey: Request, key: string, env: Env): Promise<void> {
-  if (/\.m3u8(?:$|\?)/i.test(key)) return;
-  try {
-    const metadata = await headMedia(env, key);
-    if (!metadata || metadata.size > MEDIA_CACHE_LIMIT) return;
-    const object = await getMedia(env, key);
-    if (!object) return;
-    const headers = new Headers();
-    if (object.contentType) headers.set('content-type', object.contentType);
-    headers.set('content-length', String(object.size));
-    headers.set('accept-ranges', 'bytes');
-    headers.set('cache-control', 'public, max-age=31536000, immutable');
-    headers.set('etag', object.etag);
-    await caches.default.put(cacheKey, new Response(object.body, { headers }));
-  } catch {
-    /* Edge cache fill is an optimization; R2 delivery must remain authoritative. */
-  }
-}
-
 /** R2-backed media delivery with range support so seeking works in the player. */
 pub.get('/media/*', async (c) => {
   const key = decodeURIComponent(c.req.path.replace(/^\/media\//, ''));
@@ -620,8 +601,10 @@ pub.get('/media/*', async (c) => {
     ? 'public, max-age=60'
     : 'public, max-age=31536000, immutable';
   const cacheable = !/\.m3u8(?:$|\?)/i.test(key);
+  let cacheKey: Request | null = null;
+  let cacheMiss = false;
   if (cacheable && c.req.method === 'GET' && typeof caches !== 'undefined') {
-    const cacheKey = new Request(c.req.url, { method: 'GET' });
+    cacheKey = new Request(c.req.url, { method: 'GET' });
     const cacheRequest = range
       ? new Request(cacheKey, { headers: { range } })
       : cacheKey;
@@ -641,12 +624,7 @@ pub.get('/media/*', async (c) => {
     } catch {
       /* A cache API failure must not make an otherwise healthy R2 object fail. */
     }
-    const startRange = !range || /^bytes=0-/i.test(range.trim());
-    if (startRange) {
-      c.executionCtx.waitUntil(
-        fillMediaCache(cacheKey, key, c.env).catch(() => undefined),
-      );
-    }
+    cacheMiss = true;
   }
   let object: Awaited<ReturnType<typeof getMedia>>;
   try {
@@ -668,6 +646,13 @@ pub.get('/media/*', async (c) => {
     const length = object.range.length;
     headers.set('content-range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
     return new Response(object.body, { status: 206, headers });
+  }
+  if (cacheMiss && cacheKey && object.body && object.size <= MEDIA_CACHE_LIMIT) {
+    const [clientBody, cacheBody] = object.body.tee();
+    c.executionCtx.waitUntil(
+      caches.default.put(cacheKey, new Response(cacheBody, { headers: new Headers(headers) })).catch(() => undefined),
+    );
+    return new Response(clientBody, { headers });
   }
   return new Response(object.body, { headers });
 });

@@ -38,13 +38,12 @@ type ObjectRow = {
 
 const PAID_PLANS = new Set(['starter', 'agency', 'lifetime']);
 
-function db(env: Env): D1Database | null {
-  return env.DB && typeof env.DB.prepare === 'function' ? env.DB : null;
+function db(env: Env): D1Database {
+  return env.DB;
 }
 
 async function objectRow(env: Env, key: string): Promise<ObjectRow | null> {
   const database = db(env);
-  if (!database) return null;
   return database
     .prepare('SELECT key, user_id, backend, bucket_id, size_bytes, content_type FROM media_objects WHERE key = ?')
     .bind(key)
@@ -53,7 +52,6 @@ async function objectRow(env: Env, key: string): Promise<ObjectRow | null> {
 
 async function bucketRow(env: Env, id: string): Promise<StorageBucketRow | null> {
   const database = db(env);
-  if (!database) return null;
   return database
     .prepare(
       `SELECT id, label, provider, endpoint, region, bucket_name, bucket_id, key_id, secret_cipher,
@@ -66,24 +64,18 @@ async function bucketRow(env: Env, id: string): Promise<StorageBucketRow | null>
 
 async function bucketRows(env: Env): Promise<StorageBucketRow[]> {
   const database = db(env);
-  if (!database) return [];
-  const query = database
+  const result = await database
     .prepare(
       `SELECT id, label, provider, endpoint, region, bucket_name, bucket_id, key_id, secret_cipher,
               capacity_bytes, used_bytes, object_count, status, last_probe_at, last_error, created_at
          FROM storage_buckets`,
     )
-    ;
-  if (typeof query.all !== 'function') {
-    return [];
-  }
-  const result = await query.all<StorageBucketRow>();
+    .all<StorageBucketRow>();
   return result.results;
 }
 
 async function rememberFailure(env: Env, bucketId: string, error: unknown): Promise<void> {
   const database = db(env);
-  if (!database) return;
   const message = error instanceof Error ? error.message : String(error);
   await database
     .prepare('UPDATE storage_buckets SET last_error = ? WHERE id = ?')
@@ -95,10 +87,8 @@ async function updateAccounting(
   env: Env,
   previous: ObjectRow | null,
   next: { key: string; userId: string; backend: Backend; bucketId: string; size: number; contentType: string },
-  pending: boolean,
 ): Promise<void> {
   const database = db(env);
-  if (!database) return;
   const statements: D1PreparedStatement[] = [];
   if (previous?.backend === 'b2' && previous.bucket_id) {
     const sameBucket = next.backend === 'b2' && previous.bucket_id === next.bucketId;
@@ -111,14 +101,14 @@ async function updateAccounting(
                     object_count = MAX(0, object_count - ?)
               WHERE id = ?`,
           )
-          .bind(previous.size_bytes, pending ? 0 : 1, previous.bucket_id),
+          .bind(previous.size_bytes, previous.size_bytes > 0 ? 1 : 0, previous.bucket_id),
       );
     }
   }
   if (next.backend === 'b2' && next.bucketId) {
     const sameBucket = previous?.backend === 'b2' && previous.bucket_id === next.bucketId;
     const sizeDelta = sameBucket ? next.size - previous.size_bytes : next.size;
-    const countDelta = sameBucket ? (pending ? 1 : 0) : pending ? 0 : 1;
+    const countDelta = (next.size > 0 ? 1 : 0) - (sameBucket && previous && previous.size_bytes > 0 ? 1 : 0);
     statements.push(
       database
         .prepare(
@@ -144,12 +134,12 @@ async function updateAccounting(
       )
       .bind(next.key, next.userId, next.backend, next.bucketId, next.size, next.contentType, Math.floor(Date.now() / 1000)),
   );
-  await (database.batch ? database.batch(statements) : Promise.all(statements.map((statement) => statement.run())));
+  await database.batch(statements);
 }
 
-async function removeAccounting(env: Env, row: ObjectRow | null, pending = false): Promise<void> {
+async function removeAccounting(env: Env, row: ObjectRow | null): Promise<void> {
   const database = db(env);
-  if (!database || !row) return;
+  if (!row) return;
   const statements: D1PreparedStatement[] = [];
   if (row.backend === 'b2' && row.bucket_id) {
     statements.push(
@@ -160,11 +150,11 @@ async function removeAccounting(env: Env, row: ObjectRow | null, pending = false
                   object_count = MAX(0, object_count - ?)
             WHERE id = ?`,
         )
-        .bind(row.size_bytes, pending ? 0 : 1, row.bucket_id),
+        .bind(row.size_bytes, row.size_bytes > 0 ? 1 : 0, row.bucket_id),
     );
   }
   statements.push(database.prepare('DELETE FROM media_objects WHERE key = ?').bind(row.key));
-  await (database.batch ? database.batch(statements) : Promise.all(statements.map((statement) => statement.run())));
+  await database.batch(statements);
 }
 
 async function recordObject(
@@ -175,13 +165,12 @@ async function recordObject(
   bucketId: string,
   size: number,
   contentType: string,
-  pending = false,
 ): Promise<void> {
-  await updateAccounting(env, await objectRow(env, key), { key, userId, backend, bucketId, size, contentType }, pending);
+  await updateAccounting(env, await objectRow(env, key), { key, userId, backend, bucketId, size, contentType });
 }
 
-async function forgetObject(env: Env, key: string, pending = false): Promise<void> {
-  await removeAccounting(env, await objectRow(env, key), pending);
+async function forgetObject(env: Env, key: string): Promise<void> {
+  await removeAccounting(env, await objectRow(env, key));
 }
 
 function r2(env: Env): R2Bucket {
@@ -192,10 +181,8 @@ function isStream(body: ReadableStream | ArrayBuffer | string): body is Readable
   return typeof ReadableStream !== 'undefined' && body instanceof ReadableStream;
 }
 
-function r2Size(object: R2Object | null | undefined, body: ReadableStream | ArrayBuffer | string): number {
-  if (object?.size !== undefined) return Number(object.size) || 0;
-  if (body instanceof ArrayBuffer) return body.byteLength;
-  return typeof body === 'string' ? new TextEncoder().encode(body).byteLength : 0;
+function r2Size(object: R2Object): number {
+  return Number(object.size) || 0;
 }
 
 function rangeFromHeaders(headers: Headers): { offset: number; length: number } | null {
@@ -229,6 +216,22 @@ async function targetForBucket(env: Env, bucketId: string) {
   return { bucket, target: await targetFor(env, bucket) };
 }
 
+async function bucketForPrefix(env: Env, key: string): Promise<StorageBucketRow | null> {
+  const marker = key.indexOf('/hls/');
+  if (marker < 0) return null;
+  const prefix = key.slice(0, marker + 4);
+  const row = await db(env)
+    .prepare(
+      `SELECT bucket_id
+         FROM media_objects
+        WHERE backend = 'b2' AND key LIKE ? AND size_bytes > 0
+        LIMIT 1`,
+    )
+    .bind(`${prefix}/%`)
+    .first<{ bucket_id: string }>();
+  return row?.bucket_id ? bucketRow(env, row.bucket_id) : null;
+}
+
 async function destinationFor(
   env: Env,
   key: string,
@@ -242,7 +245,9 @@ async function destinationFor(
   }
   if (await objectRow(env, key)) return { backend: 'r2', bucket: null };
   const media = r2(env);
-  if (typeof media.head === 'function' && (await media.head(key))) return { backend: 'r2', bucket: null };
+  if (await media.head(key)) return { backend: 'r2', bucket: null };
+  const pinned = await bucketForPrefix(env, key);
+  if (pinned) return { backend: 'b2', bucket: pinned };
   return backendFor(env, user);
 }
 
@@ -254,13 +259,14 @@ export async function putMedia(
     plan: string;
     body: ReadableStream | ArrayBuffer | string;
     contentType: string;
+    size?: number;
   },
 ): Promise<Backend> {
   const previous = await objectRow(env, opts.key);
   const destination = await destinationFor(env, opts.key, { id: opts.userId, plan: opts.plan });
   if (destination.backend === 'r2') {
     const object = await r2(env).put(opts.key, opts.body, { httpMetadata: { contentType: opts.contentType } });
-    const size = r2Size(object, opts.body);
+    const size = r2Size(object);
     if (previous || PAID_PLANS.has(opts.plan)) {
       await recordObject(env, opts.key, opts.userId, 'r2', '', size, opts.contentType);
     }
@@ -268,7 +274,23 @@ export async function putMedia(
   }
 
   const bucket = destination.bucket!;
-  const [b2Body, r2Body] = isStream(opts.body) ? opts.body.tee() : [opts.body, opts.body];
+  let b2Body: ReadableStream | ArrayBuffer;
+  let r2Body: ArrayBuffer | null;
+  if (isStream(opts.body)) {
+    if (opts.size !== undefined && opts.size <= 24 * 1024 * 1024) {
+      r2Body = await new Response(opts.body).arrayBuffer();
+      b2Body = r2Body;
+    } else {
+      r2Body = null;
+      b2Body = opts.body;
+    }
+  } else if (typeof opts.body === 'string') {
+    r2Body = new TextEncoder().encode(opts.body).buffer;
+    b2Body = r2Body;
+  } else {
+    r2Body = opts.body;
+    b2Body = opts.body;
+  }
   try {
     const { target } = await targetForBucket(env, bucket.id);
     const response = await putB2Object(target, opts.key, b2Body, opts.contentType);
@@ -279,8 +301,9 @@ export async function putMedia(
     return 'b2';
   } catch (error) {
     await rememberFailure(env, bucket.id, error);
+    if (!r2Body) throw new Error('upload could not be completed, please retry');
     const object = await r2(env).put(opts.key, r2Body, { httpMetadata: { contentType: opts.contentType } });
-    const size = r2Size(object, opts.body);
+    const size = r2Size(object);
     await recordObject(env, opts.key, opts.userId, 'r2', '', size, opts.contentType);
     return 'r2';
   }
@@ -288,17 +311,13 @@ export async function putMedia(
 
 async function readFromR2(object: R2ObjectBody | null): Promise<MediaRead | null> {
   if (!object) return null;
-  const legacy = object as R2ObjectBody & { text?: () => Promise<string> };
   const range = object.range && 'offset' in object.range
     ? { offset: object.range.offset ?? 0, length: object.range.length ?? object.size - (object.range.offset ?? 0) }
     : null;
-  const metadata = new Headers();
-  if (typeof object.writeHttpMetadata === 'function') object.writeHttpMetadata(metadata);
-  const body = object.body ?? (legacy.text ? new Response(await legacy.text()).body : null);
   return {
-    body,
+    body: object.body,
     size: object.size,
-    contentType: object.httpMetadata?.contentType ?? metadata.get('content-type') ?? '',
+    contentType: object.httpMetadata?.contentType ?? '',
     etag: object.httpEtag,
     range,
   };
@@ -318,7 +337,9 @@ export async function getMedia(env: Env, key: string, range?: string): Promise<M
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`B2 media read failed with HTTP ${response.status}`);
   const row = await objectRow(env, key);
-  const size = Number(response.headers.get('content-range')?.match(/\/(\d+)$/)?.[1] ?? response.headers.get('content-length') ?? 0);
+  const size = row && row.size_bytes > 0
+    ? row.size_bytes
+    : Number(response.headers.get('content-range')?.match(/\/(\d+)$/)?.[1] ?? response.headers.get('content-length') ?? 0);
   return {
     body: response.body,
     size,
@@ -371,14 +392,12 @@ export async function listMedia(env: Env, prefix: string): Promise<Array<{ key: 
   const rows = await bucketRows(env);
   const locations = new Map<string, Backend>();
   const database = db(env);
-  if (database) {
-    const query = database
+  {
+    const result = await database
       .prepare('SELECT key, backend FROM media_objects WHERE key LIKE ?')
-      .bind(`${prefix}%`);
-    if (typeof query.all === 'function') {
-      const result = await query.all<{ key: string; backend: Backend }>();
-      for (const row of result.results) locations.set(row.key, row.backend);
-    }
+      .bind(`${prefix}%`)
+      .all<{ key: string; backend: Backend }>();
+    for (const row of result.results) locations.set(row.key, row.backend);
   }
   const r2Objects: Array<{ key: string; size: number }> = [];
   let cursor: string | undefined;
@@ -412,19 +431,18 @@ export async function createUpload(
   const destination = await backendFor(env, { id: opts.userId, plan: opts.plan });
   if (destination.backend === 'r2') {
     const upload = await r2(env).createMultipartUpload(opts.key, { httpMetadata: { contentType: opts.contentType } });
-    await recordObject(env, opts.key, opts.userId, 'r2', '', 0, opts.contentType, true);
     return { uploadId: upload.uploadId, backend: 'r2' };
   }
   const bucket = destination.bucket!;
   try {
     const { target } = await targetForBucket(env, bucket.id);
     const uploadId = await createB2MultipartUpload(target, opts.key, opts.contentType);
-    await recordObject(env, opts.key, opts.userId, 'b2', bucket.id, 0, opts.contentType, true);
+    await recordObject(env, opts.key, opts.userId, 'b2', bucket.id, 0, opts.contentType);
     return { uploadId, backend: 'b2' };
   } catch (error) {
     await rememberFailure(env, bucket.id, error);
     const upload = await r2(env).createMultipartUpload(opts.key, { httpMetadata: { contentType: opts.contentType } });
-    await recordObject(env, opts.key, opts.userId, 'r2', '', 0, opts.contentType, true);
+    await recordObject(env, opts.key, opts.userId, 'r2', '', 0, opts.contentType);
     return { uploadId: upload.uploadId, backend: 'r2' };
   }
 }
@@ -436,14 +454,16 @@ async function b2UploadFailure(
   uploadId: string,
   error: unknown,
 ): Promise<never> {
+  const row = await objectRow(env, key);
+  if (row?.bucket_id) await rememberFailure(env, row.bucket_id, error);
   try {
     if (target) await abortB2MultipartUpload(target, key, uploadId);
   } catch {
     // The pending row is still removed even if the provider abort is unavailable.
   } finally {
-    await forgetObject(env, key, true);
+    await forgetObject(env, key);
   }
-  throw new Error(`B2 multipart upload failed: ${error instanceof Error ? error.message : String(error)}`);
+  throw new Error('upload could not be completed, please retry');
 }
 
 export async function uploadPart(
@@ -481,7 +501,7 @@ export async function completeUpload(
     const object = await upload.complete(parts);
     const size = object?.size ?? (await r2(env).head(key))?.size ?? 0;
     const row = await objectRow(env, key);
-    await recordObject(env, key, row?.user_id ?? '', 'r2', '', size, row?.content_type ?? '', true);
+    if (row) await recordObject(env, key, row.user_id, 'r2', '', size, row.content_type);
     return { size };
   }
   let target: Awaited<ReturnType<typeof targetFor>> | null = null;
@@ -491,7 +511,7 @@ export async function completeUpload(
     const object = await headMedia(env, key);
     if (!object) throw new Error('B2 multipart object is missing after completion');
     const row = await objectRow(env, key);
-    await recordObject(env, key, row?.user_id ?? '', 'b2', location.bucketId, object.size, row?.content_type ?? '', true);
+    await recordObject(env, key, row?.user_id ?? '', 'b2', location.bucketId, object.size, row?.content_type ?? '');
     return { size: object.size };
   } catch (error) {
     return b2UploadFailure(env, key, target, uploadId, error);
@@ -508,9 +528,9 @@ export async function abortUpload(env: Env, key: string, uploadId: string): Prom
       const { target } = await targetForBucket(env, location.bucketId);
       await abortB2MultipartUpload(target, key, uploadId);
     } finally {
-      await forgetObject(env, key, true);
+      await forgetObject(env, key);
     }
     return;
   }
-  await forgetObject(env, key, true);
+  await forgetObject(env, key);
 }
