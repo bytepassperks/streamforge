@@ -383,9 +383,9 @@
   box-shadow: 0 10px 26px rgba(0,0,0,.35);
 }
 .sf-cta-style-solid .sf-cta-btn {
-  background: #fff; color: var(--sf-accent);
+  background: var(--sf-on-accent, #fff); color: var(--sf-accent);
 }
-.sf-cta-style-solid .sf-cta-close { color: #fff; }
+.sf-cta-style-solid .sf-cta-close { color: var(--sf-on-accent, #fff); }
 
 .sf-cta.sf-cta-style-minimal {
   background: transparent; border: 0; box-shadow: none; padding: 0; color: #fff;
@@ -398,7 +398,7 @@
   background: transparent; border: 2px solid var(--sf-accent); color: #fff;
 }
 .sf-cta-style-outline .sf-cta-btn {
-  background: transparent; border: 1px solid var(--sf-accent); color: var(--sf-accent);
+  background: transparent; border: 1px solid var(--sf-accent); color: #fff;
 }
 .sf-cta-style-outline .sf-cta-btn:hover { background: var(--sf-accent); color: var(--sf-on-accent, #fff); }
 
@@ -408,6 +408,13 @@
 }
 .sf-cta-style-glass .sf-cta-body { color: #4b5563; opacity: 1; }
 .sf-cta-style-glass .sf-cta-btn { background: var(--sf-accent); color: var(--sf-on-accent, #fff); }
+.sf-cta-style-glass .sf-cta-btn.sf-btnstyle-ghost {
+  background: transparent; color: #111827;
+}
+.sf-cta-style-glass .sf-cta-btn.sf-btnstyle-ghost:hover,
+.sf-cta-style-glass .sf-cta-btn.sf-btnstyle-ghost:focus-visible {
+  background: var(--sf-accent); color: var(--sf-on-accent, #fff);
+}
 .sf-cta-style-glass .sf-cta-close { color: #111827; }
 
 .sf-cta.sf-cta-style-bar {
@@ -456,8 +463,9 @@
 }
 .sf-cta-style-gradient .sf-cta-body { margin-bottom: 6px; }
 .sf-cta-style-gradient .sf-cta-btn {
-  background: #fff; color: var(--sf-accent); border-radius: 999px; padding: 7px 13px;
+  background: #fff; color: #111827; border-radius: 999px; padding: 7px 13px;
 }
+.sf-cta-style-gradient .sf-cta-close { color: var(--sf-on-accent, #fff); }
 
 @container (max-width: 420px) {
   .sf-cta-btn.sf-btnstyle-chunky { font-size: 14px; padding: 10px 18px; }
@@ -553,10 +561,10 @@
 .sf-gate-style-solid .sf-gate-form input::placeholder,
 .sf-endscreen-style-solid .sf-gate-form input::placeholder { color: #475569; }
 .sf-gate-style-solid .sf-gate-submit,
-.sf-endscreen-style-solid .sf-gate-submit { background: #fff; color: var(--sf-accent); }
-.sf-endscreen-style-solid .sf-cta-btn { background: #fff; color: var(--sf-accent); }
+.sf-endscreen-style-solid .sf-gate-submit { background: #fff; color: #111827; }
+.sf-endscreen-style-solid .sf-cta-btn { background: #fff; color: #111827; }
 .sf-gate-style-solid .sf-gate-skip,
-.sf-endscreen-style-solid .sf-endscreen-replay { color: rgba(255,255,255,.86); }
+.sf-endscreen-style-solid .sf-endscreen-replay { color: var(--sf-on-accent, #fff); }
 
 .sf-gate-style-outline .sf-gate-card,
 .sf-endscreen-style-outline .sf-endscreen-card {
