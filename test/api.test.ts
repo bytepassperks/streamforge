@@ -134,8 +134,15 @@ function editableSlugRequest(slug: string): Request {
   });
 }
 
-function ctaEnv(existingIds: string[] = ['cta_keep123']): { env: Env; inserts: unknown[][] } {
+function ctaEnv(
+  existingIds: string[] = ['cta_keep123'],
+  otherVideoIds: string[] = [],
+): { env: Env; inserts: unknown[][] } {
   const inserts: unknown[][] = [];
+  const ctasByVideo = new Map([
+    ['vid_1', existingIds],
+    ['vid_2', otherVideoIds],
+  ]);
   const statement = (sql: string) => {
     let values: unknown[] = [];
     const chain = {
@@ -150,7 +157,7 @@ function ctaEnv(existingIds: string[] = ['cta_keep123']): { env: Env; inserts: u
       },
       async all<T>() {
         if (sql === 'SELECT id FROM ctas WHERE video_id = ?') {
-          return { results: existingIds.map((id) => ({ id })) } as T;
+          return { results: (ctasByVideo.get(String(values[0])) ?? []).map((id) => ({ id })) } as T;
         }
         return { results: [] } as T;
       },
@@ -290,7 +297,7 @@ describe('CTA persistence', () => {
   });
 
   it('regenerates an id owned by another video', async () => {
-    const { env, inserts } = ctaEnv([]);
+    const { env, inserts } = ctaEnv([], ['cta_owned_by_video']);
     const response = await api.request(
       ctaRequest([{ id: 'cta_owned_by_video', kind: 'overlay' }]),
       {},
