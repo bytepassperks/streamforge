@@ -635,14 +635,23 @@
           var td = cell(tr, value, className);
           td.setAttribute('data-label', label);
         }
+        function storageBreakableCell(label, value, className) {
+          var td = text('td', className || null);
+          String(value).split('').forEach(function (character) {
+            td.appendChild(document.createTextNode(character));
+            if (/[.@/_:-]/.test(character)) td.appendChild(document.createElement('wbr'));
+          });
+          td.setAttribute('data-label', label);
+          tr.appendChild(td);
+        }
         storageCell('Label', bucket.label || '—');
-        storageCell('Target', bucket.bucket_name + ' @ ' + bucket.endpoint, 'tiny');
+        storageBreakableCell('Target', bucket.bucket_name + ' @ ' + bucket.endpoint, 'tiny storage-target');
         storageCell('Key ID', bucket.key_id_masked, 'tiny');
         storageCell('Status', bucket.status);
         storageCell('Used / capacity', bytes(bucket.used_bytes) + ' / ' + (bucket.capacity_bytes ? bytes(bucket.capacity_bytes) : '∞'));
         storageCell('Objects', String(bucket.object_count));
         storageCell('Last probe', fmtDate(bucket.last_probe_at), 'tiny muted');
-        storageCell('Last error', bucket.last_error || '—', 'tiny muted');
+        storageBreakableCell('Last error', bucket.last_error || '—', 'tiny muted storage-error');
         tr.appendChild(storageActions(bucket));
         return tr;
       });

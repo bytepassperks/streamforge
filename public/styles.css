@@ -866,7 +866,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 #storage-body .storage-table th:nth-child(1),
 #storage-body .storage-table td:nth-child(1) { width: 9%; }
 #storage-body .storage-table th:nth-child(2),
-#storage-body .storage-table td:nth-child(2) { width: 13%; }
+#storage-body .storage-table td:nth-child(2) { width: 15%; }
 #storage-body .storage-table th:nth-child(3),
 #storage-body .storage-table td:nth-child(3) { width: 10%; }
 #storage-body .storage-table th:nth-child(4),
@@ -880,7 +880,11 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 #storage-body .storage-table th:nth-child(8),
 #storage-body .storage-table td:nth-child(8) { width: 9%; }
 #storage-body .storage-table th:nth-child(9),
-#storage-body .storage-table td:nth-child(9) { width: 22%; }
+#storage-body .storage-table td:nth-child(9) { width: 20%; }
+#storage-body .storage-table td.storage-target,
+#storage-body .storage-table td.storage-error {
+  overflow-wrap: normal; word-break: normal;
+}
 #storage-body .storage-actions {
   display: table-cell; vertical-align: top;
 }
