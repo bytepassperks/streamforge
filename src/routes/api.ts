@@ -27,6 +27,17 @@ import { sendMail } from '../lib/email';
 import { RESET_TTL_SECONDS, claimReset, generateResetToken, hashResetToken, resetUrl } from '../lib/resets';
 import { hlsMasterVariantUris, rewriteHlsMasterBandwidth } from '../lib/hls';
 import {
+  abortUpload,
+  completeUpload,
+  createUpload,
+  deleteMedia,
+  getMedia,
+  headMedia,
+  listMedia,
+  putMedia,
+  uploadPart,
+} from '../lib/media-store';
+import {
   defaultPlayerConfig,
   mergePlayerConfig,
   newId,
@@ -476,9 +487,25 @@ api.patch('/videos/:id', async (c) => {
 });
 
 api.delete('/videos/:id', async (c) => {
+  const user = c.get('user');
+  const video = await c.env.DB.prepare(
+    'SELECT source_ref, fallback_ref, thumbnail_url, thumbnail_url_b FROM videos WHERE id = ? AND user_id = ?',
+  )
+    .bind(c.req.param('id'), user.id)
+    .first<{ source_ref: string; fallback_ref: string; thumbnail_url: string; thumbnail_url_b: string }>();
   await c.env.DB.prepare('DELETE FROM videos WHERE id = ? AND user_id = ?')
-    .bind(c.req.param('id'), c.get('user').id)
+    .bind(c.req.param('id'), user.id)
     .run();
+  if (video) {
+    c.executionCtx.waitUntil(
+      cleanupVideoMedia(c.env, user.id, c.req.param('id'), [
+        video.source_ref,
+        video.fallback_ref,
+        video.thumbnail_url,
+        video.thumbnail_url_b,
+      ]),
+    );
+  }
   return c.json({ ok: true });
 });
 
@@ -503,35 +530,59 @@ function hlsPrefix(userId: string, videoId: string): string {
   return `${userId}/${videoId}/hls`;
 }
 
+function localMediaKey(value: string, userId: string): string | null {
+  if (!value || /^[a-z][a-z\d+.-]*:/i.test(value)) return null;
+  let key = value;
+  if (key.startsWith('/media/')) key = key.slice('/media/'.length);
+  else if (key.startsWith('/')) return null;
+  key = key.split(/[?#]/, 1)[0];
+  return key.startsWith(`${userId}/`) ? key : null;
+}
+
+async function cleanupVideoMedia(
+  env: Env,
+  userId: string,
+  videoId: string,
+  mediaRefs: string[],
+): Promise<void> {
+  const keys = new Set<string>();
+  for (const ref of mediaRefs) {
+    const key = localMediaKey(ref, userId);
+    if (key) keys.add(key);
+  }
+  try {
+    for (const object of await listMedia(env, hlsPrefix(userId, videoId))) {
+      if (object.key.startsWith(`${userId}/`)) keys.add(object.key);
+    }
+  } catch {
+    /* Cleanup is best effort and must not change the delete response. */
+  }
+  for (const key of keys) {
+    try {
+      await deleteMedia(env, key);
+    } catch {
+      /* Cleanup is best effort and must not change the delete response. */
+    }
+  }
+}
+
 function hlsPartType(path: string): string {
   const dot = path.lastIndexOf('.');
   return dot >= 0 ? HLS_TYPES[path.slice(dot).toLowerCase()] ?? '' : '';
 }
 
-async function listAllR2Objects(media: R2Bucket, prefix: string): Promise<R2Object[]> {
-  const objects: R2Object[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await media.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
-    objects.push(...page.objects);
-    if (!page.truncated) break;
-    cursor = page.cursor;
-  } while (cursor);
-  return objects;
-}
-
 async function repairedHlsMaster(
-  media: R2Bucket,
+  env: Env,
   prefix: string,
   master: string,
-  objects: R2Object[],
+  objects: Array<{ key: string; size: number }>,
 ): Promise<string> {
   const variants = await Promise.all(
     hlsMasterVariantUris(master).map(async (variantUri) => {
       const cleanVariantUri = variantUri.split(/[?#]/, 1)[0];
       if (!cleanVariantUri || cleanVariantUri.startsWith('/') || /^[a-z][a-z\d+.-]*:/i.test(cleanVariantUri)) return null;
       const variantKey = `${prefix}/${cleanVariantUri}`;
-      const playlistObject = await media.get(variantKey);
+      const playlistObject = await getMedia(env, variantKey);
       if (!playlistObject) return null;
       const slash = cleanVariantUri.lastIndexOf('/');
       const directory = slash >= 0 ? cleanVariantUri.slice(0, slash + 1) : '';
@@ -542,7 +593,7 @@ async function repairedHlsMaster(
           segmentSizes[object.key.slice(segmentPrefix.length)] = object.size;
         }
       }
-      return { playlist: await playlistObject.text(), segmentSizes };
+      return { playlist: await new Response(playlistObject.body).text(), segmentSizes };
     }),
   );
   return rewriteHlsMasterBandwidth(master, variants);
@@ -565,7 +616,21 @@ api.post('/videos/:id/hls/parts', async (c) => {
 
   const prefix = hlsPrefix(user.id, id);
   const key = `${prefix}/${path}`;
-  await c.env.MEDIA.put(key, entry.stream(), { httpMetadata: { contentType: hlsPartType(path) } });
+  try {
+    await putMedia(c.env, {
+      key,
+      userId: user.id,
+      plan: user.plan,
+      body: entry.stream(),
+      contentType: hlsPartType(path),
+      size: entry.size,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
+      return c.json({ error: error.message }, 400);
+    }
+    throw error;
+  }
   return c.json({ ok: true, path, key });
 });
 
@@ -581,18 +646,30 @@ api.post('/videos/:id/hls/complete', async (c) => {
 
   const prefix = hlsPrefix(user.id, id);
   const masterKey = `${prefix}/master.m3u8`;
-  const master = await c.env.MEDIA.get(masterKey);
+  const master = await getMedia(c.env, masterKey);
   if (!master) return c.json({ error: 'master.m3u8 has not been uploaded' }, 400);
-  const masterText = await master.text();
-  const objects = await listAllR2Objects(c.env.MEDIA, prefix);
+  const masterText = await new Response(master.body).text();
+  const objects = await listMedia(c.env, prefix);
   if (objects.length > HLS_PART_COUNT_LIMIT) {
     return c.json({ error: 'an HLS ladder cannot contain more than 3000 parts' }, 413);
   }
-  const repairedMaster = await repairedHlsMaster(c.env.MEDIA, prefix, masterText, objects);
+  const repairedMaster = await repairedHlsMaster(c.env, prefix, masterText, objects);
   if (repairedMaster !== masterText) {
-    await c.env.MEDIA.put(masterKey, repairedMaster, {
-      httpMetadata: { contentType: 'application/vnd.apple.mpegurl' },
-    });
+    try {
+      await putMedia(c.env, {
+        key: masterKey,
+        userId: user.id,
+        plan: user.plan,
+        body: repairedMaster,
+        contentType: 'application/vnd.apple.mpegurl',
+        size: new TextEncoder().encode(repairedMaster).byteLength,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
+        return c.json({ error: error.message }, 400);
+      }
+      throw error;
+    }
   }
 
   const nextRef = `/media/${masterKey}`;
@@ -1119,8 +1196,11 @@ api.post('/uploads/create', async (c) => {
   const limit = uploadLimitFor(extension);
   if (size > limit.bytes) return c.json({ error: `file is larger than ${limit.label}` }, 413);
   const key = `${c.get('user').id}/${newId()}.${extension}`;
-  const upload = await c.env.MEDIA.createMultipartUpload(key, {
-    httpMetadata: { contentType: `video/${extension}` },
+  const upload = await createUpload(c.env, {
+    key,
+    userId: c.get('user').id,
+    plan: c.get('user').plan,
+    contentType: `video/${extension}`,
   });
   return c.json({ key, uploadId: upload.uploadId }, 201);
 });
@@ -1140,10 +1220,12 @@ api.post('/uploads/part', async (c) => {
   if (!(entry instanceof File)) return c.json({ error: 'file is required' }, 400);
   if (entry.size > MULTIPART_PART_LIMIT) return c.json({ error: 'upload parts must be 10 MB or smaller' }, 413);
   try {
-    const upload = c.env.MEDIA.resumeMultipartUpload(key as string, uploadId);
-    const part = await upload.uploadPart(partNumber, entry.stream());
+    const part = await uploadPart(c.env, key as string, uploadId, partNumber, entry.stream());
     return c.json({ etag: part.etag });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
+      return c.json({ error: error.message }, 400);
+    }
     return c.json({ error: 'upload session not found or expired' }, 400);
   }
 });
@@ -1177,14 +1259,16 @@ api.post('/uploads/complete', async (c) => {
     parts.push({ partNumber: previous, etag: part.etag });
   }
   try {
-    const upload = c.env.MEDIA.resumeMultipartUpload(body.key as string, body.uploadId);
-    await upload.complete(parts);
-  } catch {
+    await completeUpload(c.env, body.key as string, body.uploadId, parts);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
+      return c.json({ error: error.message }, 400);
+    }
     return c.json({ error: 'upload session not found or expired' }, 400);
   }
-  const object = await c.env.MEDIA.head(body.key as string);
+  const object = await headMedia(c.env, body.key as string);
   if (object && object.size > UPLOAD_LIMITS.video) {
-    await c.env.MEDIA.delete(body.key as string);
+    await deleteMedia(c.env, body.key as string);
     return c.json({ error: `file is larger than ${uploadLimitFor('mp4').label}` }, 413);
   }
   return c.json({ key: body.key, url: `/media/${body.key}` }, 201);
@@ -1196,8 +1280,7 @@ api.post('/uploads/abort', async (c) => {
   if (invalidKey) return invalidKey;
   if (typeof body.uploadId !== 'string' || !body.uploadId) return c.json({ error: 'upload id is required' }, 400);
   try {
-    const upload = c.env.MEDIA.resumeMultipartUpload(body.key as string, body.uploadId);
-    await upload.abort();
+    await abortUpload(c.env, body.key as string, body.uploadId);
     return c.json({ ok: true });
   } catch {
     return c.json({ error: 'upload session not found or expired' }, 400);
@@ -1217,6 +1300,20 @@ api.post('/uploads', async (c) => {
   const limit = uploadLimitFor(ext);
   if (file.size > limit.bytes) return c.json({ error: `file is larger than ${limit.label}` }, 413);
   const key = `${c.get('user').id}/${newId()}.${ext}`;
-  await c.env.MEDIA.put(key, file.stream(), { httpMetadata: { contentType: declared } });
+  try {
+    await putMedia(c.env, {
+      key,
+      userId: c.get('user').id,
+      plan: c.get('user').plan,
+      body: file.stream(),
+      contentType: declared,
+      size: file.size,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
+      return c.json({ error: error.message }, 400);
+    }
+    throw error;
+  }
   return c.json({ key, url: `/media/${key}` }, 201);
 });
