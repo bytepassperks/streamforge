@@ -595,6 +595,7 @@
   border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.12); color: #fff;
 }
 .sf-gate-style-glass .sf-gate-form input::placeholder { color: rgba(255,255,255,.75); }
+
 .sf-gate.sf-gate-style-sheet { align-items: end; }
 .sf-gate-style-sheet .sf-gate-card,
 .sf-endscreen-style-sheet .sf-endscreen-card {
