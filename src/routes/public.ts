@@ -15,6 +15,7 @@ import { signAccessToken, verifyAccessToken } from '../lib/tokens';
 import { dispatchWebhooks } from '../lib/webhooks';
 import { sendMail } from '../lib/email';
 import { getMedia } from '../lib/media-store';
+import type { MediaRead } from '../lib/media-store';
 import {
   SITE,
   absoluteUrl,
@@ -592,6 +593,17 @@ pub.post('/api/leads/:videoId', async (c) => {
 
 const MEDIA_CACHE_LIMIT = 200 * 1024 * 1024;
 
+function mediaHeaders(object: MediaRead, cacheControl: string): Headers {
+  const headers = new Headers();
+  if (object.contentType) headers.set('content-type', object.contentType);
+  headers.set('etag', object.etag);
+  headers.set('accept-ranges', 'bytes');
+  headers.set('cache-control', cacheControl);
+  headers.set('access-control-allow-origin', '*');
+  headers.set('access-control-allow-headers', 'content-type, range');
+  return headers;
+}
+
 /** R2-backed media delivery with range support so seeking works in the player. */
 pub.get('/media/*', async (c) => {
   const key = decodeURIComponent(c.req.path.replace(/^\/media\//, ''));
@@ -634,17 +646,20 @@ pub.get('/media/*', async (c) => {
   }
   if (!object) return c.text('not found', 404);
 
-  const headers = new Headers();
-  if (object.contentType) headers.set('content-type', object.contentType);
-  headers.set('etag', object.etag);
-  headers.set('accept-ranges', 'bytes');
-  headers.set('cache-control', cacheControl);
-  headers.set('access-control-allow-origin', '*');
-  headers.set('access-control-allow-headers', 'content-type, range');
+  const headers = mediaHeaders(object, cacheControl);
   if (range && object.range) {
     const offset = object.range.offset;
     const length = object.range.length;
     headers.set('content-range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
+    if (cacheMiss && cacheKey && offset === 0 && object.size <= MEDIA_CACHE_LIMIT) {
+      c.executionCtx.waitUntil(
+        (async () => {
+          const full = await getMedia(c.env, key);
+          if (!full?.body || full.size > MEDIA_CACHE_LIMIT) return;
+          await caches.default.put(cacheKey, new Response(full.body, { headers: mediaHeaders(full, cacheControl) }));
+        })().catch(() => undefined),
+      );
+    }
     return new Response(object.body, { status: 206, headers });
   }
   if (cacheMiss && cacheKey && object.body && object.size <= MEDIA_CACHE_LIMIT) {

@@ -630,6 +630,44 @@ describe('media store routing', () => {
     }
   });
 
+  it('warms the full-object cache after a zero-start B2 range miss', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state);
+    const providerFetch = globalThis.fetch;
+    const countedFetch = vi.fn(providerFetch);
+    vi.stubGlobal('fetch', countedFetch);
+    state.b2.set('u/video.mp4', bytes('abcdef'));
+    state.objects.set('u/video.mp4', {
+      key: 'u/video.mp4',
+      user_id: 'u',
+      backend: 'b2',
+      bucket_id: 'bucket-1',
+      size_bytes: 6,
+      content_type: 'video/mp4',
+    });
+    const match = vi.fn(async () => undefined);
+    const put = vi.fn(async () => undefined);
+    const waits: Promise<unknown>[] = [];
+    vi.stubGlobal('caches', { default: { match, put } });
+    try {
+      const response = await pub.request(
+        new Request('https://videokr.com/media/u/video.mp4', { headers: { range: 'bytes=0-' } }),
+        {},
+        state.env,
+        { waitUntil: (promise: Promise<unknown>) => waits.push(promise), passThroughOnException: vi.fn() },
+      );
+      expect(response.status).toBe(206);
+      expect(await response.text()).toBe('abcdef');
+      await Promise.all(waits);
+      expect(countedFetch).toHaveBeenCalledTimes(2);
+      expect(countedFetch.mock.calls.every(([, init]) => init?.method === 'GET')).toBe(true);
+      expect(put).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('does not turn a B2 credential decryption failure into a missing object', async () => {
     const state = memoryEnv([bucket()]);
     state.buckets[0].secret_cipher = 'not-a-valid-cipher';

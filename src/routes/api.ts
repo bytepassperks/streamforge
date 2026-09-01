@@ -487,9 +487,25 @@ api.patch('/videos/:id', async (c) => {
 });
 
 api.delete('/videos/:id', async (c) => {
+  const user = c.get('user');
+  const video = await c.env.DB.prepare(
+    'SELECT source_ref, fallback_ref, thumbnail_url, thumbnail_url_b FROM videos WHERE id = ? AND user_id = ?',
+  )
+    .bind(c.req.param('id'), user.id)
+    .first<{ source_ref: string; fallback_ref: string; thumbnail_url: string; thumbnail_url_b: string }>();
   await c.env.DB.prepare('DELETE FROM videos WHERE id = ? AND user_id = ?')
-    .bind(c.req.param('id'), c.get('user').id)
+    .bind(c.req.param('id'), user.id)
     .run();
+  if (video) {
+    c.executionCtx.waitUntil(
+      cleanupVideoMedia(c.env, user.id, c.req.param('id'), [
+        video.source_ref,
+        video.fallback_ref,
+        video.thumbnail_url,
+        video.thumbnail_url_b,
+      ]),
+    );
+  }
   return c.json({ ok: true });
 });
 
@@ -512,6 +528,42 @@ const HLS_TYPES: Record<string, string> = {
 
 function hlsPrefix(userId: string, videoId: string): string {
   return `${userId}/${videoId}/hls`;
+}
+
+function localMediaKey(value: string, userId: string): string | null {
+  if (!value || /^[a-z][a-z\d+.-]*:/i.test(value)) return null;
+  let key = value;
+  if (key.startsWith('/media/')) key = key.slice('/media/'.length);
+  else if (key.startsWith('/')) return null;
+  key = key.split(/[?#]/, 1)[0];
+  return key.startsWith(`${userId}/`) ? key : null;
+}
+
+async function cleanupVideoMedia(
+  env: Env,
+  userId: string,
+  videoId: string,
+  mediaRefs: string[],
+): Promise<void> {
+  const keys = new Set<string>();
+  for (const ref of mediaRefs) {
+    const key = localMediaKey(ref, userId);
+    if (key) keys.add(key);
+  }
+  try {
+    for (const object of await listMedia(env, hlsPrefix(userId, videoId))) {
+      if (object.key.startsWith(`${userId}/`)) keys.add(object.key);
+    }
+  } catch {
+    /* Cleanup is best effort and must not change the delete response. */
+  }
+  for (const key of keys) {
+    try {
+      await deleteMedia(env, key);
+    } catch {
+      /* Cleanup is best effort and must not change the delete response. */
+    }
+  }
 }
 
 function hlsPartType(path: string): string {
@@ -564,14 +616,21 @@ api.post('/videos/:id/hls/parts', async (c) => {
 
   const prefix = hlsPrefix(user.id, id);
   const key = `${prefix}/${path}`;
-  await putMedia(c.env, {
-    key,
-    userId: user.id,
-    plan: user.plan,
-    body: entry.stream(),
-    contentType: hlsPartType(path),
-    size: entry.size,
-  });
+  try {
+    await putMedia(c.env, {
+      key,
+      userId: user.id,
+      plan: user.plan,
+      body: entry.stream(),
+      contentType: hlsPartType(path),
+      size: entry.size,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
+      return c.json({ error: error.message }, 400);
+    }
+    throw error;
+  }
   return c.json({ ok: true, path, key });
 });
 
@@ -596,14 +655,21 @@ api.post('/videos/:id/hls/complete', async (c) => {
   }
   const repairedMaster = await repairedHlsMaster(c.env, prefix, masterText, objects);
   if (repairedMaster !== masterText) {
-    await putMedia(c.env, {
-      key: masterKey,
-      userId: user.id,
-      plan: user.plan,
-      body: repairedMaster,
-      contentType: 'application/vnd.apple.mpegurl',
-      size: new TextEncoder().encode(repairedMaster).byteLength,
-    });
+    try {
+      await putMedia(c.env, {
+        key: masterKey,
+        userId: user.id,
+        plan: user.plan,
+        body: repairedMaster,
+        contentType: 'application/vnd.apple.mpegurl',
+        size: new TextEncoder().encode(repairedMaster).byteLength,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
+        return c.json({ error: error.message }, 400);
+      }
+      throw error;
+    }
   }
 
   const nextRef = `/media/${masterKey}`;
@@ -1234,13 +1300,20 @@ api.post('/uploads', async (c) => {
   const limit = uploadLimitFor(ext);
   if (file.size > limit.bytes) return c.json({ error: `file is larger than ${limit.label}` }, 413);
   const key = `${c.get('user').id}/${newId()}.${ext}`;
-  await putMedia(c.env, {
-    key,
-    userId: c.get('user').id,
-    plan: c.get('user').plan,
-    body: file.stream(),
-    contentType: declared,
-    size: file.size,
-  });
+  try {
+    await putMedia(c.env, {
+      key,
+      userId: c.get('user').id,
+      plan: c.get('user').plan,
+      body: file.stream(),
+      contentType: declared,
+      size: file.size,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'upload could not be completed, please retry') {
+      return c.json({ error: error.message }, 400);
+    }
+    throw error;
+  }
   return c.json({ key, url: `/media/${key}` }, 201);
 });
