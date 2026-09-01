@@ -547,6 +547,10 @@
 }
 .sf-gate-style-light .sf-gate-skip,
 .sf-endscreen-style-light .sf-endscreen-replay { color: #64748b; }
+.sf-gate-style-light .sf-gate-submit.sf-btnstyle-ghost,
+.sf-endscreen-style-light .sf-gate-submit.sf-btnstyle-ghost {
+  background: transparent; border-color: #111827; color: #111827;
+}
 
 .sf-gate-style-solid .sf-gate-card,
 .sf-endscreen-style-solid .sf-endscreen-card {
