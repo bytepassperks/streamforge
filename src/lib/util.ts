@@ -57,7 +57,7 @@ export const GATE_STYLES = [
   'glass',
   'sheet',
   'spotlight',
-  'minimal',
+  'fullbleed',
   'split',
   'gradient',
 ] as const;
@@ -65,6 +65,25 @@ export const GATE_STYLES = [
 export function normalizeCtaStyle(value: unknown, kind: unknown): string {
   const styles = kind === 'gate' || kind === 'endscreen' ? GATE_STYLES : CTA_STYLES;
   return (styles as readonly string[]).includes(String(value ?? '')) ? String(value) : 'card';
+}
+
+export const CTA_BUTTON_STYLES = [
+  'solid',
+  'pill',
+  'chunky',
+  'raised',
+  'framed',
+  'arrow',
+  'gradient',
+  'glow',
+  'ghost',
+  'white',
+] as const;
+
+export function normalizeCtaButtonStyle(value: unknown): string {
+  return (CTA_BUTTON_STYLES as readonly string[]).includes(String(value ?? ''))
+    ? String(value)
+    : 'solid';
 }
 
 export function escapeHtml(input: string): string {

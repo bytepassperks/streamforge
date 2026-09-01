@@ -32,6 +32,7 @@ import {
   newId,
   now,
   normalizeCtaStyle,
+  normalizeCtaButtonStyle,
   normalizeCtaUrl,
   parseSource,
   slugify,
@@ -647,8 +648,8 @@ api.put('/videos/:id/ctas', async (c) => {
     statements.push(
       c.env.DB.prepare(
         `INSERT INTO ctas (id, video_id, kind, start_seconds, end_seconds, headline, body,
-                           button_text, button_url, fields, skippable, position, style)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                           button_text, button_url, fields, skippable, position, style, button_style)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
         ctaId,
         id,
@@ -663,6 +664,7 @@ api.put('/videos/:id/ctas', async (c) => {
         cta.skippable === false ? 0 : 1,
         String(cta.position ?? 'bottom-right'),
         normalizeCtaStyle(cta.style, cta.kind),
+        normalizeCtaButtonStyle(cta.button_style),
       ),
     );
   }

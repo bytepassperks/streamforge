@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   canonicalRedirect,
+  CTA_BUTTON_STYLES,
   CTA_STYLES,
   defaultPlayerConfig,
   deviceFromUserAgent,
@@ -9,6 +10,7 @@ import {
   mergePlayerConfig,
   GATE_STYLES,
   normalizeCtaStyle,
+  normalizeCtaButtonStyle,
   normalizeCtaUrl,
   normalizeSkin,
   PLAYER_SKINS,
@@ -140,6 +142,8 @@ describe('CTA normalization', () => {
   });
 
   it('normalizes unknown CTA styles to the default card', () => {
+    expect(GATE_STYLES).toContain('fullbleed');
+    expect(GATE_STYLES).not.toContain('minimal');
     CTA_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'overlay')).toBe(style));
     GATE_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'gate')).toBe(style));
     GATE_STYLES.forEach((style) => expect(normalizeCtaStyle(style, 'endscreen')).toBe(style));
@@ -150,6 +154,16 @@ describe('CTA normalization', () => {
     expect(normalizeCtaStyle('', 'overlay')).toBe('card');
     expect(normalizeCtaStyle(undefined, 'gate')).toBe('card');
     expect(normalizeCtaStyle(42, 'endscreen')).toBe('card');
+  });
+
+  it('normalizes CTA button styles and preserves the declared vocabulary', () => {
+    expect(CTA_BUTTON_STYLES).toEqual([
+      'solid', 'pill', 'chunky', 'raised', 'framed',
+      'arrow', 'gradient', 'glow', 'ghost', 'white',
+    ]);
+    CTA_BUTTON_STYLES.forEach((style) => expect(normalizeCtaButtonStyle(style)).toBe(style));
+    expect(normalizeCtaButtonStyle('unknown')).toBe('solid');
+    expect(normalizeCtaButtonStyle(undefined)).toBe('solid');
   });
 });
 
@@ -166,6 +180,10 @@ describe('escapeHtml + safeExternalUrl', () => {
 });
 
 describe('player config', () => {
+  it('normalizes every player skin and defaults unknown skins to videokr', () => {
+    PLAYER_SKINS.forEach((skin) => expect(normalizeSkin(skin)).toBe(skin));
+    expect(normalizeSkin('unknown')).toBe('videokr');
+  });
   it('merges partial stored config over defaults', () => {
     const merged = mergePlayerConfig(JSON.stringify({ accent: '#ff0000', controls: { pip: false } }));
     expect(merged.accent).toBe('#ff0000');

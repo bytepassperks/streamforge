@@ -212,7 +212,7 @@ describe('editable video slugs', () => {
 });
 
 describe('CTA persistence', () => {
-  it('normalizes scheme-less urls and unknown styles', async () => {
+  it('normalizes scheme-less urls, unknown styles, and button styles', async () => {
     const { env, inserts } = ctaEnv();
     const response = await api.request(
       ctaRequest([
@@ -221,6 +221,7 @@ describe('CTA persistence', () => {
           button_text: 'Book a demo',
           button_url: 'example.com',
           style: 'not-a-style',
+          button_style: 'arrow',
         },
       ]),
       {},
@@ -241,6 +242,7 @@ describe('CTA persistence', () => {
       1,
       'bottom-right',
       'card',
+      'arrow',
     ]);
   });
 

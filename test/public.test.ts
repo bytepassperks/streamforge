@@ -224,9 +224,9 @@ describe('embed payload badge', () => {
   it('includes CTA styles in the player payload', async () => {
     const payload = await embedPayloadWithCtas(
       { plan: 'free' },
-      [{ id: 'cta_1', kind: 'overlay', style: 'spotlight' }],
+      [{ id: 'cta_1', kind: 'overlay', style: 'spotlight', button_style: 'solid' }],
     );
-    expect(payload.ctas).toEqual([{ id: 'cta_1', kind: 'overlay', style: 'spotlight' }]);
+    expect(payload.ctas).toEqual([{ id: 'cta_1', kind: 'overlay', style: 'spotlight', button_style: 'solid' }]);
   });
 });
 

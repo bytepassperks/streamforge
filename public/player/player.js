@@ -17,6 +17,7 @@
     bold: 'pop',
     glass: 'frame',
   };
+  var CTA_BUTTON_STYLES = ['solid', 'pill', 'chunky', 'raised', 'framed', 'arrow', 'gradient', 'glow', 'ghost', 'white'];
 
   function skinName(skin) {
     if (SKINS.indexOf(skin) !== -1) return skin;
@@ -100,6 +101,14 @@
       classes += ' sf-pos-' + (cta.position || 'bottom-right');
     }
     return classes;
+  }
+
+  function ctaButtonStyle(value) {
+    return CTA_BUTTON_STYLES.indexOf(value) !== -1 ? value : 'solid';
+  }
+
+  function ctaButtonClass(value) {
+    return 'sf-cta-btn sf-btnstyle-' + ctaButtonStyle(value);
   }
 
   function fmtTime(seconds) {
@@ -1437,11 +1446,19 @@
     var buttonUrl = normalizeUrl(cta.button_url);
     if (cta.button_text && buttonUrl) {
       var link = document.createElement('a');
-      link.className = 'sf-cta-btn';
+      link.className = ctaButtonClass(cta.button_style);
       link.href = buttonUrl;
       link.target = '_blank';
       link.rel = 'noopener';
-      link.textContent = cta.button_text;
+      if (ctaButtonStyle(cta.button_style) === 'arrow') {
+        link.appendChild(document.createTextNode(cta.button_text));
+        var arrow = document.createElement('span');
+        arrow.className = 'sf-btn-arrow';
+        arrow.textContent = '↗';
+        link.appendChild(arrow);
+      } else {
+        link.textContent = cta.button_text;
+      }
       link.setAttribute('data-sf', 'cta-click');
       link.addEventListener('click', function () {
         self.track('cta_click', self.adapter.currentTime(), self.adapter.duration(), cta.id);
@@ -1486,7 +1503,7 @@
     });
     var submit = document.createElement('button');
     submit.type = 'submit';
-    submit.className = 'sf-gate-submit';
+    submit.className = 'sf-gate-submit ' + ctaButtonClass(cta.button_style);
     submit.textContent = cta.button_text || 'Continue';
     submit.setAttribute('data-sf', 'gate-submit');
     form.appendChild(submit);
@@ -1703,11 +1720,19 @@
     var buttonUrl = normalizeUrl(end.button_url);
     if (end.button_text && buttonUrl) {
       var link = document.createElement('a');
-      link.className = 'sf-cta-btn';
+      link.className = ctaButtonClass(end.button_style);
       link.href = buttonUrl;
       link.target = '_blank';
       link.rel = 'noopener';
-      link.textContent = end.button_text;
+      if (ctaButtonStyle(end.button_style) === 'arrow') {
+        link.appendChild(document.createTextNode(end.button_text));
+        var endArrow = document.createElement('span');
+        endArrow.className = 'sf-btn-arrow';
+        endArrow.textContent = '↗';
+        link.appendChild(endArrow);
+      } else {
+        link.textContent = end.button_text;
+      }
       link.addEventListener('click', function () {
         self.track('cta_click', self.adapter.duration(), self.adapter.duration(), end.id);
       });

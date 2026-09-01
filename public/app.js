@@ -249,9 +249,45 @@
   function sourceBlob(source) {
     if (source instanceof File) return Promise.resolve(source);
     return fetch(new URL(source, location.href).toString()).then(function (res) {
-      if (!res.ok) throw new Error('could not read the original video');
+      if (!res.ok) throw new Error("Only uploaded videos can be optimised — this video's host does not allow it.");
       return res.blob();
+    }).catch(function (err) {
+      if (err && err.message === "Only uploaded videos can be optimised — this video's host does not allow it.") {
+        throw err;
+      }
+      throw new Error("Only uploaded videos can be optimised — this video's host does not allow it.");
     });
+  }
+
+  function isOptimisableSource(file, source) {
+    if (file) return true;
+    if (!source) return false;
+    try {
+      var url = new URL(source, location.href);
+      return url.origin === location.origin && url.pathname.indexOf('/media/') === 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function optimisationErrorMessage(err) {
+    var message = err && err.message ? err.message : '';
+    if (
+      message === 'optimisation cancelled' ||
+      message === 'upload cancelled' ||
+      message === 'another optimisation is already running' ||
+      message.indexOf('This video would create more than 3000 HLS parts.') === 0 ||
+      message.indexOf('This ladder exceeds the 3000-part limit.') === 0 ||
+      message === 'already small enough to stream' ||
+      message === 'HLS completion upload failed' ||
+      message.indexOf('Browser encoder failed with code ') === 0 ||
+      message.indexOf('browser encoder ') === 0 ||
+      message.indexOf('HLS part upload failed') === 0 ||
+      message === "Only uploaded videos can be optimised — this video's host does not allow it."
+    ) {
+      return message;
+    }
+    return 'Could not optimise this video. The original is unchanged and still plays.';
   }
 
   function encodedHlsVariantIndexes(height) {
@@ -335,15 +371,21 @@
         var form = new FormData();
         form.append('path', relative);
         form.append('file', new Blob([data]), relative);
-        return fetch('/api/videos/' + encodeURIComponent(videoId) + '/hls/parts', {
-          method: 'POST',
-          credentials: 'same-origin',
-          body: form,
-        }).then(function (res) {
-          if (!res.ok) return res.json().catch(function () { return {}; }).then(function (body) {
-            throw new Error(body.error || 'HLS part upload failed');
+        function send(attempt) {
+          return fetch('/api/videos/' + encodeURIComponent(videoId) + '/hls/parts', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: form,
+          }).then(function (res) {
+            if (!res.ok) return res.json().catch(function () { return {}; }).then(function (body) {
+              throw new Error(body.error || 'HLS part upload failed');
+            });
+          }).catch(function (err) {
+            if (!job.cancelled && attempt < 3) return send(attempt + 1);
+            throw err;
           });
-        });
+        }
+        return send(1);
       });
     }
     function worker() {
@@ -1155,7 +1197,11 @@
     var file = $('cv-upload').files[0];
     var thumb = $('cv-thumb').files[0];
     var source = $('cv-source').value.trim();
+    var hlsEligible = isOptimisableSource(file, source);
     $('cv-save').disabled = !file && !source;
+    $('cv-hls').disabled = !hlsEligible;
+    if (!hlsEligible) $('cv-hls').checked = false;
+    $('cv-hls-reason').textContent = hlsEligible ? '' : 'Only videos uploaded to Videokr can be optimised.';
     // Only a chosen file gets a tick; an empty square just looks like a dead control.
     [[$('cv-file-state'), $('cv-upload'), file], [$('cv-thumb-state'), $('cv-thumb'), thumb]].forEach(
       function (row) {
@@ -1245,7 +1291,7 @@
         });
       })
       .then(function (result) {
-        var optimise = $('cv-hls').checked;
+        var optimise = $('cv-hls').checked && isOptimisableSource(file, createdSource);
         $('cv-title').value = '';
         $('cv-source').value = '';
         $('cv-upload').value = '';
@@ -1274,7 +1320,7 @@
               return openEditorRefresh(result.video.id);
             })
             .catch(function (err) {
-              setHlsProgress('cv', 0, err && (err.message || String(err)) || 'Optimisation failed. Original video is unchanged.', true);
+              setHlsProgress('cv', 0, optimisationErrorMessage(err), true);
             });
         }
       })
@@ -1310,8 +1356,8 @@
     studio: { accent: '#3f76ff', background: '#0d0f14', borderRadius: 8, bigPlayButton: true },
     wave: { accent: '#1b7459', background: '#050908', borderRadius: 0, bigPlayButton: false },
     neon: { accent: '#7c3aed', background: '#08060f', borderRadius: 14, bigPlayButton: true },
-    cinema: { accent: '#e5b45b', background: '#000000', borderRadius: 0, bigPlayButton: true },
-    ghost: { accent: '#e6e8ee', background: '#101114', borderRadius: 10, bigPlayButton: false },
+    cinema: { accent: '#ffffff', background: '#000000', borderRadius: 16, bigPlayButton: false },
+    ghost: { accent: '#22c1b3', background: '#101114', borderRadius: 10, bigPlayButton: false },
     aurora: { accent: '#22d3ee', background: '#071018', borderRadius: 16, bigPlayButton: true },
     slate: { accent: '#2563eb', background: '#0f172a', borderRadius: 10, bigPlayButton: true },
   };
@@ -1360,14 +1406,16 @@
 
   function syncEditorHlsAction() {
     var video = state.video;
-    var eligible = video && video.source_type === 'mp4' && /^\/media\/.+\.(?:mp4|webm)(?:$|\?)/i.test(video.source_ref || '');
+    var eligible = video && video.source_type === 'mp4' && isOptimisableSource(null, video.source_ref || '');
     $('ed-hls-start').classList.toggle('hidden', !eligible);
+    $('ed-hls-reason').textContent = eligible ? '' : 'Only videos uploaded to Videokr can be optimised.';
     if (!eligible) {
       $('ed-hls-status').textContent = '';
       $('ed-hls-bar').value = 0;
     }
   }
 
+  $('ed-source').addEventListener('input', syncEditorHlsAction);
   $('ed-hls-start').addEventListener('click', function () {
     if (!state.video) return;
     $('ed-hls-start').disabled = true;
@@ -1377,7 +1425,7 @@
         return openEditorRefresh(state.video.id);
       })
       .catch(function (err) {
-        setHlsProgress('ed', 0, err && (err.message || String(err)) || 'Optimisation failed. Original video is unchanged.', true);
+        setHlsProgress('ed', 0, optimisationErrorMessage(err), true);
         $('ed-hls-start').disabled = false;
       });
   });
@@ -1571,7 +1619,9 @@
     });
     row.appendChild(start);
     row.appendChild(title);
-    row.appendChild(remove);
+    var foot = text('div', 'row-foot');
+    foot.appendChild(remove);
+    row.appendChild(foot);
     return row;
   }
 
@@ -1654,12 +1704,33 @@
       ['glass', 'Glass'],
       ['sheet', 'Bottom sheet'],
       ['spotlight', 'Spotlight'],
-      ['minimal', 'Minimal'],
+      ['fullbleed', 'Full bleed (Wistia)'],
       ['split', 'Split'],
       ['gradient', 'Gradient'],
     ];
     var style = document.createElement('select');
     style.dataset.field = 'style';
+    var buttonStyleOptions = [
+      ['solid', 'Solid'],
+      ['pill', 'Pill'],
+      ['chunky', 'Chunky pill'],
+      ['raised', 'Raised 3D'],
+      ['framed', 'Framed'],
+      ['arrow', 'Arrow'],
+      ['gradient', 'Gradient'],
+      ['glow', 'Glow'],
+      ['ghost', 'Ghost'],
+      ['white', 'White'],
+    ];
+    var buttonStyle = document.createElement('select');
+    buttonStyle.dataset.field = 'button_style';
+    buttonStyleOptions.forEach(function (pair) {
+      buttonStyle.appendChild(new Option(pair[1], pair[0]));
+    });
+    var buttonStyleValue = cta && cta.button_style ? cta.button_style : 'solid';
+    buttonStyle.value = buttonStyleOptions.some(function (pair) { return pair[0] === buttonStyleValue; })
+      ? buttonStyleValue
+      : 'solid';
     function updateCtaOptions() {
       var options = kind.value === 'gate' || kind.value === 'endscreen' ? gateStyleOptions : ctaStyleOptions;
       var current = style.value || (cta && cta.style) || 'card';
@@ -1672,6 +1743,7 @@
     }
     updateCtaOptions();
     grid.appendChild(field('Style', style));
+    grid.appendChild(field('Button style', buttonStyle));
     kind.addEventListener('change', updateCtaOptions);
     grid.appendChild(field('Start (s)', input('start_seconds', '0', cta ? cta.start_seconds : 0, 'number')));
     grid.appendChild(field('End (s)', input('end_seconds', '0 = until the end', cta ? cta.end_seconds : 0, 'number')));
@@ -1689,14 +1761,16 @@
     }
     card.appendChild(grid);
 
-    var skippable = text('label', 'checkbox');
+    var skippable = text('label', 'switch');
     var skipInput = document.createElement('input');
     skipInput.type = 'checkbox';
     skipInput.dataset.field = 'skippable';
     skipInput.checked = cta ? cta.skippable !== 0 : true;
     skippable.appendChild(skipInput);
+    skippable.appendChild(text('span', 'switch-track'));
     skippable.appendChild(document.createTextNode(gate ? ' Viewer can skip the form' : ' Viewer can skip / dismiss'));
-    card.appendChild(skippable);
+    var rowFoot = text('div', 'row-foot');
+    rowFoot.appendChild(skippable);
 
     var remove = text('button', 'btn btn-ghost btn-sm', gate ? 'Remove form' : 'Remove CTA');
     remove.type = 'button';
@@ -1704,7 +1778,8 @@
       card.remove();
       renderPreview();
     });
-    card.appendChild(remove);
+    rowFoot.appendChild(remove);
+    card.appendChild(rowFoot);
     return card;
   }
 

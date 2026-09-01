@@ -143,4 +143,5 @@ export interface Cta {
   skippable: number;
   position: string;
   style: string;
+  button_style: string;
 }
