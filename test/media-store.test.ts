@@ -383,6 +383,157 @@ describe('media store routing', () => {
     expect(state.buckets[0].last_error).toContain('B2 put failed');
   });
 
+  it('records an ArrayBuffer B2 upload without issuing a HEAD', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state);
+    const providerFetch = globalThis.fetch;
+    const calls: Array<{ method: string; key: string }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        calls.push({ method: init.method ?? 'GET', key: new URL(url).pathname });
+        return providerFetch(url, init);
+      }),
+    );
+    try {
+      await expect(
+        putMedia(state.env, {
+          key: 'u/array-buffer.mp4',
+          userId: 'u',
+          plan: 'starter',
+          body: bytes('video').buffer,
+          contentType: 'video/mp4',
+        }),
+      ).resolves.toBe('b2');
+      expect(state.objects.get('u/array-buffer.mp4')).toMatchObject({ backend: 'b2', size_bytes: 5 });
+      expect(calls.filter((call) => call.method === 'HEAD')).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('records a known-size stream without issuing a HEAD', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state);
+    const providerFetch = globalThis.fetch;
+    const calls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        calls.push(init.method ?? 'GET');
+        return providerFetch(url, init);
+      }),
+    );
+    try {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes('video'));
+          controller.close();
+        },
+      });
+      await expect(
+        putMedia(state.env, {
+          key: 'u/known-stream.mp4',
+          userId: 'u',
+          plan: 'starter',
+          body,
+          contentType: 'video/mp4',
+          size: 5,
+        }),
+      ).resolves.toBe('b2');
+      expect(state.objects.get('u/known-stream.mp4')).toMatchObject({ backend: 'b2', size_bytes: 5 });
+      expect(calls.filter((method) => method === 'HEAD')).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('retries a transient unknown-size upload HEAD before recording B2', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state);
+    const providerFetch = globalThis.fetch;
+    let heads = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        if ((init.method ?? 'GET') === 'HEAD' && heads++ === 0) return new Response(null, { status: 403 });
+        return providerFetch(url, init);
+      }),
+    );
+    try {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes('video'));
+          controller.close();
+        },
+      });
+      await expect(
+        putMedia(state.env, {
+          key: 'u/retry-stream.mp4',
+          userId: 'u',
+          plan: 'starter',
+          body,
+          contentType: 'video/mp4',
+        }),
+      ).resolves.toBe('b2');
+      expect(heads).toBe(2);
+      expect(state.objects.get('u/retry-stream.mp4')).toMatchObject({ backend: 'b2', size_bytes: 5 });
+      expect(state.r2.has('u/retry-stream.mp4')).toBe(false);
+      expect(state.buckets[0].last_error).toBe('');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('falls back to R2 and deletes B2 after all unknown-size upload HEAD retries fail', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    installB2Fetch(state);
+    const providerFetch = globalThis.fetch;
+    const methods: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit = {}) => {
+        const method = init.method ?? 'GET';
+        methods.push(method);
+        if (method === 'HEAD') return new Response(null, { status: 403 });
+        if (method === 'DELETE') {
+          state.b2.delete(decodeURIComponent(new URL(url).pathname.slice(1)));
+          return new Response(null, { status: 204 });
+        }
+        return providerFetch(url, init);
+      }),
+    );
+    try {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes('video'));
+          controller.close();
+        },
+      });
+      await expect(
+        putMedia(state.env, {
+          key: 'u/rejected-head.mp4',
+          userId: 'u',
+          plan: 'starter',
+          body,
+          contentType: 'video/mp4',
+        }),
+      ).resolves.toBe('r2');
+      expect(methods.filter((method) => method === 'HEAD')).toHaveLength(3);
+      expect(methods.filter((method) => method === 'DELETE')).toHaveLength(1);
+      expect(state.b2.has('u/rejected-head.mp4')).toBe(false);
+      expect(state.r2.has('u/rejected-head.mp4')).toBe(true);
+      expect(state.objects.get('u/rejected-head.mp4')).toMatchObject({ backend: 'r2', size_bytes: 5 });
+      expect(state.buckets[0].last_error).toContain('B2 media head failed with HTTP 403');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('delivers B2 bytes and ranges without provider headers', async () => {
     const state = memoryEnv([bucket()]);
     state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
