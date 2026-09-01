@@ -90,11 +90,7 @@
   /* -------------------------------------------------------------- HLS ---- */
 
   var activeHlsJob = null;
-  var activeVideoUpload = null;
   var ffmpegPromise = null;
-  var VIDEO_UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024;
-  var VIDEO_UPLOAD_CONCURRENCY = 3;
-  var VIDEO_UPLOAD_ATTEMPTS = 3;
 
   function setHlsProgress(prefix, percent, message, visible) {
     var box = $(prefix + '-hls-progress');
@@ -104,102 +100,6 @@
     var status = $(prefix + '-hls-status');
     if (bar) bar.value = Math.max(0, Math.min(100, percent || 0));
     if (status) status.textContent = message || '';
-  }
-
-  function cancelVideoUpload() {
-    var upload = activeVideoUpload;
-    if (!upload) return;
-    upload.cancelled = true;
-    upload.abort();
-    setHlsProgress('cv', 0, 'Upload cancelled.', true);
-  }
-
-  function uploadVideoFile(file) {
-    var upload = {
-      cancelled: false,
-      key: '',
-      uploadId: '',
-      abortRequest: null,
-    };
-    activeVideoUpload = upload;
-    upload.abort = function () {
-      if (!upload.key || !upload.uploadId) return Promise.resolve();
-      if (!upload.abortRequest) {
-        upload.abortRequest = api('/uploads/abort', {
-          method: 'POST',
-          body: { key: upload.key, uploadId: upload.uploadId },
-        }).catch(function () {});
-      }
-      return upload.abortRequest;
-    };
-    setHlsProgress('cv', 0, 'Uploading video… 0%', true);
-
-    return api('/uploads/create', {
-      method: 'POST',
-      body: { filename: file.name, size: file.size },
-    })
-      .then(function (created) {
-        upload.key = created.key;
-        upload.uploadId = created.uploadId;
-        var partCount = Math.ceil(file.size / VIDEO_UPLOAD_CHUNK_BYTES);
-        var nextPart = 0;
-        var completedBytes = 0;
-        var parts = [];
-
-        function sendPart(index, attempt) {
-          if (upload.cancelled) return Promise.reject(new Error('upload cancelled'));
-          var start = index * VIDEO_UPLOAD_CHUNK_BYTES;
-          var chunk = file.slice(start, Math.min(start + VIDEO_UPLOAD_CHUNK_BYTES, file.size));
-          var form = new FormData();
-          form.append('key', upload.key);
-          form.append('uploadId', upload.uploadId);
-          form.append('partNumber', String(index + 1));
-          form.append('file', chunk, file.name);
-          return api('/uploads/part', { method: 'POST', form: form, timeout: 30000 })
-            .then(function (result) {
-              if (upload.cancelled) throw new Error('upload cancelled');
-              parts[index] = { partNumber: index + 1, etag: result.etag };
-              completedBytes += chunk.size;
-              var percent = Math.round((completedBytes / Math.max(file.size, 1)) * 100);
-              setHlsProgress('cv', percent, 'Uploading video… ' + percent + '%', true);
-            })
-            .catch(function (err) {
-              if (!upload.cancelled && attempt < VIDEO_UPLOAD_ATTEMPTS) {
-                return sendPart(index, attempt + 1);
-              }
-              throw err;
-            });
-        }
-
-        function worker() {
-          if (upload.cancelled) return Promise.reject(new Error('upload cancelled'));
-          var index = nextPart;
-          nextPart += 1;
-          if (index >= partCount) return Promise.resolve();
-          return sendPart(index, 1).then(worker);
-        }
-
-        return Promise.all(
-          Array.from({ length: Math.min(VIDEO_UPLOAD_CONCURRENCY, partCount) }, function () {
-            return worker();
-          }),
-        ).then(function () {
-          if (upload.cancelled) throw new Error('upload cancelled');
-          return api('/uploads/complete', {
-            method: 'POST',
-            body: { key: upload.key, uploadId: upload.uploadId, parts: parts },
-          });
-        });
-      })
-      .catch(function (err) {
-        return upload.abort().then(function () {
-          throw err;
-        });
-      })
-      .finally(function () {
-        if (activeVideoUpload === upload) activeVideoUpload = null;
-        setHlsProgress('cv', 0, '', false);
-      });
   }
 
   function loadFfmpeg() {
@@ -551,10 +451,6 @@
   }
 
   function cancelHls(prefix) {
-    if (activeVideoUpload) {
-      cancelVideoUpload();
-      return;
-    }
     if (!activeHlsJob) return;
     activeHlsJob.cancelled = true;
     if (activeHlsJob.ffmpeg) activeHlsJob.ffmpeg.terminate();
@@ -743,31 +639,6 @@
       .then(function (url) {
         if (revoke) window.URL.revokeObjectURL(src);
         return url;
-      });
-  }
-
-  /* The poster the customer picked in the composer, stored on the video the same
-     way a grabbed frame is. Failure only costs the artwork, never the video. */
-  function uploadThumb(videoId, file) {
-    var form = new FormData();
-    form.append('file', file);
-    return api('/uploads', { method: 'POST', form: form })
-      .then(function (result) {
-        return api('/videos/' + videoId, {
-          method: 'PATCH',
-          body: { thumbnail_url: result.url },
-        }).then(function () {
-          if (state.video && state.video.id === videoId) {
-            state.video.thumbnail_url = result.url;
-            $('ed-thumb').value = result.url;
-            renderThumbPreviews();
-          }
-          return result.url;
-        });
-      })
-      .catch(function () {
-        toast('Thumbnail upload failed — the video was created', true);
-        return '';
       });
   }
 
@@ -1198,55 +1069,19 @@
     });
   });
 
-  /* "Create video" stays disabled until there is something to create from. */
   function syncComposer() {
-    var file = $('cv-upload').files[0];
-    var thumb = $('cv-thumb').files[0];
-    var source = $('cv-source').value.trim();
-    var hlsEligible = isOptimisableSource(file, source);
-    $('cv-save').disabled = !file && !source;
-    $('cv-hls').disabled = !hlsEligible;
-    if (!hlsEligible) $('cv-hls').checked = false;
-    $('cv-hls-reason').textContent = hlsEligible ? '' : 'Only videos uploaded to Videokr can be optimised.';
-    // Only a chosen file gets a tick; an empty square just looks like a dead control.
-    [[$('cv-file-state'), $('cv-upload'), file], [$('cv-thumb-state'), $('cv-thumb'), thumb]].forEach(
-      function (row) {
-        var box = row[0];
-        var picked = row[2];
-        box.classList.toggle('on', Boolean(picked));
-        box.textContent = picked ? '✓' : '';
-        box.title = picked ? picked.name : '';
-        showPickedName(row[1], picked ? picked.name : '');
-      },
-    );
+    $('cv-save').disabled = !$('cv-source').value.trim();
   }
 
   $('cv-source').addEventListener('input', syncComposer);
-  $('cv-upload').addEventListener('change', syncComposer);
-  /* Thumbnails are pictures, and small ones: rejecting here keeps an oversized
-     file from being uploaded only to be refused. */
-  $('cv-thumb').addEventListener('change', function () {
-    var picker = $('cv-thumb');
-    var file = picker.files[0];
-    if (file && !/^image\/(png|jpeg|webp)$/.test(file.type)) {
-      picker.value = '';
-      toast('Choose a PNG, JPG or WebP image', true);
-    } else if (file && file.size > IMAGE_LIMIT_BYTES) {
-      picker.value = '';
-      toast('Images have to be 5 MB or smaller', true);
-    }
-    syncComposer();
-  });
   $('cv-focus-source').addEventListener('click', function () {
     showComposerTab('source');
     $('cv-source').focus();
   });
   $('cv-clear').addEventListener('click', function () {
-    cancelVideoUpload();
     $('cv-title').value = '';
     $('cv-source').value = '';
-    $('cv-upload').value = '';
-    $('cv-thumb').value = '';
+    $('cv-thumb-url').value = '';
     $('cv-error').textContent = '';
     syncComposer();
   });
@@ -1260,75 +1095,45 @@
     window.open(source, '_blank', 'noopener');
   });
 
-  $('cv-hls-cancel').addEventListener('click', function () {
-    cancelHls('cv');
-  });
-
   $('cv-save').addEventListener('click', function () {
     var button = $('cv-save');
     var error = $('cv-error');
     error.textContent = '';
-    var file = $('cv-upload').files[0];
-    var thumb = $('cv-thumb').files[0];
     var source = $('cv-source').value.trim();
-    var createdSource = source;
-    if (!source && !file) {
-      error.textContent = 'Paste a video link or choose a file to upload.';
+    if (!/^https?:\/\//i.test(source)) {
+      error.textContent = 'Paste a video link starting with https://';
       return;
     }
     button.disabled = true;
 
-    var ready = Promise.resolve(source);
-    if (file) {
-      ready = uploadVideoFile(file).then(function (result) {
-        return result.url;
-      });
-    }
-    ready
-      .then(function (resolvedSource) {
-        createdSource = resolvedSource;
-        return api('/videos', {
-          method: 'POST',
-          body: {
-            title: $('cv-title').value.trim(),
-            source: resolvedSource,
-            project_id: $('cv-project').value || null,
-          },
-        });
-      })
+    api('/videos', {
+      method: 'POST',
+      body: {
+        title: $('cv-title').value.trim(),
+        source: source,
+        project_id: $('cv-project').value || null,
+      },
+    })
       .then(function (result) {
-        var optimise = $('cv-hls').checked && isOptimisableSource(file, createdSource);
+        var thumbUrl = $('cv-thumb-url').value.trim();
         $('cv-title').value = '';
         $('cv-source').value = '';
-        $('cv-upload').value = '';
-        $('cv-thumb').value = '';
-        $('cv-hls').checked = false;
+        $('cv-thumb-url').value = '';
         syncComposer();
         toast('Video created');
-        // A chosen thumbnail wins over the automatic frame grab. Where there is
-        // none, the chosen file is still in memory here, so the poster comes off
-        // it rather than downloading what we just uploaded.
-        var poster;
-        if (thumb) {
-          poster = uploadThumb(result.video.id, thumb);
-        } else if (file) {
-          poster = autoPoster(result.video.id, window.URL.createObjectURL(file), true);
-        } else {
-          poster = Promise.resolve('');
+        var patch = Promise.resolve();
+        if (/^https?:\/\//i.test(thumbUrl)) {
+          patch = api('/videos/' + encodeURIComponent(result.video.id), {
+            method: 'PATCH',
+            body: { thumbnail_url: thumbUrl },
+          }).catch(function () {
+            toast('Thumbnail update failed — the video was created', true);
+          });
         }
-        poster.then(function () {
+        return patch.then(function () {
           loadVideos();
+          openEditor(result.video.id);
         });
-        openEditor(result.video.id);
-        if (optimise) {
-          optimiseVideo(result.video.id, file || createdSource, 'cv', result.video.duration)
-            .then(function () {
-              return openEditorRefresh(result.video.id);
-            })
-            .catch(function (err) {
-              setHlsProgress('cv', 0, optimisationErrorMessage(err), true);
-            });
-        }
       })
       .catch(function (err) {
         button.disabled = false;
