@@ -114,7 +114,9 @@
   }
 
   function cell(row, value, className) {
-    row.appendChild(text('td', className || null, value));
+    var td = text('td', className || null, value);
+    row.appendChild(td);
+    return td;
   }
 
   function openModal(id) {
@@ -556,6 +558,8 @@
 
   function storageActions(bucket) {
     var actions = document.createElement('td');
+    actions.className = 'storage-actions';
+    actions.setAttribute('data-label', 'Actions');
     function action(label, method, path, body) {
       var button = text('button', 'btn btn-ghost btn-sm', label);
       button.type = 'button';
@@ -627,18 +631,24 @@
       }
       var rows = data.buckets.map(function (bucket) {
         var tr = document.createElement('tr');
-        cell(tr, bucket.label || '—');
-        cell(tr, bucket.bucket_name + ' @ ' + bucket.endpoint, 'tiny');
-        cell(tr, bucket.key_id_masked, 'tiny');
-        cell(tr, bucket.status);
-        cell(tr, bytes(bucket.used_bytes) + ' / ' + (bucket.capacity_bytes ? bytes(bucket.capacity_bytes) : '∞'));
-        cell(tr, String(bucket.object_count));
-        cell(tr, fmtDate(bucket.last_probe_at), 'tiny muted');
-        cell(tr, bucket.last_error || '—', 'tiny muted');
+        function storageCell(label, value, className) {
+          var td = cell(tr, value, className);
+          td.setAttribute('data-label', label);
+        }
+        storageCell('Label', bucket.label || '—');
+        storageCell('Target', bucket.bucket_name + ' @ ' + bucket.endpoint, 'tiny');
+        storageCell('Key ID', bucket.key_id_masked, 'tiny');
+        storageCell('Status', bucket.status);
+        storageCell('Used / capacity', bytes(bucket.used_bytes) + ' / ' + (bucket.capacity_bytes ? bytes(bucket.capacity_bytes) : '∞'));
+        storageCell('Objects', String(bucket.object_count));
+        storageCell('Last probe', fmtDate(bucket.last_probe_at), 'tiny muted');
+        storageCell('Last error', bucket.last_error || '—', 'tiny muted');
         tr.appendChild(storageActions(bucket));
         return tr;
       });
-      body.appendChild(table(['Label', 'Target', 'Key ID', 'Status', 'Used / capacity', 'Objects', 'Last probe', 'Last error', ''], rows));
+      var storageTable = table(['Label', 'Target', 'Key ID', 'Status', 'Used / capacity', 'Objects', 'Last probe', 'Last error', ''], rows);
+      storageTable.classList.add('storage-table');
+      body.appendChild(storageTable);
     });
   }
 

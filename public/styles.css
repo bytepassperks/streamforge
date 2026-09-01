@@ -830,6 +830,7 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
    table scrolls in its own pane instead. */
 .main, .main-body, .main > .view { min-width: 0; }
 #users-body, #videos-body, #purchases-body, #overage-body, #audit-body { overflow-x: auto; }
+#storage-body { min-width: 0; overflow-x: auto; }
 
 table.data {
   width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; background: var(--surface);
@@ -852,6 +853,69 @@ table.data td b { font-weight: 700; }
 .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 table.data td a { color: var(--text); text-decoration: none; border-bottom: 1px solid transparent; }
 table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-pill); }
+
+#storage-body .storage-table { table-layout: fixed; font-size: 12px; }
+#storage-body .storage-table th,
+#storage-body .storage-table td { padding: 9px 8px; }
+#storage-body .storage-table th {
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.2;
+}
+#storage-body .storage-table td {
+  overflow-wrap: anywhere; word-break: break-word; vertical-align: top;
+}
+#storage-body .storage-table th:nth-child(1),
+#storage-body .storage-table td:nth-child(1) { width: 10%; }
+#storage-body .storage-table th:nth-child(2),
+#storage-body .storage-table td:nth-child(2) { width: 17%; }
+#storage-body .storage-table th:nth-child(3),
+#storage-body .storage-table td:nth-child(3) { width: 12%; }
+#storage-body .storage-table th:nth-child(4),
+#storage-body .storage-table td:nth-child(4) { width: 9%; }
+#storage-body .storage-table th:nth-child(5),
+#storage-body .storage-table td:nth-child(5) { width: 14%; }
+#storage-body .storage-table th:nth-child(6),
+#storage-body .storage-table td:nth-child(6) { width: 7%; }
+#storage-body .storage-table th:nth-child(7),
+#storage-body .storage-table td:nth-child(7) { width: 11%; }
+#storage-body .storage-table th:nth-child(8),
+#storage-body .storage-table td:nth-child(8) { width: 13%; }
+#storage-body .storage-table th:nth-child(9),
+#storage-body .storage-table td:nth-child(9) { width: 7%; }
+#storage-body .storage-actions {
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+}
+#storage-body .storage-actions .btn {
+  width: 100%; min-height: 26px; padding: 0 3px; font-size: 10.5px; white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  #storage-body .storage-table,
+  #storage-body .storage-table tbody,
+  #storage-body .storage-table tr,
+  #storage-body .storage-table td { display: block; width: 100%; }
+  #storage-body .storage-table td:nth-child(n) { width: 100%; }
+  #storage-body .storage-table thead { display: none; }
+  #storage-body .storage-table tbody tr { padding: 10px 12px; }
+  #storage-body .storage-table td {
+    display: grid; grid-template-columns: minmax(88px, 32%) minmax(0, 1fr);
+    gap: 10px; align-items: start; padding: 5px 0; border-bottom: 0;
+  }
+  #storage-body .storage-table td::before {
+    content: attr(data-label); color: var(--muted); font-size: 10px; font-weight: 800;
+    letter-spacing: .08em; line-height: 1.3; text-transform: uppercase;
+  }
+  #storage-body .storage-table td.storage-actions {
+    display: block; border-top: 1px dashed var(--line-dash); margin-top: 6px; padding-top: 9px;
+  }
+  #storage-body .storage-table td.storage-actions::before {
+    display: block; margin-bottom: 6px;
+  }
+  #storage-body .storage-actions {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;
+  }
+  #storage-body .storage-actions .btn { min-height: 32px; font-size: 12px; }
+}
+
 .thumb-cell { width: 96px; }
 .thumb-cell img, .thumb-ph { width: 84px; height: 48px; object-fit: cover; border-radius: 9px; background: var(--panel); display: block; }
 /* A video with no poster still needs to look deliberate rather than broken. */
