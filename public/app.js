@@ -371,6 +371,19 @@
     var work = files.slice();
     var cursor = 0;
     var completed = 0;
+    function send(form, attempt) {
+      return fetch('/api/videos/' + encodeURIComponent(videoId) + '/hls/parts', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: form,
+      }).then(function (res) {
+        if (res.ok || job.cancelled || attempt >= 3) return res;
+        return send(form, attempt + 1);
+      }).catch(function (err) {
+        if (!job.cancelled && attempt < 3) return send(form, attempt + 1);
+        throw err;
+      });
+    }
     function upload(path) {
       return ffmpeg.readFile(path).then(function (data) {
         var relative = path.replace(/^\/ladder\//, '');
@@ -378,21 +391,11 @@
         var form = new FormData();
         form.append('path', relative);
         form.append('file', new Blob([data]), relative);
-        function send(attempt) {
-          return fetch('/api/videos/' + encodeURIComponent(videoId) + '/hls/parts', {
-            method: 'POST',
-            credentials: 'same-origin',
-            body: form,
-          }).then(function (res) {
-            if (!res.ok) return res.json().catch(function () { return {}; }).then(function (body) {
-              throw new Error(body.error || 'HLS part upload failed');
-            });
-          }).catch(function (err) {
-            if (!job.cancelled && attempt < 3) return send(attempt + 1);
-            throw err;
+        return send(form, 1).then(function (res) {
+          if (!res.ok) return res.json().catch(function () { return {}; }).then(function (body) {
+            throw new Error(body.error || 'HLS part upload failed');
           });
-        }
-        return send(1);
+        });
       });
     }
     function worker() {
@@ -410,11 +413,7 @@
       var form = new FormData();
       form.append('path', 'master.m3u8');
       form.append('file', new Blob([master], { type: 'application/vnd.apple.mpegurl' }), 'master.m3u8');
-      return fetch('/api/videos/' + encodeURIComponent(videoId) + '/hls/parts', {
-        method: 'POST',
-        credentials: 'same-origin',
-        body: form,
-      });
+      return send(form, 1);
     });
   }
 

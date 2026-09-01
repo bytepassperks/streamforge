@@ -1553,7 +1553,15 @@
     var submit = document.createElement('button');
     submit.type = 'submit';
     submit.className = 'sf-gate-submit ' + ctaButtonClass(cta.button_style);
-    submit.textContent = cta.button_text || 'Continue';
+    if (ctaButtonStyle(cta.button_style) === 'arrow') {
+      submit.appendChild(document.createTextNode(cta.button_text || 'Continue'));
+      var submitArrow = document.createElement('span');
+      submitArrow.className = 'sf-btn-arrow';
+      submitArrow.textContent = '↗';
+      submit.appendChild(submitArrow);
+    } else {
+      submit.textContent = cta.button_text || 'Continue';
+    }
     submit.setAttribute('data-sf', 'gate-submit');
     form.appendChild(submit);
     var error = el('div', 'sf-gate-error');
