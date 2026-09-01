@@ -84,6 +84,13 @@ async function rememberFailure(env: Env, bucketId: string, error: unknown): Prom
     .run();
 }
 
+async function rememberSuccess(env: Env, bucketId: string): Promise<void> {
+  await db(env)
+    .prepare("UPDATE storage_buckets SET last_error = '', last_probe_at = ? WHERE id = ? AND last_error != ''")
+    .bind(Math.floor(Date.now() / 1000), bucketId)
+    .run();
+}
+
 async function updateAccounting(
   env: Env,
   previous: ObjectRow | null,
@@ -308,6 +315,7 @@ export async function putMedia(
     b2Written = true;
     const size = knownSize ?? (await headB2ObjectWithRetry(destination.target, opts.key)).size;
     await recordObject(env, opts.key, opts.userId, 'b2', bucket.id, size, opts.contentType);
+    await rememberSuccess(env, bucket.id);
     return 'b2';
   } catch (error) {
     await rememberFailure(env, bucket.id, error);

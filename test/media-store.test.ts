@@ -167,7 +167,13 @@ function memoryEnv(bucketValues: Bucket[] = [], r2Values: Record<string, Uint8Ar
         return { results: [...objects.values()].filter((row) => String(row.key).startsWith(prefix)) as T[] };
       },
       async run() {
-        if (sql.startsWith('UPDATE storage_buckets SET last_error')) {
+        if (sql.includes("SET last_error = '', last_probe_at = ?")) {
+          const row = buckets.find((item) => item.id === values[1]);
+          if (row) {
+            row.last_error = '';
+            row.last_probe_at = values[0];
+          }
+        } else if (sql.startsWith('UPDATE storage_buckets SET last_error')) {
           const row = buckets.find((item) => item.id === values[1]);
           if (row) row.last_error = values[0];
         } else if (sql.includes('UPDATE storage_buckets') && sql.includes('used_bytes = MAX(0, used_bytes + ?')) {
@@ -381,6 +387,24 @@ describe('media store routing', () => {
     expect(state.r2.has('u/video.mp4')).toBe(true);
     expect(state.objects.get('u/video.mp4')).toMatchObject({ backend: 'r2' });
     expect(state.buckets[0].last_error).toContain('B2 put failed');
+  });
+
+  it('clears a stale bucket error after a successful B2 upload', async () => {
+    const state = memoryEnv([bucket()]);
+    state.buckets[0].secret_cipher = await encryptSecret(state.env, 'secret');
+    state.buckets[0].last_error = 'B2 media head failed with HTTP 403';
+    installB2Fetch(state);
+    await expect(
+      putMedia(state.env, {
+        key: 'u/recovered.mp4',
+        userId: 'u',
+        plan: 'starter',
+        body: bytes('video').buffer,
+        contentType: 'video/mp4',
+      }),
+    ).resolves.toBe('b2');
+    expect(state.buckets[0].last_error).toBe('');
+    expect(state.buckets[0].last_probe_at).toBeGreaterThan(0);
   });
 
   it('records an ArrayBuffer B2 upload without issuing a HEAD', async () => {
