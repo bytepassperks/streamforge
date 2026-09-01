@@ -31,6 +31,8 @@ export interface Env {
   PINTEREST_SITE_VERIFICATION?: string;
   /** Shared IndexNow key, also served publicly at `/{key}.txt`. */
   INDEXNOW_KEY?: string;
+  /** Base64-encoded 32-byte AES-GCM key for storage credentials. */
+  STORAGE_ENC_KEY?: string;
 }
 
 export interface User {

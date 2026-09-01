@@ -24,6 +24,7 @@
       <button class="nav-item" data-view="videos" type="button"><span>Videos</span></button>
       <button class="nav-item" data-view="purchases" type="button"><span>Purchases</span></button>
       <button class="nav-item" data-view="overage" type="button"><span>Overage</span></button>
+      <button class="nav-item" data-view="storage" type="button"><span>Storage pool</span></button>
       <button class="nav-item" data-view="audit" type="button"><span>Audit log</span></button>
     </nav>
     <div class="side-spacer"></div>
@@ -88,6 +89,30 @@
       </div>
       <div id="overage-summary" class="stat-grid"></div>
       <div id="overage-body"></div>
+    </section>
+
+    <!-- Storage ------------------------------------------------------------ -->
+    <section class="view" id="view-storage">
+      <div class="page-head">
+        <div><h1>Storage pool</h1><p class="muted tiny">Backblaze B2 buckets for future paid-account placement. Free users stay on R2; placement will be least-full-first.</p></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <h3>Add Backblaze B2 bucket</h3>
+        <p class="muted tiny">Credentials are encrypted at rest and never returned by the API. Use the S3 endpoint host, not a URL.</p>
+        <div class="grid-2">
+          <div class="field"><label for="st-label">Label</label><input id="st-label" placeholder="Primary B2"></div>
+          <div class="field"><label for="st-endpoint">S3 endpoint</label><input id="st-endpoint" placeholder="s3.us-east-005.backblazeb2.com"></div>
+          <div class="field"><label for="st-bucket">Bucket name</label><input id="st-bucket"></div>
+          <div class="field"><label for="st-bucket-id">Bucket ID</label><input id="st-bucket-id"></div>
+          <div class="field"><label for="st-key-id">Key ID</label><input id="st-key-id"></div>
+          <div class="field"><label for="st-key">Application key</label><input id="st-key" type="password" autocomplete="new-password"></div>
+          <div class="field"><label for="st-capacity">Capacity (bytes, optional)</label><input id="st-capacity" type="number" min="0" placeholder="0 = unlimited"></div>
+        </div>
+        <div class="form-error" id="st-error"></div>
+        <button class="btn" id="st-add" type="button">Probe and add bucket</button>
+      </div>
+      <div id="storage-summary" class="stat-grid"></div>
+      <div id="storage-body"></div>
     </section>
 
     <!-- Audit -------------------------------------------------------------- -->

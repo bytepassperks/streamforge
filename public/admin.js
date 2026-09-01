@@ -79,6 +79,18 @@
     return (currency || 'USD') + ' ' + (Number(cents || 0) / 100).toFixed(2);
   }
 
+  function bytes(value) {
+    var n = Number(value || 0);
+    if (!n) return '—';
+    var units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var i = 0;
+    while (n >= 1024 && i < units.length - 1) {
+      n /= 1024;
+      i += 1;
+    }
+    return n.toFixed(i ? 1 : 0) + ' ' + units[i];
+  }
+
   function empty(message) {
     return text('div', 'empty', message);
   }
@@ -102,7 +114,9 @@
   }
 
   function cell(row, value, className) {
-    row.appendChild(text('td', className || null, value));
+    var td = text('td', className || null, value);
+    row.appendChild(td);
+    return td;
   }
 
   function openModal(id) {
@@ -540,6 +554,113 @@
     });
   }
 
+  /* -------------------------------------------------------------- storage -- */
+
+  function storageActions(bucket) {
+    var actions = document.createElement('td');
+    actions.className = 'storage-actions';
+    actions.setAttribute('data-label', 'Actions');
+    function action(label, method, path, body) {
+      var button = text('button', 'btn btn-ghost btn-sm', label);
+      button.type = 'button';
+      button.addEventListener('click', function () {
+        api(path, { method: method, body: body })
+          .then(function () {
+            toast(label + ' complete');
+            return loadStorage();
+          })
+          .catch(fail);
+      });
+      actions.appendChild(button);
+    }
+    action('Probe', 'POST', '/admin/storage/' + bucket.id + '/probe');
+    if (bucket.status === 'active') action('Disable', 'PATCH', '/admin/storage/' + bucket.id, { status: 'disabled' });
+    if (bucket.status === 'disabled') action('Enable', 'PATCH', '/admin/storage/' + bucket.id, { status: 'active' });
+    if (bucket.status !== 'draining') action('Drain', 'PATCH', '/admin/storage/' + bucket.id, { status: 'draining' });
+    var rotate = text('button', 'btn btn-ghost btn-sm', 'Rotate');
+    rotate.type = 'button';
+    rotate.addEventListener('click', function () {
+      var keyId = prompt('New Backblaze key ID', '');
+      if (keyId === null) return;
+      var secret = prompt('New Backblaze application key (never stored in the page)', '');
+      if (secret === null) return;
+      api('/admin/storage/' + bucket.id + '/rotate', {
+        method: 'POST',
+        body: { key_id: keyId, application_key: secret },
+      }).then(function () {
+        toast('Credentials rotated');
+        return loadStorage();
+      }).catch(fail);
+    });
+    actions.appendChild(rotate);
+    var del = text('button', 'btn btn-danger btn-sm', 'Delete');
+    del.type = 'button';
+    del.addEventListener('click', function () {
+      if (!confirm('Delete ' + (bucket.label || bucket.bucket_name) + '?')) return;
+      api('/admin/storage/' + bucket.id, { method: 'DELETE' })
+        .then(function () {
+          toast('Bucket deleted');
+          return loadStorage();
+        })
+        .catch(fail);
+    });
+    actions.appendChild(del);
+    return actions;
+  }
+
+  function loadStorage() {
+    return api('/admin/storage').then(function (data) {
+      var summary = $('storage-summary');
+      summary.textContent = '';
+      [
+        ['buckets', data.buckets.length],
+        ['used', bytes(data.totals.used_bytes)],
+        ['capacity', data.totals.capacity_bytes ? bytes(data.totals.capacity_bytes) : 'unlimited'],
+        ['objects', data.totals.object_count],
+      ].forEach(function (pair) {
+        var box = text('div', 'stat');
+        box.appendChild(text('div', 'k', pair[0]));
+        box.appendChild(text('div', 'v', String(pair[1])));
+        summary.appendChild(box);
+      });
+      var body = $('storage-body');
+      body.textContent = '';
+      if (!data.buckets.length) {
+        body.appendChild(empty('No B2 buckets yet.'));
+        return;
+      }
+      var rows = data.buckets.map(function (bucket) {
+        var tr = document.createElement('tr');
+        function storageCell(label, value, className) {
+          var td = cell(tr, value, className);
+          td.setAttribute('data-label', label);
+        }
+        function storageBreakableCell(label, value, className) {
+          var td = text('td', className || null);
+          String(value).split('').forEach(function (character) {
+            td.appendChild(document.createTextNode(character));
+            if (/[.@/_:-]/.test(character)) td.appendChild(document.createElement('wbr'));
+          });
+          td.setAttribute('data-label', label);
+          tr.appendChild(td);
+        }
+        storageCell('Label', bucket.label || '—');
+        storageBreakableCell('Target', bucket.bucket_name + ' @ ' + bucket.endpoint, 'tiny storage-target');
+        storageCell('Key ID', bucket.key_id_masked, 'tiny');
+        storageCell('Status', bucket.status);
+        storageCell('Used / capacity', bytes(bucket.used_bytes) + ' / ' + (bucket.capacity_bytes ? bytes(bucket.capacity_bytes) : '∞'));
+        storageCell('Objects', String(bucket.object_count));
+        storageCell('Last probe', fmtDate(bucket.last_probe_at), 'tiny muted');
+        storageBreakableCell('Last error', bucket.last_error || '—', 'tiny muted storage-error');
+        tr.appendChild(storageActions(bucket));
+        return tr;
+      });
+      var storageTable = table(['Label', 'Target', 'Key ID', 'Status', 'Used / capacity', 'Objects', 'Last probe', 'Last error', ''], rows);
+      storageTable.classList.add('storage-table');
+      body.appendChild(storageTable);
+    });
+  }
+
   /* ----------------------------------------------------------------- audit -- */
 
   function loadAudit() {
@@ -571,6 +692,7 @@
     videos: loadVideos,
     purchases: loadPurchases,
     overage: loadOverage,
+    storage: loadStorage,
     audit: loadAudit,
   };
 
@@ -718,6 +840,35 @@
         location.href = '/app.html';
       })
       .catch(fail);
+  });
+
+  $('st-add').addEventListener('click', function () {
+    var button = $('st-add');
+    button.disabled = true;
+    $('st-error').textContent = '';
+    api('/admin/storage', {
+      method: 'POST',
+      body: {
+        label: $('st-label').value,
+        endpoint: $('st-endpoint').value,
+        bucket_name: $('st-bucket').value,
+        bucket_id: $('st-bucket-id').value,
+        key_id: $('st-key-id').value,
+        application_key: $('st-key').value,
+        capacity_bytes: $('st-capacity').value ? Number($('st-capacity').value) : 0,
+      },
+    })
+      .then(function () {
+        toast('Bucket added');
+        $('st-key').value = '';
+        return loadStorage();
+      })
+      .catch(function (error) {
+        $('st-error').textContent = error.message;
+      })
+      .then(function () {
+        button.disabled = false;
+      });
   });
 
   $('new-user').addEventListener('click', function () {
