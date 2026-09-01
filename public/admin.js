@@ -629,6 +629,7 @@
         var tr = document.createElement('tr');
         cell(tr, bucket.label || '—');
         cell(tr, bucket.bucket_name + ' @ ' + bucket.endpoint, 'tiny');
+        cell(tr, bucket.key_id_masked, 'tiny');
         cell(tr, bucket.status);
         cell(tr, bytes(bucket.used_bytes) + ' / ' + (bucket.capacity_bytes ? bytes(bucket.capacity_bytes) : '∞'));
         cell(tr, String(bucket.object_count));
@@ -637,7 +638,7 @@
         tr.appendChild(storageActions(bucket));
         return tr;
       });
-      body.appendChild(table(['Label', 'Target', 'Status', 'Used / capacity', 'Objects', 'Last probe', 'Last error', ''], rows));
+      body.appendChild(table(['Label', 'Target', 'Key ID', 'Status', 'Used / capacity', 'Objects', 'Last probe', 'Last error', ''], rows));
     });
   }
 

@@ -48,6 +48,16 @@ npm test
 
 This repo is deployed at <https://videokr.com>.
 
+### Worker secrets
+
+`STORAGE_ENC_KEY` is a base64-encoded 32-byte AES-GCM key used to encrypt Backblaze B2
+application keys in D1. The storage pool remains inert until this secret is configured.
+Generate and set one with:
+
+```bash
+openssl rand -base64 32 | npx wrangler secret put STORAGE_ENC_KEY
+```
+
 ## Optional offline HLS encoding
 
 Owners who keep a PC running can generate adaptive HLS without paid hosting. Install native

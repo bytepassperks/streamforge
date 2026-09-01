@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Env } from '../src/lib/types';
-import { completeMultipartUpload, listObjects, s3Fetch } from '../src/lib/s3';
+import {
+  canonicalHeaders,
+  canonicalQuery,
+  completeMultipartUpload,
+  listObjects,
+  s3Fetch,
+  sumObjects,
+  validateBucketName,
+} from '../src/lib/s3';
 import { decryptSecret, encryptSecret, pickBucket, regionFromEndpoint } from '../src/lib/storage';
 
 const target = {
@@ -74,6 +82,20 @@ describe('Backblaze storage helpers', () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
+  it('uses byte order for canonical query and header names', () => {
+    expect(canonicalQuery({ 'x-amz-a': '1', 'x-amz-A': '2' })).toBe('x-amz-A=2&x-amz-a=1');
+    const headers = canonicalHeaders(
+      new Headers({ 'x-amz-Meta-a': 'one', 'x-amz-metadata': 'two', 'x-amz_a': 'three' }),
+    );
+    expect(headers.signed).toBe('x-amz-meta-a;x-amz-metadata;x-amz_a');
+  });
+
+  it('rejects invalid bucket names before signing', () => {
+    expect(() => validateBucketName('evil.example.com/')).toThrow('valid S3 bucket name');
+    expect(() => validateBucketName('bucket@evil')).toThrow('valid S3 bucket name');
+    expect(() => validateBucketName('192.168.1.1')).toThrow('valid S3 bucket name');
+  });
+
   it('round trips encrypted credentials and rejects tampering', async () => {
     const env = envWithKey();
     const cipher = await encryptSecret(env, 'application-key');
@@ -113,6 +135,37 @@ describe('Backblaze storage helpers', () => {
       { key: 'two', size: 6, etag: undefined, lastModified: undefined },
     ]);
     expect(calls[1]).toContain('continuation-token=next%20page');
+  });
+
+  it('sums paged listings without retaining the listing', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        calls.push(url);
+        return new Response(
+          calls.length === 1
+            ? '<ListBucketResult><Contents><Key>one</Key><Size>4</Size></Contents><IsTruncated>true</IsTruncated><NextContinuationToken>next</NextContinuationToken></ListBucketResult>'
+            : '<ListBucketResult><Contents><Key>two</Key><Size>6</Size></Contents><IsTruncated>false</IsTruncated></ListBucketResult>',
+          { status: 200 },
+        );
+      }),
+    );
+    await expect(sumObjects(target)).resolves.toEqual({ bytes: 10, count: 2, truncated: false });
+    expect(calls).toHaveLength(2);
+  });
+
+  it('reports a capped listing as truncated with measured totals', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          '<ListBucketResult><Contents><Key>one</Key><Size>4</Size></Contents><IsTruncated>true</IsTruncated><NextContinuationToken>next</NextContinuationToken></ListBucketResult>',
+          { status: 200 },
+        ),
+      ),
+    );
+    await expect(sumObjects(target, 1)).resolves.toEqual({ bytes: 4, count: 1, truncated: true });
   });
 
   it('rejects a late S3 multipart error returned with HTTP 200', async () => {

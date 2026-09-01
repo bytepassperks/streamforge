@@ -18,6 +18,16 @@ export interface ListObjectsOptions {
   limit?: number;
 }
 
+export interface ListObjectsPageOptions {
+  maxKeys?: number;
+  token?: string;
+}
+
+export interface ListObjectsPage {
+  objects: S3Object[];
+  nextToken?: string;
+}
+
 const encoder = new TextEncoder();
 
 function rfc3986(value: string): string {
@@ -42,9 +52,26 @@ function keyPath(key: string): string {
   return '/' + key.split('/').map(rfc3986).join('/');
 }
 
+function codeUnitCompare(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 // Hostnames are case-insensitive and the runtime lowercases them before the
 // request goes out, so sign the lowercased host or B2 rejects the signature.
+function validBucketName(bucket: string): boolean {
+  return (
+    /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(bucket) &&
+    !bucket.includes('..') &&
+    !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(bucket)
+  );
+}
+
+export function validateBucketName(bucket: string): void {
+  if (!validBucketName(bucket)) throw new Error('bucket name is not a valid S3 bucket name');
+}
+
 function hostFor(target: S3Target): string {
+  validateBucketName(target.bucket);
   return `${target.bucket}.${target.endpoint}`.toLowerCase();
 }
 
@@ -52,18 +79,18 @@ function endpointFor(target: S3Target, key = ''): string {
   return `https://${hostFor(target)}${keyPath(key)}`;
 }
 
-function canonicalQuery(query: Record<string, string>): string {
+export function canonicalQuery(query: Record<string, string>): string {
   return Object.entries(query)
     .map(([name, value]) => [rfc3986(name), rfc3986(value)] as const)
-    .sort(([nameA, valueA], [nameB, valueB]) => nameA.localeCompare(nameB) || valueA.localeCompare(valueB))
+    .sort(([nameA, valueA], [nameB, valueB]) => codeUnitCompare(nameA, nameB) || codeUnitCompare(valueA, valueB))
     .map(([name, value]) => `${name}=${value}`)
     .join('&');
 }
 
-function canonicalHeaders(headers: Headers): { canonical: string; signed: string } {
+export function canonicalHeaders(headers: Headers): { canonical: string; signed: string } {
   const entries = [...headers.entries()]
     .map(([name, value]) => [name.toLowerCase(), value.trim().replace(/\s+/g, ' ')] as const)
-    .sort(([a], [b]) => a.localeCompare(b));
+    .sort(([a], [b]) => codeUnitCompare(a, b));
   return {
     canonical: entries.map(([name, value]) => `${name}:${value}\n`).join(''),
     signed: entries.map(([name]) => name).join(';'),
@@ -167,25 +194,56 @@ export async function listObjects(target: S3Target, options: ListObjectsOptions 
   const objects: S3Object[] = [];
   let token = '';
   do {
-    const query: Record<string, string> = { 'list-type': '2', 'max-keys': maxKeys };
-    if (token) query['continuation-token'] = token;
-    const response = await s3Fetch(target, { method: 'GET', query });
-    if (!response.ok) await throwS3Error(response);
-    const body = await response.text();
-    const contents = [...body.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)];
-    for (const content of contents) {
-      const item = content[1];
-      objects.push({
-        key: xmlUnescape(xmlText(item, 'Key')),
-        size: Number(xmlText(item, 'Size')) || 0,
-        etag: xmlUnescape(xmlText(item, 'ETag')) || undefined,
-        lastModified: xmlText(item, 'LastModified') || undefined,
-      });
-      if (options.limit !== undefined && objects.length >= options.limit) return objects.slice(0, options.limit);
+    const page = await listObjectsPage(target, { maxKeys: Number(maxKeys), token });
+    objects.push(...page.objects);
+    if (options.limit !== undefined && objects.length >= options.limit) {
+      return objects.slice(0, options.limit);
     }
-    token = xmlUnescape(xmlText(body, 'NextContinuationToken'));
+    token = page.nextToken ?? '';
   } while (token);
   return objects;
+}
+
+export async function listObjectsPage(
+  target: S3Target,
+  options: ListObjectsPageOptions = {},
+): Promise<ListObjectsPage> {
+  const maxKeys = String(Math.max(1, Math.min(1000, Math.floor(options.maxKeys ?? 1000))));
+  const query: Record<string, string> = { 'list-type': '2', 'max-keys': maxKeys };
+  if (options.token) query['continuation-token'] = options.token;
+  const response = await s3Fetch(target, { method: 'GET', query });
+  if (!response.ok) await throwS3Error(response);
+  const body = await response.text();
+  const objects = [...body.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)].map((content) => {
+    const item = content[1];
+    return {
+      key: xmlUnescape(xmlText(item, 'Key')),
+      size: Number(xmlText(item, 'Size')) || 0,
+      etag: xmlUnescape(xmlText(item, 'ETag')) || undefined,
+      lastModified: xmlText(item, 'LastModified') || undefined,
+    };
+  });
+  const nextToken = xmlUnescape(xmlText(body, 'NextContinuationToken')) || undefined;
+  return { objects, nextToken };
+}
+
+export async function sumObjects(
+  target: S3Target,
+  maxPages = 200,
+): Promise<{ bytes: number; count: number; truncated: boolean }> {
+  let token = '';
+  let bytes = 0;
+  let count = 0;
+  for (let pageNumber = 0; pageNumber < maxPages; pageNumber += 1) {
+    const page = await listObjectsPage(target, { token });
+    for (const object of page.objects) {
+      bytes += object.size;
+      count += 1;
+    }
+    if (!page.nextToken) return { bytes, count, truncated: false };
+    token = page.nextToken;
+  }
+  return { bytes, count, truncated: true };
 }
 
 export async function createMultipartUpload(target: S3Target, key: string, contentType?: string): Promise<string> {

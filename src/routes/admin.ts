@@ -6,7 +6,7 @@ import type { OverageRow } from '../lib/overage';
 import { closePeriod, collectOverage, previousPeriod, recordOverage } from '../lib/overage';
 import { siteTargets, submitChanged } from '../lib/indexnow';
 import { syncLifetimePricing } from '../lib/pricing-sync';
-import { headBucket, listObjects } from '../lib/s3';
+import { headBucket, listObjects, sumObjects, validateBucketName } from '../lib/s3';
 import {
   bucketView,
   encryptSecret,
@@ -58,19 +58,19 @@ function storageError(error: unknown, secrets: string[] = []): string {
 async function probeStorageTarget(
   target: Parameters<typeof headBucket>[0],
   full = false,
-): Promise<{ used: number; objects: number }> {
+): Promise<{ used: number; objects: number; truncated: boolean }> {
   const head = await headBucket(target);
   if (!head.ok) {
     const message = await head.text().catch(() => '');
     const providerMessage = /<Message>([\s\S]*?)<\/Message>/i.exec(message)?.[1]?.trim();
     throw new Error(providerMessage || message || `provider returned ${head.status}`);
   }
-  const objects = await listObjects(target, full ? {} : { maxKeys: 1, limit: 1 });
-  if (!full) return { used: 0, objects: 0 };
-  return {
-    used: objects.reduce((total, object) => total + object.size, 0),
-    objects: objects.length,
-  };
+  if (!full) {
+    await listObjects(target, { maxKeys: 1, limit: 1 });
+    return { used: 0, objects: 0, truncated: false };
+  }
+  const summary = await sumObjects(target);
+  return { used: summary.bytes, objects: summary.count, truncated: summary.truncated };
 }
 
 async function storageRow(env: Env, id: string): Promise<StorageBucketRow | null> {
@@ -119,6 +119,11 @@ admin.post('/storage', async (c) => {
   if (!endpoint || !bucketName || !keyId || !applicationKey) {
     return c.json({ error: 'endpoint, bucket name, key id and application key are required' }, 400);
   }
+  try {
+    validateBucketName(bucketName);
+  } catch (error) {
+    return c.json({ error: storageError(error) }, 400);
+  }
   let region: string;
   try {
     region = regionFromEndpoint(endpoint);
@@ -159,12 +164,17 @@ admin.post('/storage/:id/probe', async (c) => {
   try {
     const target = await targetFor(c.env, row);
     const stats = await probeStorageTarget(target, true);
+    const lastError = stats.truncated ? 'object listing truncated after 200 pages' : '';
     await c.env.DB.prepare(
       'UPDATE storage_buckets SET used_bytes = ?, object_count = ?, last_probe_at = ?, last_error = ? WHERE id = ?',
     )
-      .bind(stats.used, stats.objects, probedAt, '', id)
+      .bind(stats.used, stats.objects, probedAt, lastError, id)
       .run();
-    await audit(c.env, c.get('user'), 'storage.probe', id, { endpoint: row.endpoint, objects: stats.objects });
+    await audit(c.env, c.get('user'), 'storage.probe', id, {
+      endpoint: row.endpoint,
+      objects: stats.objects,
+      truncated: stats.truncated,
+    });
     const updated = await storageRow(c.env, id);
     return c.json({ bucket: updated ? bucketView(updated) : null });
   } catch (error) {

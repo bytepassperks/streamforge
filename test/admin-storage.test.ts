@@ -160,6 +160,19 @@ describe('admin storage pool routes', () => {
     vi.unstubAllGlobals();
   });
 
+  it('rejects hostile bucket names before making a provider request', async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    for (const bucket_name of ['evil.example.com/', 'bucket@evil']) {
+      const { env, rows } = poolEnv();
+      const response = await request(env, '/storage', post({ ...payload, bucket_name }));
+      expect(response.status).toBe(400);
+      expect(rows).toHaveLength(0);
+    }
+    expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it('rejects a delete while the bucket still holds objects', async () => {
     const { env } = poolEnv([{ id: 'bkt_1', object_count: 3, endpoint: 'e', bucket_name: 'b', status: 'active' }]);
     const response = await request(env, '/storage/bkt_1', { method: 'DELETE' });
