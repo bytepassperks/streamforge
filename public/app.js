@@ -1428,14 +1428,17 @@
     schedulePreview();
     toast('Branding cleared');
   });
-  function moveBrandingTab(direction) {
+  function stepEditorTab(fromTab, direction) {
     var buttons = Array.prototype.slice.call(document.querySelectorAll('#ed-tabs button'));
-    var index = buttons.findIndex(function (button) { return button.dataset.tab === 'branding'; });
+    var index = buttons.findIndex(function (button) { return button.dataset.tab === fromTab; });
     var target = buttons[index + direction];
     if (target) showEditorTab(target.dataset.tab);
   }
-  $('pc-branding-back').addEventListener('click', function () { moveBrandingTab(-1); });
-  $('pc-branding-continue').addEventListener('click', function () { moveBrandingTab(1); });
+  $('pc-branding-back').addEventListener('click', function () { stepEditorTab('branding', -1); });
+  $('pc-branding-continue').addEventListener('click', function () { stepEditorTab('branding', 1); });
+  document.querySelectorAll('[data-step-back]').forEach(function (button) {
+    button.addEventListener('click', function () { stepEditorTab(button.dataset.stepBack, -1); });
+  });
 
   /* Single entry point for showing an editor section, so a section that is
      already active when the editor opens still runs its loader. */
@@ -1526,6 +1529,9 @@
     $('pc-skin').value = config.skin;
     $('pc-accent').value = config.accent;
     $('pc-bg').value = config.background;
+    $('panel-chapters-enabled').checked = config.showChapters !== false;
+    $('panel-ctas-enabled').checked = config.showCtas !== false;
+    $('panel-forms-enabled').checked = config.showForms !== false;
     $('pc-radius').value = config.borderRadius;
     $('pc-font').value = normaliseBrandingFont(config.fontFamily || '');
     $('pc-logo').value = config.logoUrl || '';
@@ -1557,6 +1563,7 @@
 
     renderChapterRows(result.chapters || []);
     renderCtaRows(result.ctas || []);
+    syncPanelSwitches();
     renderThumbPreviews();
     $('ed-thumb-grab-state').textContent =
       video.source_type === 'mp4'
@@ -1670,7 +1677,7 @@
   });
 
   function chapterRow(chapter) {
-    var row = text('div', 'repeater-row');
+    var row = text('div', 'repeater-row chapter-row');
     var start = document.createElement('input');
     start.type = 'number';
     start.min = '0';
@@ -1685,6 +1692,7 @@
     remove.type = 'button';
     remove.addEventListener('click', function () {
       row.remove();
+      schedulePreview();
     });
     row.appendChild(start);
     row.appendChild(title);
@@ -1702,13 +1710,14 @@
 
   $('add-chapter').addEventListener('click', function () {
     $('chapters-rows').appendChild(chapterRow(null));
+    schedulePreview();
   });
 
   /* One row shape serves both sections: an email gate is a CTA whose kind is "gate",
      so the Form section only ever renders and adds gate rows. */
   function ctaRow(cta, gate) {
     var card = text('div', 'card');
-    card.style.marginBottom = '12px';
+    card.classList.add(gate ? 'form-row-card' : 'cta-row-card');
     var grid = text('div', 'grid-2');
     card.appendChild(input('id', '', cta ? cta.id : '', 'hidden'));
 
@@ -1815,8 +1824,14 @@
     grid.appendChild(field('Button style', buttonStyle));
     kind.addEventListener('change', updateCtaOptions);
     style.addEventListener('change', updateCtaOptions);
-    grid.appendChild(field('Start (s)', input('start_seconds', '0', cta ? cta.start_seconds : 0, 'number')));
-    grid.appendChild(field('End (s)', input('end_seconds', '0 = until the end', cta ? cta.end_seconds : 0, 'number')));
+    if (gate) {
+      grid.appendChild(field('Pause video at', input('start_seconds', '0', cta ? cta.start_seconds : 0, 'number')));
+    } else {
+      var timing = text('div', 'grid-2 cta-timing');
+      timing.appendChild(field('Start (s)', input('start_seconds', '0', cta ? cta.start_seconds : 0, 'number')));
+      timing.appendChild(field('End (s)', input('end_seconds', '0 = until the end', cta ? cta.end_seconds : 0, 'number')));
+      grid.appendChild(timing);
+    }
     grid.appendChild(
       field(gate ? 'Title' : 'Headline', input('headline', gate ? 'Watch the rest' : 'Book a demo', cta ? cta.headline : '')),
     );
@@ -1830,6 +1845,39 @@
       grid.appendChild(field('Button url', input('button_url', 'https://example.com', cta ? cta.button_url : '')));
     }
     card.appendChild(grid);
+    if (gate) {
+      var when = text('div', 'form-when');
+      when.appendChild(text('strong', null, 'When to show'));
+      var before = text('label', 'choice-card');
+      var beforeInput = document.createElement('input');
+      beforeInput.type = 'radio';
+      beforeInput.name = 'form-timing-' + String(Date.now()) + Math.random();
+      beforeInput.checked = !cta || Number(cta.start_seconds) === 0;
+      before.appendChild(beforeInput);
+      before.appendChild(text('span', null, 'Before playback starts'));
+      var specific = text('label', 'choice-card');
+      var specificInput = document.createElement('input');
+      specificInput.type = 'radio';
+      specificInput.name = beforeInput.name;
+      specificInput.checked = !!cta && Number(cta.start_seconds) > 0;
+      specific.appendChild(specificInput);
+      specific.appendChild(text('span', null, 'At a specific time'));
+      when.appendChild(before);
+      when.appendChild(specific);
+      var pauseField = grid.querySelector('[data-field="start_seconds"]').closest('.field');
+      function updateWhen() {
+        if (beforeInput.checked) pauseField.querySelector('input').value = '0';
+        pauseField.hidden = !specificInput.checked;
+      }
+      beforeInput.addEventListener('change', updateWhen);
+      specificInput.addEventListener('change', updateWhen);
+      updateWhen();
+      card.insertBefore(when, grid);
+      var edit = text('button', 'btn btn-ghost form-edit-action', 'Edit form');
+      edit.type = 'button';
+      edit.addEventListener('click', function () { openFormEditor(card); });
+      card.appendChild(edit);
+    }
 
     var skippable = text('label', 'switch');
     var skipInput = document.createElement('input');
@@ -1864,12 +1912,147 @@
     });
   }
 
+  function syncPanelSwitches() {
+    [
+      ['panel-chapters-enabled', 'chapters-rows'],
+      ['panel-ctas-enabled', 'ctas-rows'],
+      ['panel-forms-enabled', 'forms-rows'],
+    ].forEach(function (pair) {
+      var input = $(pair[0]);
+      var rows = $(pair[1]);
+      var label = input.closest('.panel-switch');
+      rows.classList.toggle('is-disabled', !input.checked);
+      label.querySelector('.panel-switch-text').textContent = input.checked ? 'ON' : 'OFF';
+      label.classList.toggle('is-on', input.checked);
+    });
+  }
+
+  var activeFormEditor = null;
+  function formField(card, name) {
+    return card.querySelector('[data-field="' + name + '"]');
+  }
+  function formFieldsWithName(value, includeName) {
+    var fields = String(value || '').split(',').map(function (field) {
+      return field.trim().toLowerCase();
+    }).filter(Boolean).filter(function (field, index, list) {
+      return field === 'email' || (field !== 'name' && list.indexOf(field) === index);
+    });
+    if (fields.indexOf('email') === -1) fields.unshift('email');
+    fields = fields.filter(function (field) { return field !== 'name'; });
+    if (includeName) fields.push('name');
+    return fields.join(',');
+  }
+  function renderFormEditPreview() {
+    if (!activeFormEditor || !state.video) return;
+    var host = $('form-edit-preview');
+    host.textContent = '';
+    var cta = {
+      kind: 'gate',
+      start_seconds: 0,
+      end_seconds: 0,
+      headline: $('form-edit-headline').value,
+      body: $('form-edit-body').value,
+      button_text: $('form-edit-button').value,
+      fields: formFieldsWithName(formField(activeFormEditor.card, 'fields').value, $('form-edit-name').checked),
+      skippable: 1,
+      style: formField(activeFormEditor.card, 'style').value || 'card',
+      button_style: formField(activeFormEditor.card, 'button_style').value || 'solid',
+      position: 'center',
+    };
+    var mount = document.createElement('div');
+    host.appendChild(mount);
+    window.Videokr.mount(mount, {
+      tracking: false,
+      video: {
+        id: state.video.id,
+        slug: state.video.slug,
+        title: $('ed-name').value,
+        source_type: state.video.source_type,
+        source_ref: $('ed-source').value.trim() || state.video.source_ref,
+        duration: Number($('ed-duration').value) || 1,
+        thumbnail_url: $('ed-thumb').value.trim(),
+        captions_url: $('ed-captions').value.trim(),
+      },
+      player: Object.assign({}, collectConfig(), { showForms: true }),
+      chapters: [],
+      ctas: [cta],
+      variant: 'a',
+    });
+  }
+  function closeFormEditor() {
+    if (!activeFormEditor) return;
+    $('form-editor').classList.add('hidden');
+    $('forms-rows').classList.remove('hidden');
+    $('add-form').classList.remove('hidden');
+    $('ed-form-export').closest('.row').classList.remove('hidden');
+    $('ed-form-leads').classList.remove('hidden');
+    activeFormEditor = null;
+  }
+  function openFormEditor(card) {
+    var fields = formField(card, 'fields');
+    activeFormEditor = {
+      card: card,
+      snapshot: {
+        headline: formField(card, 'headline').value,
+        body: formField(card, 'body').value,
+        button_text: formField(card, 'button_text').value,
+        fields: formFieldsWithName(fields.value, fields.value.split(',').map(function (part) {
+          return part.trim().toLowerCase();
+        }).indexOf('name') !== -1),
+      },
+    };
+    $('form-edit-headline').value = activeFormEditor.snapshot.headline;
+    $('form-edit-body').value = activeFormEditor.snapshot.body;
+    $('form-edit-button').value = activeFormEditor.snapshot.button_text;
+    $('form-edit-name').checked = activeFormEditor.snapshot.fields.split(',').indexOf('name') !== -1;
+    $('forms-rows').classList.add('hidden');
+    $('add-form').classList.add('hidden');
+    $('ed-form-export').closest('.row').classList.add('hidden');
+    $('ed-form-leads').classList.add('hidden');
+    $('form-editor').classList.remove('hidden');
+    renderFormEditPreview();
+  }
+  $('form-edit-name').addEventListener('change', renderFormEditPreview);
+  ['form-edit-headline', 'form-edit-body', 'form-edit-button'].forEach(function (id) {
+    $(id).addEventListener('input', renderFormEditPreview);
+  });
+  $('form-editor-back').addEventListener('click', closeFormEditor);
+  $('form-edit-discard').addEventListener('click', function () {
+    if (!activeFormEditor) return;
+    var snapshot = activeFormEditor.snapshot;
+    $('form-edit-headline').value = snapshot.headline;
+    $('form-edit-body').value = snapshot.body;
+    $('form-edit-button').value = snapshot.button_text;
+    $('form-edit-name').checked = snapshot.fields.split(',').indexOf('name') !== -1;
+    renderFormEditPreview();
+  });
+  $('form-edit-done').addEventListener('click', function () {
+    if (!activeFormEditor) return;
+    formField(activeFormEditor.card, 'headline').value = $('form-edit-headline').value;
+    formField(activeFormEditor.card, 'body').value = $('form-edit-body').value;
+    formField(activeFormEditor.card, 'button_text').value = $('form-edit-button').value;
+    formField(activeFormEditor.card, 'fields').value = formFieldsWithName(
+      formField(activeFormEditor.card, 'fields').value,
+      $('form-edit-name').checked,
+    );
+    closeFormEditor();
+    schedulePreview();
+  });
+  ['panel-chapters-enabled', 'panel-ctas-enabled', 'panel-forms-enabled'].forEach(function (id) {
+    $(id).addEventListener('change', function () {
+      syncPanelSwitches();
+      schedulePreview();
+    });
+  });
+
   $('add-cta').addEventListener('click', function () {
     $('ctas-rows').appendChild(ctaRow(null, false));
+    schedulePreview();
   });
 
   $('add-form').addEventListener('click', function () {
     $('forms-rows').appendChild(ctaRow(null, true));
+    schedulePreview();
   });
 
   function collectConfig() {
@@ -1890,6 +2073,9 @@
       accent: $('pc-accent').value,
       background: $('pc-bg').value,
       fontFamily: normaliseBrandingFont($('pc-font').value),
+      showChapters: $('panel-chapters-enabled').checked,
+      showCtas: $('panel-ctas-enabled').checked,
+      showForms: $('panel-forms-enabled').checked,
       controls: controls,
       autoplay: $('pc-autoplay').checked,
       muted: $('pc-muted').checked,

@@ -841,8 +841,12 @@
     this.payload = payload;
     this.config = payload.player;
     this.video = payload.video;
-    this.chapters = payload.chapters || [];
-    this.ctas = payload.ctas || [];
+    this.chapters = this.config.showChapters === false ? [] : payload.chapters || [];
+    this.ctas = (payload.ctas || []).filter(function (cta) {
+      if (this.config.showCtas === false && ['overlay', 'banner', 'endscreen'].indexOf(cta.kind) !== -1) return false;
+      if (this.config.showForms === false && cta.kind === 'gate') return false;
+      return true;
+    }, this);
     this.variant = payload.variant || 'a';
     this.viewId = viewId();
     this._seen = {};

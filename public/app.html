@@ -518,9 +518,13 @@
         </div>
 
         <div class="tab-panel" data-panel="chapters">
-          <p class="muted tiny">Chapters appear as markers on the timeline and in a jump menu.</p>
-          <div id="chapters-rows"></div>
-          <button class="btn btn-ghost btn-sm" id="add-chapter" type="button">Add chapter</button>
+          <div class="panel-head">
+            <button class="panel-back" data-step-back="chapters" type="button" aria-label="Back to Quality and speed">←</button>
+            <div><h3>Chapters</h3><p class="muted tiny">Chapters appear as markers on the timeline and in a jump menu.</p></div>
+            <label class="panel-switch"><span class="panel-switch-text">ON</span><input id="panel-chapters-enabled" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span><span class="visually-hidden">Show chapters</span></label>
+          </div>
+          <button class="btn btn-outline-pill" id="add-chapter" type="button">Add chapter</button>
+          <div class="panel-rows" id="chapters-rows"></div>
         </div>
 
         <div class="tab-panel" data-panel="subtitles">
@@ -536,26 +540,42 @@
         </div>
 
         <div class="tab-panel" data-panel="ctas">
-          <p class="muted tiny">
-            Overlays and banners appear between their start and end second; an end screen shows once the video
-            finishes. Email gates live under Form.
-          </p>
-          <div id="ctas-rows"></div>
-          <button class="btn btn-ghost btn-sm" id="add-cta" type="button">Add CTA</button>
+          <div class="panel-head">
+            <button class="panel-back" data-step-back="ctas" type="button" aria-label="Back to Subtitles">←</button>
+            <div><h3>Call to action</h3><p class="muted tiny">Overlays and banners appear between their start and end second; an end screen shows once the video finishes. Email gates live under Form.</p></div>
+            <label class="panel-switch"><span class="panel-switch-text">ON</span><input id="panel-ctas-enabled" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span><span class="visually-hidden">Show calls to action</span></label>
+          </div>
+          <div class="panel-rows" id="ctas-rows"></div>
+          <button class="btn btn-outline-pill" id="add-cta" type="button">Add CTA</button>
         </div>
 
         <div class="tab-panel" data-panel="form">
-          <p class="muted tiny">
-            A form pauses playback at its start second until the viewer submits, and everything collected lands
-            here and in Leads.
-          </p>
-          <div id="forms-rows"></div>
-          <button class="btn btn-ghost btn-sm" id="add-form" type="button">Add form</button>
+          <div class="panel-head">
+            <button class="panel-back" data-step-back="form" type="button" aria-label="Back to Call to action">←</button>
+            <div><h3>Form</h3><p class="muted tiny">A form pauses playback at its start second until the viewer submits, and everything collected lands here and in Leads.</p></div>
+            <label class="panel-switch"><span class="panel-switch-text">ON</span><input id="panel-forms-enabled" type="checkbox" checked><span class="switch-track" aria-hidden="true"></span><span class="visually-hidden">Show forms</span></label>
+          </div>
+          <div class="panel-rows" id="forms-rows"></div>
+          <button class="btn btn-outline-pill" id="add-form" type="button">Add form</button>
           <div class="row spread" style="margin-top:22px">
             <h3>Submissions</h3>
             <a class="btn btn-ghost btn-sm" id="ed-form-export" href="/api/leads.csv">Export CSV</a>
           </div>
           <div id="ed-form-leads" class="muted tiny">No submissions yet.</div>
+          <div class="form-editor hidden" id="form-editor">
+            <div class="form-editor-fields">
+              <div class="panel-head form-editor-head"><button class="panel-back" id="form-editor-back" type="button" aria-label="Back to forms">←</button><div><h3>Edit form</h3><p class="muted tiny">Customize the fields viewers see.</p></div></div>
+              <div class="field"><label for="form-edit-headline">Headline</label><input id="form-edit-headline"></div>
+              <div class="field"><label for="form-edit-body">Body text</label><textarea id="form-edit-body"></textarea></div>
+              <fieldset class="form-fields-group"><legend>Fields</legend>
+                <label class="panel-switch"><span>Ask for first and last name</span><input id="form-edit-name" type="checkbox"><span class="switch-track" aria-hidden="true"></span></label>
+                <div class="form-locked-row"><span>Email</span><span>Required</span></div>
+              </fieldset>
+              <div class="field"><label for="form-edit-button">Submit button text</label><input id="form-edit-button"></div>
+              <div class="row spread form-editor-actions"><button class="btn btn-ghost" id="form-edit-discard" type="button">Discard</button><button class="btn" id="form-edit-done" type="button">Done</button></div>
+            </div>
+            <div class="form-editor-preview"><h4>Preview</h4><div id="form-edit-preview"></div></div>
+          </div>
         </div>
 
         <div class="tab-panel" data-panel="access">
