@@ -418,6 +418,297 @@ List, so a blank grey box is a regression. Library `Copy link` really does put
 `https://<base>/v/<slug>` on the clipboard — prove it by pasting into the composer's
 **Source URL** field, not from the toast.
 
+## Audience retention chart (survival curve) — how to prove it, not eyeball it
+
+The Analytics section of the video editor draws retention from `retentionSurvival(rows)` in
+`public/app.js`: 101 buckets, suffix-maximum, normalised to bucket 0, emitted as a single
+`path.an-line` with 101 `M/L` points. A correct chart can only ever descend (y grows
+downward in SVG), so the cheap, decisive check is a one-liner in the console *after* the
+Analytics pane is open:
+
+```js
+var d = document.querySelector('#stats-body svg path.an-line').getAttribute('d');
+var n = d.match(/-?\d+(?:\.\d+)?/g).map(Number), ys = [], i;
+for (i = 1; i < n.length; i += 2) ys.push(n[i]);
+ys.reduce(function (r, y, k) { return k && y < ys[k-1] - 0.001 ? r + 1 : r; }, 0); // must be 0
+```
+
+Expect `pairs === 101` and `rises === 0`. The old buggy build produced a repeating sawtooth
+(alternating y values), so a non-zero rise count is the regression signature.
+
+To give the curve a real shape you need **separate view sessions** (a new `view_id` per player
+mount): open `/v/<slug>` in a fresh tab, press play, and close the tab at the abandonment
+point you want. Progress events fire once per 5% of duration, so on a 20 s clip a tab closed
+at ~4 s / ~8 s / ~14 s lands at ~20% / ~40% / ~70%. Note an email gate configured mid-clip
+pauses playback there, which caps how far an "abandoned" session gets — plan abandonment
+points around the gate time.
+
+## Domain allow-list (`allowed_domains`) — the own-host exemption
+
+Editor → **Password** section → `Allowed domains` (comma separated) → *Save changes*.
+`embedBlocked` in `src/routes/public.ts` exempts the `PUBLIC_BASE_URL` host, its `www.`
+variant and the incoming request host, so with `allowed_domains = clientsite.com` the
+video's own `/v/<slug>` page on the product domain **must still play** — if it shows
+"not authorised to play on …", that is the pre-fix regression.
+
+Off-list third-party hosts must still be refused. Cheapest realistic fixture is a local
+static host page carrying the script embed:
+
+```bash
+cd /home/ubuntu/demo && setsid nohup python3 -m http.server 8099 >/tmp/http8099.log 2>&1 </dev/null &
+# embed-host.html contains:
+# <script src="https://<base>/embed.js" data-video="<slug>" async></script>
+```
+
+`http://localhost:8099/embed-host.html` must render "This video is not authorised to play on
+**localhost**" inside the iframe. Use `setsid nohup` — a plain `nohup python3 -m http.server`
+launched from the shell tool frequently dies immediately (curl then reports status `000`).
+
+Note the ordering trap: `/e/:key` runs the domain check **before** mounting a password gate,
+so an off-list host never renders the gate. The "gate shows the server's real reason instead
+of *Network error, please retry.*" fix therefore cannot be demonstrated visually from an
+off-list host — verify the two halves separately and say so:
+- server half: `curl -s -X POST https://<base>/api/embed/<videoId>/unlock -H 'content-type: application/json' -H 'Referer: https://offlist.example/' -d '{"password":"x"}'`
+  → `403 {"error":"this video is not allowed to play on this domain","code":"domain_blocked"}`
+- UI half (reachable on the own host): wrong password in the gate must print the server text
+  `incorrect password`, never `Network error, please retry.`
+
+Restoration caveat: the editor's password field is "leave blank to keep current", so there is
+**no UI way to clear a stored password** — setting Visibility back to `Public` stops it being
+enforced but the hash stays. If you set a password during testing, say so in the report and
+give the value you set to the owner.
+
+## Adaptive HLS: proving the quality ladder and a real rendition switch
+
+A video whose `source_type` is `hls` serves `.../hls/master.m3u8` with variant folders
+`v0` (360p), `v1` (720p), `v2` (1080p) and keeps the original MP4 as `fallback_ref`.
+Read the current state without logging in:
+
+```bash
+curl -s https://videokr.com/api/embed/<slug> | python3 -m json.tool | head -40
+curl -s https://videokr.com/media/<user>/<vid>/hls/master.m3u8   # check RESOLUTION= on each variant
+```
+
+`HtmlAdapter.qualities()` in `public/player/player.js` labels each hls.js level
+`level.height + 'p'` and only falls back to `Math.round(bitrate/1000)+'k'` when `height`
+is 0. So **bitrate-looking rows in the gear menu ("985k") mean RESOLUTION was lost from the
+master playlist** — that is the assertion worth screenshotting, read off the menu, not the DOM.
+
+To prove a 360p selection is real rather than cosmetic, after clicking `360p` seek into an
+unbuffered part of the timeline (a 20 s clip is otherwise fully buffered and no new request
+is made), then read the resource timeline once from the console:
+
+```js
+performance.getEntriesByType('resource').filter(e => e.name.includes('/hls/'))
+  .slice(-15).map(e => e.name.split('/hls/')[1] + ' @' + Math.round(e.startTime));
+```
+
+Entries containing `v0/` with a `startTime` after the click prove the switch; switching back
+to `Auto` should resume `v1/`-or-higher fetches. Keep the elapsed label climbing across both
+switches on screenshots ~4 s apart — that is the "playback survived" half.
+
+## Measuring ABR (does Auto adapt?) and manual-override stickiness
+
+The running hls.js instance is private (`adapter._hls`); `window.Videokr` / `window.StreamForge`
+expose only `mount/mountById/Player/formatTime`, and the gear → Quality menu reflects only the
+last *manual* pick. **The only trustworthy evidence of the active level is which `/hls/vN/`
+fragment was fetched** — dump `performance.getEntriesByType('resource')` filtered to `/hls/`
+and print level, segment, `startTime`, `duration`, `transferSize`. Cross-check with
+`document.querySelector('video').videoHeight` (360 / 720 / 1080).
+
+Network control must come from a **persistent** CDP websocket (Chrome reverts `Network.*`
+overrides the moment the socket closes). `/home/ubuntu/cdp_daemon.py` is a working pattern:
+attach to the page target on port 29229 and accept `nocache` / `cache` / `throttle <kbps>` /
+`fast` / `schedule <s> <cmd>` / `quit` on stdin. Run it with `/usr/bin/python3` (the tty shell's
+default python may not have `websocket-client`).
+
+- **`Network.*` overrides are per-target.** The daemon attaches to the *first* videokr page in
+  `http://127.0.0.1:29229/json/list`, which is ordered most-recently-active-first. If another
+  videokr tab is open (e.g. the dashboard, or someone else working in the same Chrome), the
+  daemon may be throttling/uncaching the wrong tab and your measurement runs unthrottled with a
+  warm cache. Always check the `attached: <url>` line, click your measurement tab to make it
+  most-recent, then send `attach` and re-verify. The attachment survives navigations within the
+  same tab, so re-attach once and then navigate.
+- If another agent/person is driving the same Chrome profile, open a dedicated tab, keep it
+  focused for the whole run, and pause rather than reporting a hijacked run as a product failure.
+
+- Always run with `Network.setCacheDisabled(true)`, otherwise replays/seeks are served from disk
+  cache (2 ms fetches, `transferSize` 0) and ABR is never exercised.
+- Pick the throttle from the real ladder bitrates (measure the segment sizes first). On the demo
+  video v0 ≈ 318 kb/s, v1 ≈ 1052 kb/s, v2 ≈ 2726 kb/s, so **700 kb/s** cleanly forces v0.
+- Cold start at 0:00: the player re-saves its position every render tick and resume beats `?t=`,
+  so removing `sf_pos_<videoId>` in the same tab races. Go to a same-origin page with no player
+  (`/pricing`), remove the key there, then navigate to the video.
+- The email gate fires at 8 s and pauses playback — dismiss with **Skip for now** and report that
+  pause separately from network rebuffering.
+
+Big caveat to plan around: **the demo clip is only 20 s / 5 fragments**, so ABR gets very few
+decision points and the whole ladder can download in under a second on a fast link. Expect
+"cold start climbs 360p→720p in ~1 s but never requests 1080p" and expect *in-session recovery*
+(lift the throttle mid-playback and wait for an up-switch) to be unprovable — the remaining
+fragments land within ~80 ms of the lift, before hls.js's EWMA estimator has any fast samples.
+Report that as inconclusive rather than as a defect, and use a longer asset if recovery must be
+proven.
+
+**Whether Auto ever reaches the top rung is decided by the master's declared `BANDWIDTH` vs
+`abrBandWidthUpFactor`, not by the network.** Predict it before measuring: hls.js needs an
+estimate above `BANDWIDTH / abrBandWidthUpFactor` (default factor 0.7). With v2 declared at
+8.88 Mb/s the threshold was ~12.7 Mb/s and Auto stayed on v1 for 215 fragments on a healthy
+link; after the encoder capped v2 to `BANDWIDTH=5,062,915` and the player added
+`abrBandWidthUpFactor: 0.8` the threshold dropped to ~6.33 Mb/s and Auto switched to v2 on the
+*second* fragment and held it for the whole window. Report measured throughput
+(`encodedBodySize * 8 / duration` per fragment, median/p90/max) next to that threshold so the
+pass/fail is arithmetic, not opinion. Note the opening rung is a separate calculation
+(`abrEwmaDefaultEstimate * upFactor`), so a factor change can silently move fragment one —
+always re-check it as a regression.
+
+**An unthrottled pass on this box is not a customer-representative pass.** The sandbox measures
+median throughput anywhere from ~7 Mb/s to ~57 Mb/s depending on the day, so "Auto reached
+1080p unthrottled" can be true here and false for real viewers. Re-run the top-rung case with
+CDP caps at realistic consumer speeds (10 Mb/s and 8 Mb/s worked well) and report the *measured*
+median next to the `BANDWIDTH / upFactor` threshold. Useful calibration: a nominal CDP cap
+delivers ~85% of its value in practice (10 Mb/s cap → 8.24 Mb/s measured, 8 Mb/s cap →
+6.84 Mb/s measured), so pick the cap with that derating in mind — a nominal 8 Mb/s cap sits only
+~0.5 Mb/s above a 6.33 Mb/s threshold and is the right place to probe for a marginal ladder.
+
+**A longer asset does NOT by itself make in-session recovery provable.** On the 130 s /
+18-fragment demo (`/v/videokr-product-film-130s-abr-demo`) the same wall was hit three times:
+once the throttle is lifted, hls.js pulls *every remaining fragment* in a sub-200 ms burst
+(e.g. `v0/011..v0/017` all inside 150 ms), because the buffer target is no longer bandwidth
+limited. hls.js's bandwidth EWMA is *time*-based (fast half-life ~3 s), so a 150 ms burst of
+fast samples cannot move an estimate that has minutes of slow samples behind it — there are
+effectively zero ABR decision points after the lift, and the session finishes on v0.
+Lifting to a moderate rate instead of "unlimited" does not help either: an up-switch to v1
+needs a sustained estimate above roughly `v1 declared BANDWIDTH / 0.7` (≈4.1 Mb/s for the
+2.89 Mb/s v1 rendition), which a paced-but-bursty refill never reaches.
+Practical options if recovery must be demonstrated: use a very long asset (≥10 min) so the
+buffer cannot swallow the remainder, or temporarily cap `maxBufferLength` in the player, or
+instrument `hls.on(Hls.Events.LEVEL_SWITCHED)` telemetry. Otherwise report it as
+untested/inconclusive and show the closest provable proxy: throttled session = all v0, then
+unthrottled reload = climbs to v1 by fragment two.
+
+Note on the `abrEwmaDefaultEstimate: 1500000` / `testBandwidth: false` / `startLevel: -1`
+config: it does **not** make fragment one 720p if the master playlist declares v1 BANDWIDTH
+above the assumed estimate (v1 = 2.89 Mb/s > 1.5 Mb/s), so hls.js still opens on v0/360p and
+only climbs on fragment two. Always read the declared `BANDWIDTH` values out of the master
+`.m3u8` before predicting the opening level.
+
+**The declared master BANDWIDTH is usually the real lever, not the player config.** When
+`POST /hls/complete` measures the ladder from R2 and rewrites the master (film became
+v0 `378757/225389`, v1 `1424413/578728`, v2 `8625044/2970656`), the opening pick changes with
+no player change: with `abrEwmaDefaultEstimate: 2500000` and hls.js's ~0.95 bandwidth factor the
+effective opening estimate is ~2.37 Mb/s, which now clears v1's 1.42 Mb/s → **fragment one is
+v1/720p**. Predict the opening level before every run as
+`highest level whose BANDWIDTH < 0.95 * abrEwmaDefaultEstimate`; that arithmetic makes the test
+adversarial, because a stale player or an un-rewritten master still visibly yields v0 first.
+v2 stays unreachable on Auto because its declared BANDWIDTH (8.6 Mb/s) is far above the
+estimate — the AVERAGE-BANDWIDTH path only applies once the buffer is healthy, and on these
+short demo assets the whole file downloads before that matters.
+
+**Watch the startup cost of a higher opening level on a capped link.** Opening at v1 means the
+*first* fragment is a 720p one: at 700 kb/s it took 6.6 s to transfer and navigation → first
+fragment complete was ~11.4 s (vs ~7 s when fragment one was v0). ABR still corrects to v0 from
+fragment two and playback is stall-free, so measure and report the startup number separately
+from the stall count — they can disagree.
+
+**Pre-buffering, not just burst-fetching, blocks recovery tests.** On the 71 s-of-media film at
+a 700 kb/s cap, all 18 fragments were already fetched by ~32 s of page time, so
+`video.buffered` covered `0.0-71.5` before the cap was even lifted. Seeking forward after the
+lift then lands in buffered territory and produces **zero** new requests. Check
+`video.buffered.end(0)` *before* deciding a seek will prove anything; if it already covers the
+asset, the run is inconclusive by construction.
+
+**A ≥10-minute asset with 2 s segments finally makes recovery provable.** On
+`/v/videokr-product-film-10-min-abr-demo` (651 s, 326 segments/rung) at a 700 kb/s cap the buffer
+horizon stays bounded (~120 s of 651 s at the 60 s mark) and hls.js keeps issuing fragment
+requests continuously, so lifting the throttle produces real decision points: measured up-switch
+`v0 → v1/720p` **5.3 s / 10 segments after the lift**, with `videoHeight` following from 360 to
+720 only once the playhead reaches the newly fetched segments (expect that lag — the already
+buffered low-rung segments play out first, so poll `videoHeight` again ~30-60 s later before
+calling it a failure). Always log the lift page-time plus `currentTime`, `buffered.end()` and the
+fragment count at the instant of the lift; that trio is what makes the result defensible.
+
+Two other things this asset class showed:
+- **2 s segments roughly halve capped startup**: navigation → first fragment complete was 7.1 s
+  (vs 11.4 s on the 4 s-segment film), even though fragment one is still the 720p rung.
+- **Auto still never picks v2/1080p on an unthrottled link** even with a bounded buffer and 215
+  fragments fetched: v2 declares `BANDWIDTH=8880388`, and with hls.js's up-switch factor the
+  estimate must exceed ~12.7 Mb/s, above the ~7.4 Mb/s median throughput measured from the
+  browser. If a run needs to show 1080p on Auto, expect to need either a lower declared v2
+  BANDWIDTH or a genuinely faster link — and note that v2 may also still be on 4 s segments
+  (`TARGETDURATION:4`, 325 segments) while v0/v1 are 2 s.
+
+Manual override is provable and cheap, and the strongest demo is done **under the throttle**:
+load throttled (Auto picks v0/360p), pick `720p` from the gear menu, then `video.currentTime = 0;
+video.play()` to force fresh fetches — every fragment should be `v1` with 6–10 s fetch times and
+`videoHeight === 720`, proving ABR does not override the pin. Then pick `Auto` with the same cap
+still applied and replay: fragments drop back to `v0` / `videoHeight === 360`, which is the
+cleanest possible proof that adaptive control resumed.
+
+## The `wave` skin and narrow-viewport player checks
+
+`.sf-skin-wave` (in `public/player/player.css`) is a flat bar with a full-width
+waveform-masked seek rail (`order:-1; flex:0 0 100%`) and explicit control ordering ending
+in `.sf-fs { order: 10 }`, so **fullscreen must be the right-most control**. Its responsive
+rules use a `@container (max-width: 420px)` query keyed off the *player's own width*, not the
+viewport — so an iframe is a faithful narrow test even though Chrome here cannot be resized
+below ~532px:
+
+```html
+<!-- /home/ubuntu/demo/wave-390.html, served from the 8099 fixture host -->
+<div style="width:390px;outline:2px solid magenta">
+  <iframe src="https://videokr.com/e/<slug>" width="390" height="220" style="border:0"></iframe>
+</div>
+```
+
+Anything spilling outside the magenta outline is a clip/overflow bug. Hover the player before
+each screenshot (the bar auto-fades) and use the screenshot `zoom` region rather than browser
+zoom — page zoom does not reliably scale the iframe's rendered control bar here.
+
+**Restoration trap:** `public/app.js` overwrites accent/background/corner-radius/big-play with
+the new skin's preset whenever you change the Skin select, so switching back to the original
+skin does *not* restore the original colours. Record them first
+(`GET /api/embed/<slug>` → `player.accent/background/borderRadius/bigPlayButton`) and re-enter
+them by hand. The colour inputs are native `<input type=color>`: click the swatch, then
+triple-click the R field and type `R<TAB>G<TAB>B<ENTER>` (e.g. `226 87 27` for `#e2571b`) —
+much more reliable than dragging in the picker. Verify the restore with the same API call.
+
+## CTA styles / button styles / gate styles / skins matrix (dashboard → public player)
+
+The CTA row in the editor has **two independent selects** (`Style` = card treatment,
+`Button style` = button treatment) plus `Position`. Testing the 10x10 space exhaustively is
+pointless; instead put 3-4 CTAs on one video at distinct positions, name each CTA's headline
+after its own style (`STYLE: glass`) so screenshots are self-labelling, then Save changes →
+**hard-reload** the public page (`ctrl+shift+r`; the player JS/CSS are aggressively cached) →
+hover the player → `zoom` the stage region.
+
+Things that have actually broken here and are worth asserting every time:
+
+- **Position is only disabled when Type = Banner.** Fixed-layout *styles* (`bar`, `ribbon`,
+  `spotlight`) still let you pick a Position that the player then ignores
+  (`ctaClassName()` omits `sf-pos-*` for them). If a task says "Position must be disabled for
+  banner/bar/ribbon/spotlight", check all four — and cross-check on the player that the picked
+  position genuinely has no effect, which makes it a misleading-control bug rather than cosmetic.
+- **Skin presets can make a CTA button unreadable.** Changing Skin overwrites accent/background,
+  so e.g. the `white` button style under the `cinema` skin renders white text on a white button
+  (label invisible). When testing skins, keep the CTA button style on `solid` and re-check
+  contrast per skin, otherwise you cannot tell whether a fault is skin-side or CTA-side.
+- Gate/form styles: set Start at ~2 s so the gate fires quickly, enable Skip, and let playback
+  reach it (the gate does not render before its start time). Check email input + submit + "Skip
+  for now" all visible per style, and use the 390px iframe harness
+  (`/home/ubuntu/demo/gate-390.html?slug=<slug>`) for the phone-width check.
+
+## Optimise-for-slow-connections gating (uploaded vs link sources)
+
+- Composer with a YouTube/Vimeo/HLS URL pasted: the checkbox must be **disabled + unchecked**
+  with the inline reason `Only videos uploaded to Videokr can be optimised.`
+- Editor of a link video: the button is replaced by that same inline reason (found under
+  **Metadata**, at the bottom — not under "Quality & speed"). Assert no raw `Failed to fetch`.
+- Editor of an uploaded MP4: the button is present and enabled. Clicking it encodes in-tab
+  (~5x realtime; a 30 s clip took ~45 s end to end), progresses through `Uploading ladder
+  parts…`, then the Source field flips to `/media/<user>/<vid>/hls/master.m3u8`, the library
+  badge flips `mp4` → `hls`, and the public page still plays. Keep the tab focused while it runs.
+
 ## Devin Secrets Needed
 
 None for local runs (simulated D1/R2). For production runs you need the deployed base URL
