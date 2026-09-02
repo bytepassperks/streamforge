@@ -1116,7 +1116,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate,
 .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen { padding-bottom: 0; }
 .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card p { display: block; }
-@container (max-width: 420px) {
+@container (max-width: 790px) {
   #preview .sf-player.sf-short .sf-gate-card,
   #preview .sf-player.sf-short .sf-endscreen-card,
   .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card,
