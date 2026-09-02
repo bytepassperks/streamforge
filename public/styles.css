@@ -697,6 +697,7 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
   padding: 16px 20px 46px; position: relative; min-height: 92px;
   transition: border-color .16s var(--ease), background .16s var(--ease), box-shadow .16s var(--ease);
 }
+.composer-field + .composer-field { margin-top: var(--s3); }
 /* The box itself is the control here, so it carries the focus ring. Left to the
    global input rule, the ring was painted around the bare text node instead —
    a rounded orange outline hugging the words with no padding, sitting inside the

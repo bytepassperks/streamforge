@@ -162,7 +162,7 @@ content.get(`/:section{(?:${SECTION_IDS})}`, (c) => {
   </section>
   <aside class="sf-lib-cta">
     <h2>Try it on the free plan</h2>
-    <p>500 plays a month, 5 videos, 2 GB of storage, every player and analytics feature — $0, no card, no timer.</p>
+    <p>500 plays a month, 5 videos, every player and analytics feature — $0, no card, no timer.</p>
     <p><a class="btn" href="/login.html?mode=signup">Start free</a> <a class="sf-quiet-link" href="/v/videokr-the-product-film">or watch the two-minute film</a></p>
   </aside>
 </main>`;

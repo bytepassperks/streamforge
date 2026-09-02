@@ -14,8 +14,6 @@ export interface Plan {
   plays: number;
   /** null means unlimited. */
   videos: number | null;
-  /** Fair-use storage ceiling, in bytes. */
-  storageBytes: number;
   /** Free stops at its allowance; paid plans keep serving and accrue overage. */
   hardStop: boolean;
   usd: number;
@@ -24,8 +22,7 @@ export interface Plan {
 }
 
 /**
- * Plays are what we charge for; storage is the cost that accrues whether a video
- * is watched or not, so every plan carries a fair-use ceiling on it.
+ * Plays are what we charge for; bandwidth is never metered on any plan.
  */
 export const PLANS: Record<string, Plan> = {
   free: {
@@ -33,7 +30,6 @@ export const PLANS: Record<string, Plan> = {
     name: 'Free',
     plays: 500,
     videos: 5,
-    storageBytes: 2 * 1024 * 1024 * 1024,
     hardStop: true,
     usd: 0,
     usdAnnual: 0,
@@ -44,7 +40,6 @@ export const PLANS: Record<string, Plan> = {
     name: 'Starter',
     plays: 10000,
     videos: null,
-    storageBytes: 25 * 1024 * 1024 * 1024,
     hardStop: false,
     usd: 5,
     usdAnnual: 29,
@@ -53,9 +48,8 @@ export const PLANS: Record<string, Plan> = {
   agency: {
     id: 'agency',
     name: 'Agency',
-    plays: 150000,
+    plays: Infinity,
     videos: null,
-    storageBytes: 250 * 1024 * 1024 * 1024,
     hardStop: false,
     usd: 29,
     usdAnnual: 290,
@@ -66,7 +60,6 @@ export const PLANS: Record<string, Plan> = {
     name: 'Lifetime',
     plays: 10000,
     videos: null,
-    storageBytes: 25 * 1024 * 1024 * 1024,
     hardStop: false,
     usd: 0,
     usdAnnual: 0,
@@ -79,7 +72,6 @@ export const OVERAGE_PER_10K_USD = 1;
 
 export const FREE_LIMITS = {
   videos: PLANS.free.videos ?? 5,
-  storageBytes: PLANS.free.storageBytes,
   playsPerMonth: PLANS.free.plays,
 };
 

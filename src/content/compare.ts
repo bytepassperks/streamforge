@@ -38,14 +38,14 @@ Wistia is a well-established video marketing platform and it is genuinely good a
 
 Videokr is metered on plays, de-duplicated once per video per month, and never on bandwidth:
 
-| Plan | Price | Plays / month | Storage |
+| Plan | Price | Plays / month | Videos |
 | --- | --- | --- | --- |
-| Free | $0 forever | 500 | 2 GB |
-| Starter | $29/year or $5/month | 10,000 | 25 GB |
-| Agency | $29/month or $290/year | 150,000 | 250 GB |
-| Lifetime | $69 once | 10,000 forever | 25 GB |
+| Free | $0 forever | 500 | 5 |
+| Starter | $29/year or $5/month | 10,000 | Unlimited |
+| Agency | $29/month or $290/year | unlimited | Unlimited |
+| Lifetime | $69 once | 10,000 forever | Unlimited |
 
-Extra plays on paid plans are $1 per 10,000. There is no egress meter, so a page that unexpectedly does well does not produce a bandwidth invoice.
+Extra plays on Starter and Lifetime are $1 per 10,000; Agency has no play limit. There is no egress meter, so a page that unexpectedly does well does not produce a bandwidth invoice.
 
 ## Where Videokr is the wrong choice
 
@@ -106,7 +106,7 @@ Vidyard's centre of gravity is the first. Videokr does the second: [public video
 
 ## Pricing shape
 
-Per play, de-duplicated once per video per month, with no bandwidth meter: free at 500 plays, $29/year for 10,000, $29/month for 150,000, or $69 once for 10,000 a month forever. Extra plays cost $1 per 10,000 on paid plans.
+Per play, de-duplicated once per video per month, with no bandwidth meter: free at 500 plays, $29/year for 10,000, $29/month with unlimited plays for Agency, or $69 once for 10,000 a month forever. Extra plays cost $1 per 10,000 on Starter and Lifetime.
 
 Seat-based pricing is the thing to compare against your own reality: if two people manage video for a company of two hundred, per-seat pricing is usually irrelevant and per-play is cheaper; if two hundred reps each send personal videos, the opposite is true.
 
@@ -143,7 +143,7 @@ ${FAIRNESS}`,
 
 - **Scope.** Vimeo covers a wide surface — hosting, creation tools, showcases, a public audience. Videokr covers hosted marketing video: player, embeds, CTAs, leads, analytics.
 - **What the player is for.** A Videokr player ends on your [end screen or CTA](/docs/ctas-and-lead-forms), not on anything that points elsewhere, and carries no vendor branding on paid plans or Lifetime.
-- **What is metered.** Videokr counts de-duplicated plays (once per video per month) and never bandwidth. Storage is a fixed per-plan allowance, and [linking an external file](/docs/sources) uses none of it.
+- **What is metered.** Videokr counts de-duplicated plays (once per video per month) and never bandwidth. [Linking an external file](/docs/sources) keeps the file where it already lives.
 
 ## Privacy and access control
 
@@ -155,12 +155,12 @@ Timed overlays, banners, end screens, email gates that pause playback, A/B thumb
 
 ## Pricing
 
-| Plan | Price | Plays / month | Storage |
+| Plan | Price | Plays / month | Videos |
 | --- | --- | --- | --- |
-| Free | $0 forever | 500 | 2 GB |
-| Starter | $29/year or $5/month | 10,000 | 25 GB |
-| Agency | $29/month or $290/year | 150,000 | 250 GB |
-| Lifetime | $69 once | 10,000 forever | 25 GB |
+| Free | $0 forever | 500 | 5 |
+| Starter | $29/year or $5/month | 10,000 | Unlimited |
+| Agency | $29/month or $290/year | unlimited | Unlimited |
+| Lifetime | $69 once | 10,000 forever | Unlimited |
 
 ## Where Videokr is the wrong choice
 
@@ -181,7 +181,7 @@ ${FAIRNESS}`,
       },
       {
         q: 'Is there a bandwidth limit?',
-        a: 'No. Videokr never meters bandwidth on any plan; the allowance is on de-duplicated plays and storage.',
+        a: 'No. Videokr never meters bandwidth on any plan; Starter and Lifetime charge only for de-duplicated plays above their allowance, while Agency has no play limit.',
       },
     ],
   },
@@ -332,7 +332,7 @@ Keep masters and archive in your own storage. [Link that file](/docs/sources) �
 
 ## Cost, concretely
 
-Self-hosting costs engineering time plus egress; the egress line is the one that grows with success. Videokr's cost shape is fixed and small: $0 for 500 plays a month, $69 once for 10,000 a month forever, $29/month for 150,000, and $1 per extra 10,000 plays on paid plans — with no bandwidth meter, so a page that does unexpectedly well costs the same as one that does not.
+Self-hosting costs engineering time plus egress; the egress line is the one that grows with success. Videokr's cost shape is fixed and small: $0 for 500 plays a month, $69 once for 10,000 a month forever, $29/month for unlimited Agency plays, and $1 per extra 10,000 plays on Starter and Lifetime — with no bandwidth meter, so a page that does unexpectedly well costs the same as one that does not.
 
 ## Questions to ask any vendor first
 

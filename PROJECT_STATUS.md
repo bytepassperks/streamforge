@@ -70,12 +70,12 @@ end-to-end against a live receiver.
 **Billing (Free, Starter, Agency, Lifetime — Dodo Payments) — LIVE and connected.**
 `src/lib/billing.ts`. Plans are metered on plays, not on storage:
 
-| Plan | Price | Plays / month | Videos | Fair-use storage | Over allowance |
-| --- | --- | --- | --- | --- | --- |
-| Free | $0 | 500 | 5 | 2 GB | playback stops until the month rolls over |
-| Starter | $5/mo or $29/yr | 10,000 | unlimited | 25 GB | keeps playing, $1 per 10,000 |
-| Agency | $29/mo or $290/yr | 150,000 | unlimited | 250 GB | keeps playing, $1 per 10,000 |
-| Lifetime | $69 → $99 → $149 one-time, on sale permanently | 10,000 forever | unlimited | 25 GB | keeps playing, $1 per 10,000 |
+| Plan | Price | Plays / month | Videos | Over allowance |
+| --- | --- | --- | --- | --- |
+| Free | $0 | 500 | 5 | playback stops until the month rolls over |
+| Starter | $5/mo or $29/yr | 10,000 | unlimited | keeps playing, $1 per 10,000 |
+| Agency | $29/mo or $290/yr | unlimited | unlimited | no overage |
+| Lifetime | $69 → $99 → $149 one-time, on sale permanently | 10,000 forever | unlimited | keeps playing, $1 per 10,000 |
 
 - Dodo live products: Lifetime `pdt_0NlkABQZHg1IEe8PHKx3j`; recurring Starter monthly
   `pdt_0NlpHnWuphLGAtw5NnKzA`, Starter annual `pdt_0NlpHnaEHSuVDufu3ixr7`, Agency monthly
@@ -334,8 +334,8 @@ Ordered by what blocks revenue.
    waive paths are covered by unit tests against a faked provider, but no real subscription
    charge has been run, so the request/response field names are still as documented rather
    than as observed.
-7. **Storage is metadata only.** Each plan carries a fair-use storage ceiling, but uploaded
-   bytes are not totalled per account and nothing enforces the ceiling. The cold-storage
+7. **Storage routing is separate from plan limits.** Uploaded bytes are not totalled per
+   account and no plan storage ceiling is enforced. The cold-storage
    lifecycle (move media with no plays for 60 days to infrequent-access) is also not built.
 8. **View identity is weak.** `view_id` comes from the client, so a determined caller can
    rotate it to inflate an owner's counted plays, or reuse one to suppress them. Fine for

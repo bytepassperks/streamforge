@@ -3200,9 +3200,7 @@
         thousands(plan.plays) +
           ' plays a month, ' +
           plan.videos +
-          ' videos, ' +
-          Math.round(plan.storageBytes / (1024 * 1024 * 1024)) +
-          ' GB fair-use storage. Playback pauses once the allowance runs out.',
+          ' videos. Playback pauses once the allowance runs out.',
       ),
     );
     card.appendChild(text('p', 'pill pill-ok', 'Your current plan'));
@@ -3212,6 +3210,7 @@
   /** One card per metered plan, with monthly and annual checkout. */
   function planCard(billing, planId) {
     var plan = billing.plans[planId];
+    var unlimited = plan.plays === null || !Number.isFinite(plan.plays);
     var card = text('div', 'card plan-card');
     card.appendChild(text('h3', null, plan.name));
     var price = text('div', 'plan-price', '$' + plan.usd);
@@ -3221,12 +3220,12 @@
       text(
         'p',
         'muted tiny',
-        thousands(plan.plays) +
-          ' plays a month, unlimited videos, ' +
-          Math.round(plan.storageBytes / (1024 * 1024 * 1024)) +
-          ' GB fair-use storage. Extra plays are $' +
-          billing.overage_per_10k_usd +
-          ' per 10,000.',
+        unlimited
+          ? 'Unlimited plays a month, unlimited videos. No overage.'
+          : thousands(plan.plays) +
+            ' plays a month, unlimited videos. Extra plays are $' +
+            billing.overage_per_10k_usd +
+            ' per 10,000.',
       ),
     );
     if (billing.plan === planId) {

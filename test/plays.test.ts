@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  FREE_LIMITS,
   PLANS,
   countPlay,
   periodKey,
@@ -59,7 +60,7 @@ describe('periodKey', () => {
 describe('planFor', () => {
   it('maps the stored plan, defaulting unknown plans to free', () => {
     expect(planFor({ plan: 'starter' }).plays).toBe(10000);
-    expect(planFor({ plan: 'agency' }).plays).toBe(150000);
+    expect(planFor({ plan: 'agency' }).plays).toBe(Infinity);
     expect(planFor({ plan: 'lifetime' }).plays).toBe(10000);
     expect(planFor({ plan: 'free' }).plays).toBe(500);
     expect(planFor({ plan: 'nonsense' }).id).toBe('free');
@@ -124,6 +125,13 @@ describe('play ledger', () => {
 
     const agency = await playUsage(env, { id: 'usr_1', plan: 'agency', role: 'user', unlimited: 0 });
     expect(agency).toMatchObject({ over: 0, blocked: false, overage_usd: 0 });
+  });
+
+  it('treats Agency as unlimited and keeps free limits focused on plays and videos', async () => {
+    store.usage.set(`usr_1|${periodKey()}`, 900000);
+    const agency = await playUsage(env, { id: 'usr_1', plan: 'agency', role: 'user', unlimited: 0 });
+    expect(agency).toMatchObject({ allowance: null, over: 0, blocked: false, overage_usd: 0 });
+    expect('storageBytes' in FREE_LIMITS).toBe(false);
   });
 
   it('never meters an admin or an unlimited override', async () => {

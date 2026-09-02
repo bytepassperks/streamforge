@@ -304,16 +304,16 @@ seo.get('/sitemap-playlists.xml', async (c) => {
 /* ------------------------------------------------- llms.txt and markdown --- */
 
 const PLANS = [
-  'Free — $0 forever, no card: 500 plays/month, 5 videos, 2 GB storage, full player, analytics and lead capture, small Videokr badge.',
-  'Starter — $29/year (or $5 month-to-month): 10,000 plays/month, unlimited videos, 25 GB storage, badge off.',
-  'Agency — $29/month (or $290/year): 150,000 plays/month, unlimited videos, 250 GB storage, projects, playlists and SEO video pages.',
-  'Lifetime — $69 one payment (a $10 launch discount off $79, applied at checkout): 10,000 plays/month forever, unlimited videos, 25 GB storage, badge off, every future feature. Sales are final and carry a 1 year warranty.',
-  'Extra plays on paid plans cost $1 per 10,000. Bandwidth is never metered on any plan.',
+  'Free — $0 forever, no card: 500 plays/month, 5 videos, full player, analytics and lead capture, small Videokr badge.',
+  'Starter — $29/year (or $5 month-to-month): 10,000 plays/month, unlimited videos, badge off.',
+  'Agency — $29/month (or $290/year): unlimited plays, unlimited videos, projects, playlists and SEO video pages.',
+  'Lifetime — $69 one payment (a $10 launch discount off $79, applied at checkout): 10,000 plays/month forever, unlimited videos, badge off, every future feature. Sales are final and carry a 1 year warranty.',
+  'Extra plays cost $1 per 10,000 on Starter and Lifetime; Agency has no play limit. Bandwidth is never metered on any plan.',
 ];
 
 const FACTS = [
   'A play is one viewer starting one video, counted once per video per month; reloads and rewatches in the same month are not counted again.',
-  'Free accounts stop serving at 500 plays a month until the month rolls over; paid plans keep playing and accrue overage.',
+  'Free accounts stop serving at 500 plays a month until the month rolls over; Starter and Lifetime keep playing and accrue overage, while Agency has no play limit or overage.',
   'Sources: upload MP4 or WebM (200 MB per file, 5 MB per image), or link an MP4, WebM, HLS, YouTube or Vimeo URL.',
   'Player: skins, accent colour, corner radius, logo watermark, per-control toggles, chapters, captions, playback speeds, picture-in-picture, sticky miniplayer, hotkeys.',
   'Marketing: timed overlays, banners, end screens, email lead gates that pause playback, A/B thumbnails, related videos.',
@@ -377,7 +377,7 @@ const ANSWERS: { q: string; a: string }[] = [
   },
   {
     q: 'What counts as a play?',
-    a: 'One viewer starting one video, counted once per video per month. A viewer who reloads or rewatches the same video in the same month is not counted again. Free stops at 500 plays until the month rolls over; paid plans keep playing and extra plays cost $1 per 10,000.',
+    a: 'One viewer starting one video, counted once per video per month. A viewer who reloads or rewatches the same video in the same month is not counted again. Free stops at 500 plays until the month rolls over; Starter and Lifetime keep playing and extra plays cost $1 per 10,000, while Agency has no monthly play limit.',
   },
   {
     q: 'How much does it cost?',
@@ -385,7 +385,7 @@ const ANSWERS: { q: string; a: string }[] = [
   },
   {
     q: 'Will bandwidth or storage bill me?',
-    a: 'No. There is no metered egress on any plan. Storage is a fixed allowance per plan (2 GB free, 25 GB Starter and Lifetime, 250 GB Agency), and linking an external source uses no storage at all.',
+    a: 'No. There is no metered egress on any plan. You pay for plays, and linking an external source keeps the file where it already lives.',
   },
   {
     q: 'How large can an upload be?',

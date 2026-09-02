@@ -222,7 +222,7 @@ See [plans and limits](/docs/plans-and-limits) for the exact numbers, and [how t
     faqs: [
       {
         q: 'Does Videokr charge for bandwidth?',
-        a: 'No — no plan meters bandwidth. Allowances are on de-duplicated plays and on storage.',
+        a: 'No — no plan meters bandwidth. Starter and Lifetime charge only for de-duplicated plays above their allowance, while Agency has no play limit.',
       },
       {
         q: 'How is a play counted?',
@@ -479,7 +479,7 @@ Video uploaded into each client's WordPress means: their bandwidth, their upload
 
 ## What this costs
 
-Agency is $29/month or $290/year for 150,000 plays a month, 250 GB and unlimited videos, with extra plays at $1 per 10,000 and no bandwidth meter. For most agency portfolios that is a rounding error against a single client's monthly retainer, and it is a fixed number you can quote in a proposal.
+Agency is $29/month or $290/year for unlimited plays and unlimited videos, with no overage and no bandwidth meter. For most agency portfolios that is a rounding error against a single client's monthly retainer, and it is a simple number you can quote in a proposal.
 
 ## Handover
 
@@ -670,7 +670,7 @@ The vendor's mark on the player. Free tiers usually show one; check exactly whic
 
 ## Unlimited
 
-Almost never literally unlimited. Look for the fair-use clause, the per-file size cap and the storage cap. Videokr says the specific numbers instead: 200 MB per file, 5 MB per image, and a per-plan storage allowance.`,
+Almost never literally unlimited. Look for the fair-use clause and the per-file size cap. Videokr states the specific upload limits: 200 MB per file and 5 MB per image.`,
     faqs: [
       {
         q: 'What is the difference between a play and a view?',

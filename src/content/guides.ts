@@ -823,7 +823,7 @@ Can you export videos, leads and analytics? Do embed URLs survive a plan change?
 
 ## A short scoring exercise
 
-Write down your worst realistic month — plays, storage, number of sites — and price every candidate against that, not against today. Then check the one feature you would miss most if the free tier hid it: for most people that is either unbranding or the retention curve.
+Write down your worst realistic month — plays and number of sites — and price every candidate against that, not against today. Then check the one feature you would miss most if the free tier hid it: for most people that is either unbranding or the retention curve.
 
 Comparisons: [vs Wistia](/compare/wistia-alternative), [vs Vimeo](/compare/vimeo-alternative), [vs Vidyard](/compare/vidyard-alternative), [vs YouTube](/compare/youtube-alternative).`,
     faqs: [
@@ -833,7 +833,7 @@ Comparisons: [vs Wistia](/compare/wistia-alternative), [vs Vimeo](/compare/vimeo
       },
       {
         q: 'Does free video hosting exist?',
-        a: 'Yes, with limits worth reading: play or bandwidth caps, and usually the vendor’s badge on the player. Videokr’s free plan allows 500 plays a month, 5 videos and 2 GB, with one small badge.',
+        a: 'Yes, with limits worth reading: play or bandwidth caps, and usually the vendor’s badge on the player. Videokr’s free plan allows 500 plays a month and 5 videos, with one small badge.',
       },
     ],
   },
