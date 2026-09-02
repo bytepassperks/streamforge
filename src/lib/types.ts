@@ -55,6 +55,10 @@ export interface PlayerConfig {
   skin: string;
   accent: string;
   background: string;
+  fontFamily: string;
+  showChapters: boolean;
+  showCtas: boolean;
+  showForms: boolean;
   controls: {
     playPause: boolean;
     progress: boolean;

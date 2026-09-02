@@ -179,6 +179,120 @@ export function retentionBucket(position: number, duration: number, buckets = 10
 /** Shipped skins. The first is the default every new video and every surface uses. */
 export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate'] as const;
 
+export const PLAYER_FONTS = ['', 'Inter', 'Figtree', 'Bricolage Grotesque', 'JetBrains Mono'] as const;
+
+export function normalizeFontFamily(value: unknown): string {
+  return (PLAYER_FONTS as readonly string[]).includes(String(value ?? '')) ? String(value ?? '') : '';
+}
+
+// Keep this in sync with formFieldsWithName in public/app.js.
+export function normalizeFormFields(value: unknown): string {
+  const fields = String(value ?? '')
+    .split(',')
+    .map((field) => field.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((field, index, list) => field !== 'email' && field !== 'name' && list.indexOf(field) === index);
+  fields.unshift('email');
+  return fields.join(',');
+}
+
+export function toggleFormNameField(value: unknown, includeName: boolean): string {
+  const fields = normalizeFormFields(value).split(',').filter((field) => field !== 'name');
+  if (includeName) fields.push('name');
+  return fields.join(',');
+}
+
+export type RgbColor = [number, number, number];
+
+export function parseHexColor(value: unknown): RgbColor | null {
+  const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(value ?? '').trim());
+  if (!match) return null;
+  const digits = match[1].length === 3
+    ? match[1].split('').map((digit) => digit + digit).join('')
+    : match[1];
+  return [
+    parseInt(digits.slice(0, 2), 16),
+    parseInt(digits.slice(2, 4), 16),
+    parseInt(digits.slice(4, 6), 16),
+  ];
+}
+
+export function rgbToHex(rgb: RgbColor): string {
+  return '#' + rgb.map((channel) => Math.max(0, Math.min(255, Math.round(channel))).toString(16).padStart(2, '0')).join('');
+}
+
+export function rgbToHsv(rgb: RgbColor): [number, number, number] {
+  const values = rgb.map((channel) => channel / 255);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const delta = max - min;
+  let hue = 0;
+  if (delta) {
+    if (max === values[0]) hue = ((values[1] - values[2]) / delta) % 6;
+    else if (max === values[1]) hue = (values[2] - values[0]) / delta + 2;
+    else hue = (values[0] - values[1]) / delta + 4;
+    hue *= 60;
+    if (hue < 0) hue += 360;
+  }
+  return [hue, max ? delta / max : 0, max];
+}
+
+export function hsvToRgb(hsv: [number, number, number]): RgbColor {
+  const [hue, saturation, value] = hsv;
+  const chroma = value * saturation;
+  const part = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const match = value - chroma;
+  let rgb: [number, number, number];
+  if (hue < 60) rgb = [chroma, part, 0];
+  else if (hue < 120) rgb = [part, chroma, 0];
+  else if (hue < 180) rgb = [0, chroma, part];
+  else if (hue < 240) rgb = [0, part, chroma];
+  else if (hue < 300) rgb = [part, 0, chroma];
+  else rgb = [chroma, 0, part];
+  return rgb.map((channel) => Math.round((channel + match) * 255)) as RgbColor;
+}
+
+export function contrastRatio(first: RgbColor, second: RgbColor): number {
+  const luminance = (rgb: RgbColor) => {
+    const channels = rgb.map((channel) => {
+      const normalized = channel / 255;
+      return normalized <= 0.03928
+        ? normalized / 12.92
+        : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+  const firstLuminance = luminance(first);
+  const secondLuminance = luminance(second);
+  return (Math.max(firstLuminance, secondLuminance) + 0.05) /
+    (Math.min(firstLuminance, secondLuminance) + 0.05);
+}
+
+export function clampHighContrast(accent: RgbColor, background: RgbColor): RgbColor {
+  if (contrastRatio(accent, background) >= 4.5) return accent;
+  const [hue, saturation, value] = rgbToHsv(accent);
+  const low = hsvToRgb([hue, saturation, 0]);
+  const towardLow = contrastRatio(low, background) >= 4.5;
+  let lower = 0;
+  let upper = 1;
+  if (towardLow) upper = value;
+  else lower = value;
+  for (let index = 0; index < 24; index += 1) {
+    const midpoint = (lower + upper) / 2;
+    const candidate = hsvToRgb([hue, saturation, midpoint]);
+    const passes = contrastRatio(candidate, background) >= 4.5;
+    if (towardLow) {
+      if (passes) lower = midpoint;
+      else upper = midpoint;
+    } else if (passes) {
+      upper = midpoint;
+    } else {
+      lower = midpoint;
+    }
+  }
+  return hsvToRgb([hue, saturation, towardLow ? lower : upper]);
+}
+
 /** Retired skin names still stored on old videos, mapped onto the shipped set. */
 const LEGACY_SKINS: Record<string, string> = {
   'forge-dark': 'videokr',
@@ -199,6 +313,10 @@ export function defaultPlayerConfig(): PlayerConfig {
     skin: PLAYER_SKINS[0],
     accent: '#ff6106',
     background: '#0b0908',
+    fontFamily: '',
+    showChapters: true,
+    showCtas: true,
+    showForms: true,
     controls: {
       playPause: true,
       progress: true,
@@ -252,6 +370,10 @@ export function mergePlayerConfig(stored: string | null | undefined): PlayerConf
     ...base,
     ...incoming,
     accent: incoming.accent === LEGACY_ACCENT || !incoming.accent ? base.accent : incoming.accent,
+    fontFamily: normalizeFontFamily(incoming.fontFamily),
+    showChapters: incoming.showChapters !== false,
+    showCtas: incoming.showCtas !== false,
+    showForms: incoming.showForms !== false,
     skin: normalizeSkin(incoming.skin),
     controls: { ...base.controls, ...(incoming.controls ?? {}) },
     speeds: Array.isArray(incoming.speeds) && incoming.speeds.length ? incoming.speeds : base.speeds,

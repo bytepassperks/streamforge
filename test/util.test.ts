@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   canonicalRedirect,
+  clampHighContrast,
+  contrastRatio,
   CTA_BUTTON_STYLES,
   CTA_STYLES,
   defaultPlayerConfig,
@@ -16,6 +18,10 @@ import {
   PLAYER_SKINS,
   newId,
   parseSource,
+  parseHexColor,
+  normalizeFormFields,
+  toggleFormNameField,
+  rgbToHsv,
   retentionBucket,
   safeExternalUrl,
   slugify,
@@ -191,6 +197,21 @@ describe('player config', () => {
     expect(merged.controls.fullscreen).toBe(defaultPlayerConfig().controls.fullscreen);
   });
 
+  it('keeps feature visibility enabled when keys are absent and preserves explicit false', () => {
+    const defaults = defaultPlayerConfig();
+    expect(defaults.showChapters).toBe(true);
+    expect(defaults.showCtas).toBe(true);
+    expect(defaults.showForms).toBe(true);
+    const absent = mergePlayerConfig(JSON.stringify({}));
+    expect(absent.showChapters).toBe(true);
+    expect(absent.showCtas).toBe(true);
+    expect(absent.showForms).toBe(true);
+    const disabled = mergePlayerConfig(JSON.stringify({ showChapters: false, showCtas: false, showForms: false }));
+    expect(disabled.showChapters).toBe(false);
+    expect(disabled.showCtas).toBe(false);
+    expect(disabled.showForms).toBe(false);
+  });
+
   it('falls back to defaults on invalid json or empty speeds', () => {
     expect(mergePlayerConfig('not json')).toEqual(defaultPlayerConfig());
     expect(mergePlayerConfig(null)).toEqual(defaultPlayerConfig());
@@ -217,6 +238,46 @@ describe('player config', () => {
     expect(normalizeSkin('<script>')).toBe('videokr');
     expect(mergePlayerConfig(JSON.stringify({ skin: 'nope' })).skin).toBe('videokr');
     expect(mergePlayerConfig(JSON.stringify({ skin: 'pop' })).skin).toBe('pop');
+  });
+
+  it('whitelists player font families', () => {
+    expect(mergePlayerConfig(JSON.stringify({ fontFamily: 'Inter' })).fontFamily).toBe('Inter');
+    expect(mergePlayerConfig(JSON.stringify({ fontFamily: 'Bricolage Grotesque' })).fontFamily)
+      .toBe('Bricolage Grotesque');
+    expect(mergePlayerConfig(JSON.stringify({ fontFamily: 'url(https://evil.invalid)' })).fontFamily).toBe('');
+    expect(defaultPlayerConfig().fontFamily).toBe('');
+  });
+
+  it('parses three and six digit hex colours', () => {
+    expect(parseHexColor('#abc')).toEqual([170, 187, 204]);
+    expect(parseHexColor('ff6106')).toEqual([255, 97, 6]);
+    expect(parseHexColor('nope')).toBeNull();
+  });
+
+  it('keeps email required while toggling the optional name field', () => {
+    expect(normalizeFormFields('email')).toBe('email');
+    expect(normalizeFormFields('email,email')).toBe('email');
+    expect(normalizeFormFields('Email, EMAIL, phone')).toBe('email,phone');
+    expect(normalizeFormFields('email,phone,email')).toBe('email,phone');
+    expect(toggleFormNameField('email', true)).toBe('email,name');
+    expect(toggleFormNameField('email,name,name', true)).toBe('email,name');
+    expect(toggleFormNameField('email,email', true)).toBe('email,name');
+    expect(toggleFormNameField('email,phone,email', false)).toBe('email,phone');
+    expect(toggleFormNameField('name', false)).toBe('email');
+    expect(toggleFormNameField('', false)).toBe('email');
+  });
+
+  it('calculates WCAG contrast ratios', () => {
+    expect(contrastRatio([0, 0, 0], [255, 255, 255])).toBeCloseTo(21, 5);
+    expect(contrastRatio([119, 119, 119], [255, 255, 255])).toBeCloseTo(4.478, 3);
+  });
+
+  it('clamps accents to high contrast without changing hue', () => {
+    const accent = parseHexColor('#ff9900')!;
+    const background = parseHexColor('#ffffff')!;
+    const clamped = clampHighContrast(accent, background);
+    expect(contrastRatio(clamped, background)).toBeGreaterThanOrEqual(4.5);
+    expect(rgbToHsv(clamped)[0]).toBeCloseTo(rgbToHsv(accent)[0], 0);
   });
 });
 
