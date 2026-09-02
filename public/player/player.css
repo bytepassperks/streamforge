@@ -15,7 +15,7 @@
   border-radius: var(--sf-radius);
   overflow: hidden;
   outline: none;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--sf-font, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
   color: #fff;
 }
 .sf-fill { width: 100%; }

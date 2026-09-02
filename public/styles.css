@@ -1052,6 +1052,78 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .sec-panels > .tab-panel > h3:first-child { margin-top: 0; }
 .sec-preview .card { position: sticky; top: 74px; }
 .sec-preview #preview { margin-bottom: var(--s3); }
+.visually-hidden {
+  position: absolute !important; width: 1px !important; height: 1px !important;
+  padding: 0 !important; margin: -1px !important; overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important;
+}
+.branding-head { align-items: flex-start; margin-bottom: var(--s4); }
+.branding-head h3 { margin: 0 0 4px; font-size: 21px; }
+.branding-head p { margin: 0; }
+.branding-head .btn span { font-size: 14px; margin-right: 4px; }
+.branding-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s5); }
+.branding-col h4 { margin: 0 0 var(--s2); font-size: 14px; }
+.branding-toggle { margin-bottom: var(--s2); }
+.color-picker { display: grid; gap: 10px; }
+.color-sv {
+  position: relative; height: 190px; border-radius: 10px; overflow: hidden; cursor: crosshair;
+  background:
+    linear-gradient(to bottom, transparent, #000),
+    linear-gradient(to right, #fff, hsl(var(--pc-hue, 25), 100%, 50%));
+  box-shadow: inset 0 0 0 1px rgba(12, 14, 18, .12);
+}
+.color-hue {
+  position: relative; height: 16px; border-radius: 999px; cursor: ew-resize;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.color-knob {
+  position: absolute; width: 15px; height: 15px; border: 2px solid #fff; border-radius: 50%;
+  background: transparent; box-shadow: 0 1px 3px rgba(12, 14, 18, .55);
+  transform: translate(-50%, -50%); pointer-events: none;
+}
+.color-sv .color-knob { top: 0; left: 0; }
+.color-hue .color-knob { top: 50%; }
+.color-meta { display: flex; align-items: center; gap: 8px; }
+.color-meta input { min-width: 0; flex: 1 1 auto; font-family: var(--mono); font-size: 13px; }
+.contrast-badge {
+  flex: none; border-radius: var(--radius-pill); padding: 5px 9px; background: #fff2d8;
+  color: #a86a00; font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.contrast-badge.is-good { background: var(--green-soft); color: var(--green); }
+.branding-bg-field { margin: 2px 0 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.branding-bg-field label { margin: 0; }
+.branding-bg-field input[type="color"] { width: 52px; height: 32px; }
+.logo-dropzone {
+  min-height: 190px; display: grid; place-items: center; position: relative; text-align: center;
+  border: 2px dashed var(--line-strong); border-radius: 10px; background: var(--panel-2);
+  color: var(--muted); transition: border-color .14s var(--ease), background .14s var(--ease);
+}
+.logo-dropzone:hover, .logo-dropzone:focus-visible, .logo-dropzone.is-dragging {
+  outline: 0; border-color: var(--accent); background: var(--accent-soft);
+}
+.logo-dropzone.has-logo { border-style: solid; }
+.logo-dropzone img { max-width: 78%; max-height: 112px; object-fit: contain; }
+.logo-drop-copy { display: grid; gap: 5px; justify-items: center; font-size: 13px; }
+.logo-drop-copy small { color: var(--muted-2); font-size: 11px; }
+.logo-upload-link { color: var(--accent-ink); text-decoration: underline; cursor: pointer; margin: 0; }
+.branding-logo-url { margin-top: var(--s3); }
+.branding-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s5); margin-top: var(--s4); }
+.branding-bottom .field { margin-bottom: 0; }
+.radius-field output { float: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.radius-field input[type="range"] { width: 100%; accent-color: var(--accent); }
+.branding-foot {
+  display: flex; justify-content: center; gap: 8px; border-top: 1px solid var(--line);
+  margin-top: var(--s5); padding-top: var(--s4);
+}
+.preview-error { padding: 32px 12px; border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); color: var(--muted); text-align: center; }
+@media (max-width: 640px) {
+  .branding-grid, .branding-bottom { grid-template-columns: 1fr; gap: var(--s4); }
+  .branding-head { gap: var(--s2); }
+  .branding-head .btn { white-space: nowrap; }
+  .color-sv, .logo-dropzone { min-height: 150px; height: 150px; }
+  .branding-foot { justify-content: stretch; }
+  .branding-foot .btn { flex: 1; }
+}
 
 .thumb-previews { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
 .thumb-preview { display: grid; gap: 6px; justify-items: center; }

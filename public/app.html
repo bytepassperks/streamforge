@@ -316,9 +316,9 @@
         <button class="active" data-tab="stats" type="button">Analytics</button>
         <button data-tab="details" type="button">Metadata</button>
         <button data-tab="thumbnail" type="button">Thumbnail</button>
+        <button data-tab="branding" type="button">Branding</button>
         <button data-tab="player" type="button">Player</button>
         <button data-tab="controls" type="button">Controls</button>
-        <button data-tab="colors" type="button">Colours</button>
         <button data-tab="playbtn" type="button">Play button</button>
         <button data-tab="quality" type="button">Quality &amp; speed</button>
         <button data-tab="chapters" type="button">Chapters</button>
@@ -329,7 +329,7 @@
         <button data-tab="embed" type="button">Embed</button>
       </nav>
 
-      <div class="sec-panels">
+      <div class="sec-panels" id="sec-panels">
         <div class="tab-panel" data-panel="details">
           <div class="grid-2">
             <div class="field"><label for="ed-name">Title</label><input id="ed-name"></div>
@@ -385,6 +385,88 @@
           <div class="thumb-previews" id="ed-thumb-previews"></div>
         </div>
 
+        <div class="tab-panel" data-panel="branding">
+          <div class="branding-head row spread">
+            <div>
+              <h3>Customize your branding</h3>
+              <p class="muted tiny">These settings apply to this video's player.</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="pc-branding-clear" type="button">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 7h16M10 11v6m4-6v6M9 7V4h6v3m-9 0 1 13h8l1-13"/>
+              </svg> Clear all
+            </button>
+          </div>
+          <div class="branding-grid">
+            <section class="branding-col">
+              <h4>Player colour</h4>
+              <label class="switch branding-toggle">
+                <input type="checkbox" id="pc-contrast-toggle">
+                <span class="switch-track" aria-hidden="true"></span>
+                <span>Limit to high-contrast colours</span>
+              </label>
+              <div class="color-picker">
+                <div class="color-sv" id="pc-sv" role="slider" tabindex="0" aria-label="Colour saturation and value"
+                  aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-valuetext="100% saturation, 100% brightness">
+                  <span class="color-knob" id="pc-sv-knob"></span>
+                </div>
+                <div class="color-hue" id="pc-hue" role="slider" tabindex="0" aria-label="Colour hue"
+                  aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" aria-valuetext="0 degrees">
+                  <span class="color-knob" id="pc-hue-knob"></span>
+                </div>
+                <div class="color-meta">
+                  <input id="pc-hex" type="text" inputmode="text" autocomplete="off" spellcheck="false"
+                    aria-label="Accent colour hex value" placeholder="#ff6106">
+                  <span class="contrast-badge" id="pc-contrast" role="status"></span>
+                </div>
+                <div class="field branding-bg-field"><label for="pc-bg">Player background</label>
+                  <input id="pc-bg" type="color" aria-label="Player background colour">
+                </div>
+                <input id="pc-accent" class="visually-hidden" type="color" tabindex="-1" aria-hidden="true">
+              </div>
+            </section>
+            <section class="branding-col">
+              <h4>Logo</h4>
+              <div class="logo-dropzone" id="pc-logo-dropzone" tabindex="0" role="button"
+                aria-controls="pc-logo-file" aria-label="Upload or drop a logo">
+                <img id="pc-logo-preview" alt="" hidden>
+                <div class="logo-drop-copy">
+                  <label class="logo-upload-link" for="pc-logo-file">Upload</label>
+                  <span>or drag and drop a logo</span>
+                  <small>PNG, JPG or WebP · max 5 MB</small>
+                </div>
+              </div>
+              <input id="pc-logo-file" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp">
+              <div class="field branding-logo-url"><label for="pc-logo">Logo image URL</label><input id="pc-logo"></div>
+              <div class="field"><label for="pc-logo-pos">Logo position</label>
+                <select id="pc-logo-pos">
+                  <option value="top-right">Top right</option>
+                  <option value="top-left">Top left</option>
+                  <option value="bottom-right">Bottom right</option>
+                  <option value="bottom-left">Bottom left</option>
+                </select>
+              </div>
+            </section>
+          </div>
+          <div class="branding-bottom">
+            <div class="field"><label for="pc-font">Font</label>
+              <select id="pc-font">
+                <option value="">System (default)</option>
+                <option value="Inter">Inter</option>
+                <option value="Figtree">Figtree</option>
+                <option value="Bricolage Grotesque">Bricolage Grotesque</option>
+                <option value="JetBrains Mono">JetBrains Mono</option>
+              </select>
+            </div>
+            <div class="field radius-field"><label for="pc-radius">Rounded corners <output id="pc-radius-value" for="pc-radius">14</output></label>
+              <input id="pc-radius" type="range" min="0" max="40" step="1" value="14"></div>
+          </div>
+          <div class="branding-foot">
+            <button class="btn btn-ghost" id="pc-branding-back" type="button">Back</button>
+            <button class="btn" id="pc-branding-continue" type="button">Continue</button>
+          </div>
+        </div>
+
         <div class="tab-panel" data-panel="player">
           <div class="grid-2">
             <div class="field"><label for="pc-skin">Skin</label>
@@ -401,19 +483,6 @@
                 <option value="slate">Slate</option>
               </select>
               <span class="tiny">Picking a skin loads its colours; every setting stays yours to change.</span></div>
-            <div class="field"><label for="pc-logo">Logo image url</label><input id="pc-logo">
-              <div class="filepick">
-                <input id="pc-logo-file" type="file" accept="image/png,image/jpeg,image/webp">
-                <label class="filepick-btn" for="pc-logo-file">Choose image</label>
-                <span class="filepick-name">PNG, JPG or WebP · max 5 MB</span>
-              </div></div>
-            <div class="field"><label for="pc-logo-pos">Logo position</label>
-              <select id="pc-logo-pos">
-                <option value="top-right">Top right</option>
-                <option value="top-left">Top left</option>
-                <option value="bottom-right">Bottom right</option>
-                <option value="bottom-left">Bottom left</option>
-              </select></div>
             <div class="field"><label for="pc-start">Start at (seconds)</label>
               <input id="pc-start" type="number" min="0"></div>
           </div>
@@ -432,15 +501,6 @@
         <div class="tab-panel" data-panel="controls">
           <p class="muted tiny">Turn off anything you don't want viewers to reach.</p>
           <div class="grid-2" id="pc-controls"></div>
-        </div>
-
-        <div class="tab-panel" data-panel="colors">
-          <div class="grid-2">
-            <div class="field"><label for="pc-accent">Accent colour</label><input id="pc-accent" type="color"></div>
-            <div class="field"><label for="pc-bg">Background</label><input id="pc-bg" type="color"></div>
-            <div class="field"><label for="pc-radius">Corner radius (px)</label>
-              <input id="pc-radius" type="number" min="0" max="40"></div>
-          </div>
         </div>
 
         <div class="tab-panel" data-panel="playbtn">
@@ -538,9 +598,6 @@
         <div class="card">
           <h3>Live preview</h3>
           <div id="preview"></div>
-          <button class="btn btn-ghost btn-sm" id="refresh-preview" type="button" style="margin-top:12px">
-            Refresh preview
-          </button>
         </div>
       </div>
     </div>

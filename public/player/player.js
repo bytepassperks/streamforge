@@ -862,6 +862,15 @@
     this.root.style.setProperty('--sf-on-accent', accentInk(accent));
     this.root.style.setProperty('--sf-bg', cfg.background || '#0b0908');
     this.root.style.setProperty('--sf-radius', (cfg.borderRadius || 0) + 'px');
+    var fontFamilies = ['', 'Inter', 'Figtree', 'Bricolage Grotesque', 'JetBrains Mono'];
+    if (fontFamilies.indexOf(cfg.fontFamily) !== -1 && cfg.fontFamily) {
+      this.root.style.setProperty(
+        '--sf-font',
+        '"' + cfg.fontFamily.replace(/"/g, '') + '", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+      );
+    } else {
+      this.root.style.removeProperty('--sf-font');
+    }
     this.root.innerHTML = '';
 
     this.stage = el('div', 'sf-stage');
@@ -2327,6 +2336,8 @@
     Player: Player,
     formatTime: fmtTime,
     ctaClassName: ctaClassName,
+    accentInk: accentInk,
+    contrastRatio: contrastRatio,
   };
 
   // `Videokr` is the current name; `StreamForge` stays for embeds already in the wild.

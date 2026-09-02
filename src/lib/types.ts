@@ -55,6 +55,7 @@ export interface PlayerConfig {
   skin: string;
   accent: string;
   background: string;
+  fontFamily: string;
   controls: {
     playPause: boolean;
     progress: boolean;

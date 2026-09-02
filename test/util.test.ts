@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   canonicalRedirect,
+  clampHighContrast,
+  contrastRatio,
   CTA_BUTTON_STYLES,
   CTA_STYLES,
   defaultPlayerConfig,
@@ -16,6 +18,8 @@ import {
   PLAYER_SKINS,
   newId,
   parseSource,
+  parseHexColor,
+  rgbToHsv,
   retentionBucket,
   safeExternalUrl,
   slugify,
@@ -217,6 +221,33 @@ describe('player config', () => {
     expect(normalizeSkin('<script>')).toBe('videokr');
     expect(mergePlayerConfig(JSON.stringify({ skin: 'nope' })).skin).toBe('videokr');
     expect(mergePlayerConfig(JSON.stringify({ skin: 'pop' })).skin).toBe('pop');
+  });
+
+  it('whitelists player font families', () => {
+    expect(mergePlayerConfig(JSON.stringify({ fontFamily: 'Inter' })).fontFamily).toBe('Inter');
+    expect(mergePlayerConfig(JSON.stringify({ fontFamily: 'Bricolage Grotesque' })).fontFamily)
+      .toBe('Bricolage Grotesque');
+    expect(mergePlayerConfig(JSON.stringify({ fontFamily: 'url(https://evil.invalid)' })).fontFamily).toBe('');
+    expect(defaultPlayerConfig().fontFamily).toBe('');
+  });
+
+  it('parses three and six digit hex colours', () => {
+    expect(parseHexColor('#abc')).toEqual([170, 187, 204]);
+    expect(parseHexColor('ff6106')).toEqual([255, 97, 6]);
+    expect(parseHexColor('nope')).toBeNull();
+  });
+
+  it('calculates WCAG contrast ratios', () => {
+    expect(contrastRatio([0, 0, 0], [255, 255, 255])).toBeCloseTo(21, 5);
+    expect(contrastRatio([119, 119, 119], [255, 255, 255])).toBeCloseTo(4.478, 3);
+  });
+
+  it('clamps accents to high contrast without changing hue', () => {
+    const accent = parseHexColor('#ff9900')!;
+    const background = parseHexColor('#ffffff')!;
+    const clamped = clampHighContrast(accent, background);
+    expect(contrastRatio(clamped, background)).toBeGreaterThanOrEqual(4.5);
+    expect(rgbToHsv(clamped)[0]).toBeCloseTo(rgbToHsv(accent)[0], 0);
   });
 });
 

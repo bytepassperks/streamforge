@@ -1173,6 +1173,163 @@
     slate: { accent: '#2563eb', background: '#0f172a', borderRadius: 10, bigPlayButton: true },
   };
 
+  var BRANDING_FONTS = ['', 'Inter', 'Figtree', 'Bricolage Grotesque', 'JetBrains Mono'];
+  var BRANDING_PREF_KEY = 'videokr-branding-high-contrast';
+  var brandingHsv = [0, 1, 1];
+  var brandingPreviewTimer = null;
+
+  function parseHexColor(value) {
+    var match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(value || '').trim());
+    if (!match) return null;
+    var digits = match[1].length === 3
+      ? match[1].split('').map(function (digit) { return digit + digit; }).join('')
+      : match[1];
+    return [
+      parseInt(digits.slice(0, 2), 16),
+      parseInt(digits.slice(2, 4), 16),
+      parseInt(digits.slice(4, 6), 16),
+    ];
+  }
+
+  function rgbToHex(rgb) {
+    return '#' + rgb.map(function (channel) {
+      return Math.max(0, Math.min(255, Math.round(channel))).toString(16).padStart(2, '0');
+    }).join('');
+  }
+
+  function rgbToHsv(rgb) {
+    var values = rgb.map(function (channel) { return channel / 255; });
+    var max = Math.max.apply(Math, values);
+    var min = Math.min.apply(Math, values);
+    var delta = max - min;
+    var hue = 0;
+    if (delta) {
+      if (max === values[0]) hue = ((values[1] - values[2]) / delta) % 6;
+      else if (max === values[1]) hue = (values[2] - values[0]) / delta + 2;
+      else hue = (values[0] - values[1]) / delta + 4;
+      hue *= 60;
+      if (hue < 0) hue += 360;
+    }
+    return [hue, max ? delta / max : 0, max];
+  }
+
+  function hsvToRgb(hsv) {
+    var hue = hsv[0];
+    var saturation = hsv[1];
+    var value = hsv[2];
+    var chroma = value * saturation;
+    var part = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+    var match = value - chroma;
+    var rgb;
+    if (hue < 60) rgb = [chroma, part, 0];
+    else if (hue < 120) rgb = [part, chroma, 0];
+    else if (hue < 180) rgb = [0, chroma, part];
+    else if (hue < 240) rgb = [0, part, chroma];
+    else if (hue < 300) rgb = [part, 0, chroma];
+    else rgb = [chroma, 0, part];
+    return rgb.map(function (channel) { return Math.round((channel + match) * 255); });
+  }
+
+  function contrastRatio(first, second) {
+    var luminance = function (rgb) {
+      var channels = rgb.map(function (channel) {
+        var normalized = channel / 255;
+        return normalized <= 0.03928
+          ? normalized / 12.92
+          : Math.pow((normalized + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    };
+    var firstLuminance = luminance(first);
+    var secondLuminance = luminance(second);
+    return (Math.max(firstLuminance, secondLuminance) + 0.05) /
+      (Math.min(firstLuminance, secondLuminance) + 0.05);
+  }
+
+  function clampHighContrast(rgb, background) {
+    if (contrastRatio(rgb, background) >= 4.5) return rgb;
+    var hsv = rgbToHsv(rgb);
+    var low = hsvToRgb([hsv[0], hsv[1], 0]);
+    var towardLow = contrastRatio(low, background) >= 4.5;
+    var lower = towardLow ? 0 : hsv[2];
+    var upper = towardLow ? hsv[2] : 1;
+    for (var index = 0; index < 24; index += 1) {
+      var midpoint = (lower + upper) / 2;
+      var candidate = hsvToRgb([hsv[0], hsv[1], midpoint]);
+      var passes = contrastRatio(candidate, background) >= 4.5;
+      if (towardLow) {
+        if (passes) lower = midpoint;
+        else upper = midpoint;
+      } else if (passes) {
+        upper = midpoint;
+      } else {
+        lower = midpoint;
+      }
+    }
+    return hsvToRgb([hsv[0], hsv[1], towardLow ? lower : upper]);
+  }
+
+  function normaliseBrandingFont(value) {
+    return BRANDING_FONTS.indexOf(value) !== -1 ? value : '';
+  }
+
+  function brandingContrastEnabled() {
+    return $('pc-contrast-toggle').checked;
+  }
+
+  function updateBrandingBadge() {
+    var accent = parseHexColor($('pc-accent').value) || [255, 97, 6];
+    var background = parseHexColor($('pc-bg').value) || [11, 9, 8];
+    var ratio = contrastRatio(accent, background);
+    var badge = $('pc-contrast');
+    badge.textContent = (ratio >= 4.5 ? '✓ Contrast: ' : '⚠ Contrast: ') + ratio.toFixed(1) + ':1';
+    badge.classList.toggle('is-good', ratio >= 4.5);
+    badge.classList.toggle('is-warn', ratio < 4.5);
+    badge.title = ratio < 4.5 ? 'This accent may be hard to read on the player background.' : 'WCAG AA contrast';
+  }
+
+  function updateBrandingUi() {
+    var accent = parseHexColor($('pc-accent').value) || [255, 97, 6];
+    brandingHsv = rgbToHsv(accent);
+    $('pc-hex').value = rgbToHex(accent);
+    $('pc-radius-value').value = $('pc-radius').value;
+    $('pc-radius-value').textContent = $('pc-radius').value;
+    var hue = brandingHsv[0] / 360 * 100;
+    $('pc-sv').style.setProperty('--pc-hue', hue + 'deg');
+    $('pc-sv-knob').style.left = (brandingHsv[1] * 100) + '%';
+    $('pc-sv-knob').style.top = ((1 - brandingHsv[2]) * 100) + '%';
+    $('pc-hue-knob').style.left = (brandingHsv[0] / 360 * 100) + '%';
+    $('pc-sv').setAttribute('aria-valuenow', Math.round(brandingHsv[1] * 100));
+    $('pc-sv').setAttribute('aria-valuetext', Math.round(brandingHsv[1] * 100) + '% saturation, ' + Math.round(brandingHsv[2] * 100) + '% brightness');
+    $('pc-hue').setAttribute('aria-valuenow', Math.round(brandingHsv[0]));
+    $('pc-hue').setAttribute('aria-valuetext', Math.round(brandingHsv[0]) + ' degrees');
+    var logo = $('pc-logo').value.trim();
+    $('pc-logo-preview').src = logo;
+    $('pc-logo-preview').hidden = !logo;
+    $('pc-logo-dropzone').classList.toggle('has-logo', Boolean(logo));
+    updateBrandingBadge();
+  }
+
+  function setBrandingAccent(rgb) {
+    var background = parseHexColor($('pc-bg').value) || [11, 9, 8];
+    var next = brandingContrastEnabled() ? clampHighContrast(rgb, background) : rgb;
+    $('pc-accent').value = rgbToHex(next);
+    updateBrandingUi();
+    applyPreviewStyles();
+  }
+
+  function setBrandingFromPointer(event, target) {
+    var rect = target.getBoundingClientRect();
+    var x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    var y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    if (target === $('pc-hue')) brandingHsv[0] = x * 360;
+    else {
+      brandingHsv[1] = x;
+      brandingHsv[2] = 1 - y;
+    }
+    setBrandingAccent(hsvToRgb(brandingHsv));
+  }
+
   $('pc-skin').addEventListener('change', function () {
     var preset = SKIN_PRESETS[$('pc-skin').value];
     if (!preset) return;
@@ -1180,8 +1337,106 @@
     $('pc-bg').value = preset.background;
     $('pc-radius').value = preset.borderRadius;
     $('pc-bigplay').checked = preset.bigPlayButton;
-    renderPreview();
+    updateBrandingUi();
+    applyPreviewStyles();
+    schedulePreview();
   });
+
+  $('pc-contrast-toggle').checked = localStorage.getItem(BRANDING_PREF_KEY) === '1';
+  $('pc-contrast-toggle').addEventListener('change', function () {
+    localStorage.setItem(BRANDING_PREF_KEY, this.checked ? '1' : '0');
+    if (this.checked) {
+      var accent = parseHexColor($('pc-accent').value) || [255, 97, 6];
+      setBrandingAccent(accent);
+    } else {
+      updateBrandingUi();
+    }
+  });
+  $('pc-accent').addEventListener('input', function () {
+    setBrandingAccent(parseHexColor(this.value) || [255, 97, 6]);
+  });
+  $('pc-bg').addEventListener('input', function () {
+    if (brandingContrastEnabled()) {
+      setBrandingAccent(parseHexColor($('pc-accent').value) || [255, 97, 6]);
+    } else {
+      updateBrandingUi();
+      applyPreviewStyles();
+    }
+  });
+  $('pc-hex').addEventListener('input', function () {
+    var parsed = parseHexColor(this.value);
+    if (parsed) setBrandingAccent(parsed);
+  });
+  $('pc-radius').addEventListener('input', function () {
+    updateBrandingUi();
+    applyPreviewStyles();
+  });
+  $('pc-font').addEventListener('change', function () {
+    this.value = normaliseBrandingFont(this.value);
+    applyPreviewStyles();
+  });
+  $('pc-logo').addEventListener('input', function () {
+    updateBrandingUi();
+    schedulePreview();
+  });
+  $('pc-logo-pos').addEventListener('change', schedulePreview);
+
+  ['pc-sv', 'pc-hue'].forEach(function (id) {
+    var target = $(id);
+    var dragging = false;
+    target.addEventListener('pointerdown', function (event) {
+      dragging = true;
+      target.setPointerCapture(event.pointerId);
+      setBrandingFromPointer(event, target);
+    });
+    target.addEventListener('pointermove', function (event) {
+      if (dragging) setBrandingFromPointer(event, target);
+    });
+    target.addEventListener('pointerup', function (event) {
+      dragging = false;
+      target.releasePointerCapture(event.pointerId);
+    });
+    target.addEventListener('pointercancel', function () { dragging = false; });
+    target.addEventListener('keydown', function (event) {
+      var step = event.shiftKey ? 0.1 : 0.01;
+      if (id === 'pc-hue') step = event.shiftKey ? 10 : 1;
+      var handled = true;
+      if (id === 'pc-hue') {
+        if (event.key === 'ArrowRight' || event.key === 'ArrowUp') brandingHsv[0] = (brandingHsv[0] + step) % 360;
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') brandingHsv[0] = (brandingHsv[0] - step + 360) % 360;
+        else handled = false;
+      } else if (event.key === 'ArrowRight') brandingHsv[1] = Math.min(1, brandingHsv[1] + step);
+      else if (event.key === 'ArrowLeft') brandingHsv[1] = Math.max(0, brandingHsv[1] - step);
+      else if (event.key === 'ArrowUp') brandingHsv[2] = Math.min(1, brandingHsv[2] + step);
+      else if (event.key === 'ArrowDown') brandingHsv[2] = Math.max(0, brandingHsv[2] - step);
+      else handled = false;
+      if (handled) {
+        event.preventDefault();
+        setBrandingAccent(hsvToRgb(brandingHsv));
+      }
+    });
+  });
+  $('pc-branding-clear').addEventListener('click', function () {
+    $('pc-accent').value = '#ff6106';
+    $('pc-bg').value = '#0b0908';
+    $('pc-radius').value = 14;
+    $('pc-font').value = '';
+    $('pc-logo').value = '';
+    $('pc-logo-pos').value = 'top-right';
+    $('pc-logo-file').value = '';
+    updateBrandingUi();
+    applyPreviewStyles();
+    schedulePreview();
+    toast('Branding cleared');
+  });
+  function moveBrandingTab(direction) {
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('#ed-tabs button'));
+    var index = buttons.findIndex(function (button) { return button.dataset.tab === 'branding'; });
+    var target = buttons[index + direction];
+    if (target) showEditorTab(target.dataset.tab);
+  }
+  $('pc-branding-back').addEventListener('click', function () { moveBrandingTab(-1); });
+  $('pc-branding-continue').addEventListener('click', function () { moveBrandingTab(1); });
 
   /* Single entry point for showing an editor section, so a section that is
      already active when the editor opens still runs its loader. */
@@ -1273,6 +1528,7 @@
     $('pc-accent').value = config.accent;
     $('pc-bg').value = config.background;
     $('pc-radius').value = config.borderRadius;
+    $('pc-font').value = normaliseBrandingFont(config.fontFamily || '');
     $('pc-logo').value = config.logoUrl || '';
     $('pc-logo-pos').value = config.logoPosition;
     $('pc-speeds').value = config.speeds.join(',');
@@ -1309,6 +1565,7 @@
         : 'Frames can only be grabbed from uploads and MP4 links';
     $('ed-form-export').href = '/api/leads.csv?video=' + video.id;
     syncEditorHlsAction();
+    updateBrandingUi();
     setLoading($('ed-form-leads'), 'Loading submissions');
     renderSnippets(video);
   }
@@ -1633,6 +1890,7 @@
       skin: $('pc-skin').value,
       accent: $('pc-accent').value,
       background: $('pc-bg').value,
+      fontFamily: normaliseBrandingFont($('pc-font').value),
       controls: controls,
       autoplay: $('pc-autoplay').checked,
       muted: $('pc-muted').checked,
@@ -1693,6 +1951,7 @@
   /* The name slot doubles as the hint line, so it has to be able to go back to
      the hint once a picker is cleared. */
   function pickName(picker) {
+    if (!picker) return null;
     var row = picker.closest('.filepick') || picker.parentNode;
     return row ? row.querySelector('.filepick-name') : null;
   }
@@ -1707,48 +1966,75 @@
   }
 
   function bindImagePicker(pickerId, targetId) {
-    $(pickerId).addEventListener('change', function () {
-      var picker = $(pickerId);
-      var file = picker.files[0];
+    function uploadImageFile(file, picker) {
       showPickedName(picker, file ? file.name : '');
       if (!file) return;
       if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
-        picker.value = '';
+        if (picker) picker.value = '';
         showPickedName(picker, '');
         toast('Choose a PNG, JPG or WebP image', true);
         return;
       }
       if (file.size > IMAGE_LIMIT_BYTES) {
-        picker.value = '';
+        if (picker) picker.value = '';
         showPickedName(picker, '');
         toast('Images have to be 5 MB or smaller', true);
         return;
       }
       var form = new FormData();
       form.append('file', file);
-      picker.disabled = true;
+      if (picker) picker.disabled = true;
       showPickedName(picker, 'Uploading ' + file.name + '…');
       api('/uploads', { method: 'POST', form: form })
         .then(function (result) {
           $(targetId).value = result.url;
           if (targetId.indexOf('ed-thumb') === 0) renderThumbPreviews();
+          if (targetId === 'pc-logo') updateBrandingUi();
           showPickedName(picker, file.name + ' — save to apply');
           toast('Image uploaded — save to apply');
+          schedulePreview();
         })
         .catch(function (err) {
           showPickedName(picker, '');
           toast(err.message || 'Upload failed', true);
         })
         .then(function () {
-          picker.disabled = false;
-          picker.value = '';
+          if (picker) {
+            picker.disabled = false;
+            picker.value = '';
+          }
         });
+    }
+    $(pickerId).addEventListener('change', function () {
+      uploadImageFile($(pickerId).files[0], $(pickerId));
     });
+    return uploadImageFile;
   }
 
   bindImagePicker('ed-thumb-file', 'ed-thumb');
   bindImagePicker('ed-thumb-b-file', 'ed-thumb-b');
-  bindImagePicker('pc-logo-file', 'pc-logo');
+  var uploadLogoFile = bindImagePicker('pc-logo-file', 'pc-logo');
+  $('pc-logo-dropzone').addEventListener('click', function (event) {
+    if (event.target.tagName !== 'LABEL') $('pc-logo-file').click();
+  });
+  $('pc-logo-dropzone').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      $('pc-logo-file').click();
+    }
+  });
+  $('pc-logo-dropzone').addEventListener('dragover', function (event) {
+    event.preventDefault();
+    this.classList.add('is-dragging');
+  });
+  $('pc-logo-dropzone').addEventListener('dragleave', function () {
+    this.classList.remove('is-dragging');
+  });
+  $('pc-logo-dropzone').addEventListener('drop', function (event) {
+    event.preventDefault();
+    this.classList.remove('is-dragging');
+    uploadLogoFile(event.dataTransfer.files[0], null);
+  });
 
   /* Manual version of the automatic poster, for videos that were added before
      we grabbed frames — or when the customer wants a different frame. */
@@ -1885,10 +2171,11 @@
   function renderPreview() {
     if (!state.video) return;
     var host = $('preview');
-    host.textContent = '';
     var mount = document.createElement('div');
+    var previous = host.firstElementChild;
+    if (previous) previous.style.display = 'none';
     host.appendChild(mount);
-    window.Videokr.mount(mount, {
+    var payload = {
       tracking: false,
       video: {
         id: state.video.id,
@@ -1905,10 +2192,53 @@
       chapters: collectChapters(),
       ctas: collectCtas(),
       variant: 'a',
-    });
+    };
+    Promise.resolve(window.Videokr.mount(mount, payload))
+      .then(function () {
+        if (previous && previous.parentNode) previous.parentNode.removeChild(previous);
+      })
+      .catch(function () {
+        if (mount.parentNode) mount.parentNode.removeChild(mount);
+        if (previous) previous.style.display = '';
+        else host.innerHTML = '<div class="preview-error">Preview unavailable</div>';
+      });
   }
 
-  $('refresh-preview').addEventListener('click', renderPreview);
+  function applyPreviewStyles() {
+    var player = $('preview').lastElementChild && $('preview').lastElementChild.querySelector('.sf-player');
+    if (!player) return;
+    var accent = $('pc-accent').value || '#ff6106';
+    var font = normaliseBrandingFont($('pc-font').value);
+    player.style.setProperty('--sf-accent', accent);
+    player.style.setProperty('--sf-on-accent', window.Videokr.accentInk(accent));
+    player.style.setProperty('--sf-bg', $('pc-bg').value || '#0b0908');
+    player.style.setProperty('--sf-radius', (Number($('pc-radius').value) || 0) + 'px');
+    if (font) {
+      player.style.setProperty(
+        '--sf-font',
+        '"' + font + '", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+      );
+    } else {
+      player.style.removeProperty('--sf-font');
+    }
+  }
+
+  function schedulePreview() {
+    clearTimeout(brandingPreviewTimer);
+    if (!$('modal-editor') || $('modal-editor').classList.contains('hidden') || !state.video) return;
+    brandingPreviewTimer = setTimeout(renderPreview, 120);
+  }
+
+  $('sec-panels').addEventListener('input', function (event) {
+    var id = event.target.id;
+    if (id === 'pc-accent' || id === 'pc-bg' || id === 'pc-radius' || id === 'pc-font') {
+      applyPreviewStyles();
+    }
+    schedulePreview();
+  });
+  $('sec-panels').addEventListener('change', function () {
+    schedulePreview();
+  });
 
   /* ------------------------------------------------------- video analytics -- */
 
