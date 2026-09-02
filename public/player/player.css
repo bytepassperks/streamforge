@@ -1278,19 +1278,21 @@
 .sf-skin-pill .sf-buffer { background: rgba(255,255,255,.3); border-radius: 999px; }
 .sf-skin-pill .sf-played { background: var(--sf-accent); border-radius: 999px; }
 .sf-skin-pill .sf-handle {
-  display: block; width: 16px; height: 16px; background: var(--sf-accent);
+  display: block; width: 20px; height: 20px; background: var(--sf-accent);
   border: 2px solid rgba(255,255,255,.9); box-shadow: 0 1px 4px rgba(0,0,0,.35);
 }
 .sf-skin-pill .sf-play,
 .sf-skin-pill .sf-volume button {
-  width: 46px; height: 46px; padding: 0; flex: none;
+  width: 56px; height: 56px; padding: 0; flex: none;
   display: grid; place-items: center; border-radius: 999px;
-  background: rgba(255,255,255,.3); backdrop-filter: blur(8px); color: #fff;
+  background: rgba(122,113,105,.62); backdrop-filter: blur(8px); color: #fff;
 }
 .sf-skin-pill .sf-play:hover, .sf-skin-pill .sf-play:focus-visible,
 .sf-skin-pill .sf-volume button:hover, .sf-skin-pill .sf-volume button:focus-visible {
-  background: rgba(255,255,255,.44);
+  background: rgba(122,113,105,.8);
 }
+.sf-skin-pill .sf-play svg,
+.sf-skin-pill .sf-volume button svg { width: 22px; height: 22px; }
 .sf-skin-pill .sf-rewind,
 .sf-skin-pill .sf-controls > .sf-forward { display: none; }
 .sf-skin-pill .sf-volume {
@@ -1300,37 +1302,43 @@
 .sf-skin-pill .sf-volume input[type="range"] { display: none; }
 .sf-skin-pill .sf-time-current {
   order: 2;
-  height: 46px; padding: 0 16px; border-radius: 999px;
-  background: rgba(255,255,255,.3); backdrop-filter: blur(8px);
+  height: 56px; padding: 0 18px; border-radius: 999px;
+  background: rgba(122,113,105,.62); backdrop-filter: blur(8px);
   display: flex; align-items: center; font-weight: 600; color: #fff;
 }
 .sf-skin-pill .sf-time-duration { display: none; }
 .sf-skin-pill .sf-pill-group {
   order: 3;
-  margin-left: auto; display: flex; align-items: center; gap: 2px; height: 46px;
-  padding: 0 8px; border-radius: 999px; background: rgba(255,255,255,.3);
+  margin-left: auto; display: flex; align-items: center; gap: 2px; height: 56px;
+  padding: 0 8px; border-radius: 999px; background: rgba(122,113,105,.62);
   backdrop-filter: blur(8px); overflow: visible;
 }
 .sf-skin-pill .sf-pill-group > * { background: none; color: #fff; }
 .sf-skin-pill .sf-pill-group .sf-btn:hover,
 .sf-skin-pill .sf-pill-group .sf-btn:focus-visible,
 .sf-skin-pill .sf-pill-group .sf-btn[aria-expanded="true"] {
-  background: rgba(255,255,255,.44); color: #fff;
+  background: rgba(122,113,105,.8); color: #fff;
 }
 
 @container (max-width: 520px) {
   .sf-skin-pill .sf-controls { gap: 6px; padding: 10px; }
   .sf-skin-pill .sf-progress-wrap { margin-bottom: 6px; }
   .sf-skin-pill .sf-play,
-  .sf-skin-pill .sf-volume button { width: 36px; height: 36px; }
-  .sf-skin-pill .sf-time-current { height: 36px; padding: 0 12px; font-size: 12px; }
-  .sf-skin-pill .sf-pill-group { height: 36px; padding: 0 5px; gap: 0; }
+  .sf-skin-pill .sf-volume button { width: 40px; height: 40px; }
+  .sf-skin-pill .sf-play svg,
+  .sf-skin-pill .sf-volume button svg { width: 18px; height: 18px; }
+  .sf-skin-pill .sf-time-current { height: 40px; padding: 0 13px; font-size: 12px; }
+  .sf-skin-pill .sf-pill-group { height: 40px; padding: 0 5px; gap: 0; }
+  .sf-skin-pill .sf-handle { width: 16px; height: 16px; }
   .sf-skin-pill .sf-pill-group .sf-btn { padding: 5px; }
   .sf-skin-pill .sf-pill-group .sf-btn svg { width: 16px; height: 16px; }
 }
 @container (max-width: 380px) {
   .sf-skin-pill .sf-play,
-  .sf-skin-pill .sf-volume button { width: 34px; height: 34px; }
-  .sf-skin-pill .sf-time-current { height: 34px; padding: 0 10px; font-size: 11px; }
-  .sf-skin-pill .sf-pill-group { height: 34px; }
+  .sf-skin-pill .sf-volume button { width: 36px; height: 36px; }
+  .sf-skin-pill .sf-play svg,
+  .sf-skin-pill .sf-volume button svg { width: 16px; height: 16px; }
+  .sf-skin-pill .sf-time-current { height: 36px; padding: 0 10px; font-size: 11px; }
+  .sf-skin-pill .sf-pill-group { height: 36px; }
+  .sf-skin-pill .sf-handle { width: 14px; height: 14px; }
 }
