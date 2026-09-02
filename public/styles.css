@@ -1120,8 +1120,108 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 #preview .sf-player.sf-short .sf-endscreen-card,
 .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card,
 .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card {
-  padding-top: 11px;
-  padding-bottom: 11px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+#preview .sf-player.sf-short .sf-gate-card,
+#preview .sf-player.sf-short .sf-endscreen-card,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+#preview .sf-player.sf-short .sf-gate-card h3,
+#preview .sf-player.sf-short .sf-endscreen-card h3,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card h3,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card h3 {
+  margin-bottom: 2px;
+  font-size: 14px;
+  line-height: 1.15;
+}
+#preview .sf-player.sf-short .sf-gate-card p,
+#preview .sf-player.sf-short .sf-endscreen-card p,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card p,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card p {
+  margin-bottom: 4px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+#preview .sf-player.sf-short .sf-gate-form,
+#preview .sf-player.sf-short .sf-endscreen-card .sf-gate-form,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-form,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card .sf-gate-form {
+  gap: 3px;
+  grid-template-columns: 1fr;
+}
+#preview .sf-player.sf-short .sf-gate-card input,
+#preview .sf-player.sf-short .sf-endscreen-card input,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card input,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card input {
+  height: 30px;
+  min-height: 30px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+#preview .sf-player.sf-short .sf-gate-submit,
+#preview .sf-player.sf-short .sf-endscreen-card .sf-gate-submit,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-submit,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card .sf-gate-submit {
+  min-height: 30px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+#preview .sf-player.sf-short .sf-gate-skip,
+#preview .sf-player.sf-short .sf-endscreen-card .sf-endscreen-replay,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-skip,
+.form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card .sf-endscreen-replay {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 13px;
+}
+@container (max-width: 380px) {
+  #preview .sf-player.sf-short .sf-gate-card,
+  #preview .sf-player.sf-short .sf-endscreen-card,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card {
+    padding: 5px 8px;
+  }
+  #preview .sf-player.sf-short .sf-gate-card h3,
+  #preview .sf-player.sf-short .sf-endscreen-card h3,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card h3,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card h3 {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+  #preview .sf-player.sf-short .sf-gate-card p,
+  #preview .sf-player.sf-short .sf-endscreen-card p,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card p,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card p {
+    margin-bottom: 2px;
+    line-height: 1.15;
+  }
+  #preview .sf-player.sf-short .sf-gate-form,
+  #preview .sf-player.sf-short .sf-endscreen-card .sf-gate-form,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-form,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card .sf-gate-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  #preview .sf-player.sf-short .sf-gate-card input,
+  #preview .sf-player.sf-short .sf-endscreen-card input,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-card input,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card input {
+    height: 28px;
+    min-height: 28px;
+    padding: 5px 6px;
+  }
+  #preview .sf-player.sf-short .sf-gate-submit,
+  #preview .sf-player.sf-short .sf-endscreen-card .sf-gate-submit,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-gate-submit,
+  .form-editor-preview #form-edit-preview .sf-player.sf-short .sf-endscreen-card .sf-gate-submit {
+    grid-column: 1 / -1;
+    min-height: 28px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
 }
 .form-fields-group { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; margin: 0 0 var(--s3); }
 .form-fields-group legend { padding: 0 5px; font-size: 13px; font-weight: 700; }
