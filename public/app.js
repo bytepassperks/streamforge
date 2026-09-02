@@ -1294,11 +1294,10 @@
     $('pc-hex').value = rgbToHex(accent);
     $('pc-radius-value').value = $('pc-radius').value;
     $('pc-radius-value').textContent = $('pc-radius').value;
-    var hue = brandingHsv[0] / 360 * 100;
-    $('pc-sv').style.setProperty('--pc-hue', hue + 'deg');
-    $('pc-sv-knob').style.left = (brandingHsv[1] * 100) + '%';
-    $('pc-sv-knob').style.top = ((1 - brandingHsv[2]) * 100) + '%';
-    $('pc-hue-knob').style.left = (brandingHsv[0] / 360 * 100) + '%';
+    $('pc-sv').style.setProperty('--pc-hue', brandingHsv[0] + 'deg');
+    $('pc-sv-knob').style.left = 'clamp(7.5px, ' + (brandingHsv[1] * 100) + '%, calc(100% - 7.5px))';
+    $('pc-sv-knob').style.top = 'clamp(7.5px, ' + ((1 - brandingHsv[2]) * 100) + '%, calc(100% - 7.5px))';
+    $('pc-hue-knob').style.left = 'clamp(7.5px, ' + (brandingHsv[0] / 360 * 100) + '%, calc(100% - 7.5px))';
     $('pc-sv').setAttribute('aria-valuenow', Math.round(brandingHsv[1] * 100));
     $('pc-sv').setAttribute('aria-valuetext', Math.round(brandingHsv[1] * 100) + '% saturation, ' + Math.round(brandingHsv[2] * 100) + '% brightness');
     $('pc-hue').setAttribute('aria-valuenow', Math.round(brandingHsv[0]));
@@ -2226,7 +2225,7 @@
   function schedulePreview() {
     clearTimeout(brandingPreviewTimer);
     if (!$('modal-editor') || $('modal-editor').classList.contains('hidden') || !state.video) return;
-    brandingPreviewTimer = setTimeout(renderPreview, 120);
+    brandingPreviewTimer = setTimeout(renderPreview, 300);
   }
 
   $('sec-panels').addEventListener('input', function (event) {

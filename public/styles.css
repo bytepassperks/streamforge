@@ -1066,7 +1066,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .branding-toggle { margin-bottom: var(--s2); }
 .color-picker { display: grid; gap: 10px; }
 .color-sv {
-  position: relative; height: 190px; border-radius: 10px; overflow: hidden; cursor: crosshair;
+  position: relative; height: 190px; border-radius: 10px; cursor: crosshair;
   background:
     linear-gradient(to bottom, transparent, #000),
     linear-gradient(to right, #fff, hsl(var(--pc-hue, 25), 100%, 50%));
@@ -1081,28 +1081,31 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   background: transparent; box-shadow: 0 1px 3px rgba(12, 14, 18, .55);
   transform: translate(-50%, -50%); pointer-events: none;
 }
-.color-sv .color-knob { top: 0; left: 0; }
+.color-sv .color-knob { top: 7.5px; left: 7.5px; }
 .color-hue .color-knob { top: 50%; }
 .color-meta { display: flex; align-items: center; gap: 8px; }
 .color-meta input { min-width: 0; flex: 1 1 auto; font-family: var(--mono); font-size: 13px; }
 .contrast-badge {
-  flex: none; border-radius: var(--radius-pill); padding: 5px 9px; background: #fff2d8;
-  color: #a86a00; font-size: 11px; font-weight: 700; white-space: nowrap;
+  flex: none; border-radius: var(--radius-pill); padding: 5px 9px; background: var(--panel-2);
+  color: var(--muted); font-size: 11px; font-weight: 700; white-space: nowrap;
 }
 .contrast-badge.is-good { background: var(--green-soft); color: var(--green); }
+.contrast-badge.is-warn { background: #fff2d8; color: #a86a00; }
 .branding-bg-field { margin: 2px 0 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .branding-bg-field label { margin: 0; }
 .branding-bg-field input[type="color"] { width: 52px; height: 32px; }
 .logo-dropzone {
   min-height: 190px; display: grid; place-items: center; position: relative; text-align: center;
-  border: 2px dashed var(--line-strong); border-radius: 10px; background: var(--panel-2);
+  border: 2px dashed var(--accent-pill); border-radius: 10px; background: var(--accent-soft);
   color: var(--muted); transition: border-color .14s var(--ease), background .14s var(--ease);
 }
 .logo-dropzone:hover, .logo-dropzone:focus-visible, .logo-dropzone.is-dragging {
   outline: 0; border-color: var(--accent); background: var(--accent-soft);
 }
-.logo-dropzone.has-logo { border-style: solid; }
-.logo-dropzone img { max-width: 78%; max-height: 112px; object-fit: contain; }
+.logo-dropzone.has-logo {
+  grid-template-rows: auto auto; align-content: center; gap: 6px; padding: 8px;
+}
+.logo-dropzone img { max-width: 82%; max-height: 76px; object-fit: contain; }
 .logo-drop-copy { display: grid; gap: 5px; justify-items: center; font-size: 13px; }
 .logo-drop-copy small { color: var(--muted-2); font-size: 11px; }
 .logo-upload-link { color: var(--accent-ink); text-decoration: underline; cursor: pointer; margin: 0; }
