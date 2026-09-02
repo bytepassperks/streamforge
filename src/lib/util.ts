@@ -185,6 +185,23 @@ export function normalizeFontFamily(value: unknown): string {
   return (PLAYER_FONTS as readonly string[]).includes(String(value ?? '')) ? String(value ?? '') : '';
 }
 
+// Keep this in sync with formFieldsWithName in public/app.js.
+export function normalizeFormFields(value: unknown): string {
+  const fields = String(value ?? '')
+    .split(',')
+    .map((field) => field.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((field, index, list) => field !== 'email' && field !== 'name' && list.indexOf(field) === index);
+  fields.unshift('email');
+  return fields.join(',');
+}
+
+export function toggleFormNameField(value: unknown, includeName: boolean): string {
+  const fields = normalizeFormFields(value).split(',').filter((field) => field !== 'name');
+  if (includeName) fields.push('name');
+  return fields.join(',');
+}
+
 export type RgbColor = [number, number, number];
 
 export function parseHexColor(value: unknown): RgbColor | null {
@@ -297,6 +314,9 @@ export function defaultPlayerConfig(): PlayerConfig {
     accent: '#ff6106',
     background: '#0b0908',
     fontFamily: '',
+    showChapters: true,
+    showCtas: true,
+    showForms: true,
     controls: {
       playPause: true,
       progress: true,
@@ -351,6 +371,9 @@ export function mergePlayerConfig(stored: string | null | undefined): PlayerConf
     ...incoming,
     accent: incoming.accent === LEGACY_ACCENT || !incoming.accent ? base.accent : incoming.accent,
     fontFamily: normalizeFontFamily(incoming.fontFamily),
+    showChapters: incoming.showChapters !== false,
+    showCtas: incoming.showCtas !== false,
+    showForms: incoming.showForms !== false,
     skin: normalizeSkin(incoming.skin),
     controls: { ...base.controls, ...(incoming.controls ?? {}) },
     speeds: Array.isArray(incoming.speeds) && incoming.speeds.length ? incoming.speeds : base.speeds,

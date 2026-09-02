@@ -19,6 +19,8 @@ import {
   newId,
   parseSource,
   parseHexColor,
+  normalizeFormFields,
+  toggleFormNameField,
   rgbToHsv,
   retentionBucket,
   safeExternalUrl,
@@ -195,6 +197,21 @@ describe('player config', () => {
     expect(merged.controls.fullscreen).toBe(defaultPlayerConfig().controls.fullscreen);
   });
 
+  it('keeps feature visibility enabled when keys are absent and preserves explicit false', () => {
+    const defaults = defaultPlayerConfig();
+    expect(defaults.showChapters).toBe(true);
+    expect(defaults.showCtas).toBe(true);
+    expect(defaults.showForms).toBe(true);
+    const absent = mergePlayerConfig(JSON.stringify({}));
+    expect(absent.showChapters).toBe(true);
+    expect(absent.showCtas).toBe(true);
+    expect(absent.showForms).toBe(true);
+    const disabled = mergePlayerConfig(JSON.stringify({ showChapters: false, showCtas: false, showForms: false }));
+    expect(disabled.showChapters).toBe(false);
+    expect(disabled.showCtas).toBe(false);
+    expect(disabled.showForms).toBe(false);
+  });
+
   it('falls back to defaults on invalid json or empty speeds', () => {
     expect(mergePlayerConfig('not json')).toEqual(defaultPlayerConfig());
     expect(mergePlayerConfig(null)).toEqual(defaultPlayerConfig());
@@ -235,6 +252,19 @@ describe('player config', () => {
     expect(parseHexColor('#abc')).toEqual([170, 187, 204]);
     expect(parseHexColor('ff6106')).toEqual([255, 97, 6]);
     expect(parseHexColor('nope')).toBeNull();
+  });
+
+  it('keeps email required while toggling the optional name field', () => {
+    expect(normalizeFormFields('email')).toBe('email');
+    expect(normalizeFormFields('email,email')).toBe('email');
+    expect(normalizeFormFields('Email, EMAIL, phone')).toBe('email,phone');
+    expect(normalizeFormFields('email,phone,email')).toBe('email,phone');
+    expect(toggleFormNameField('email', true)).toBe('email,name');
+    expect(toggleFormNameField('email,name,name', true)).toBe('email,name');
+    expect(toggleFormNameField('email,email', true)).toBe('email,name');
+    expect(toggleFormNameField('email,phone,email', false)).toBe('email,phone');
+    expect(toggleFormNameField('name', false)).toBe('email');
+    expect(toggleFormNameField('', false)).toBe('email');
   });
 
   it('calculates WCAG contrast ratios', () => {

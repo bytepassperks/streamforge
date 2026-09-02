@@ -56,6 +56,9 @@ export interface PlayerConfig {
   accent: string;
   background: string;
   fontFamily: string;
+  showChapters: boolean;
+  showCtas: boolean;
+  showForms: boolean;
   controls: {
     playPause: boolean;
     progress: boolean;
