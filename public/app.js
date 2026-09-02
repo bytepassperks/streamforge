@@ -1851,7 +1851,7 @@
       var before = text('label', 'choice-card');
       var beforeInput = document.createElement('input');
       beforeInput.type = 'radio';
-      beforeInput.name = 'form-timing-' + String(Date.now()) + Math.random();
+      beforeInput.name = 'form-timing-' + String(++formTimingId);
       beforeInput.checked = !cta || Number(cta.start_seconds) === 0;
       before.appendChild(beforeInput);
       before.appendChild(text('span', null, 'Before playback starts'));
@@ -1927,25 +1927,28 @@
     });
   }
 
+  var formTimingId = 0;
   var activeFormEditor = null;
+  var formPreviewTimer = 0;
   function formField(card, name) {
     return card.querySelector('[data-field="' + name + '"]');
   }
+  // Keep this in sync with normalizeFormFields in src/lib/util.ts.
   function formFieldsWithName(value, includeName) {
-    var fields = String(value || '').split(',').map(function (field) {
-      return field.trim().toLowerCase();
-    }).filter(Boolean).filter(function (field, index, list) {
-      return field === 'email' || (field !== 'name' && list.indexOf(field) === index);
-    });
-    if (fields.indexOf('email') === -1) fields.unshift('email');
-    fields = fields.filter(function (field) { return field !== 'name'; });
+    var fields = String(value == null ? '' : value)
+      .split(',')
+      .map(function (field) { return field.trim().toLowerCase(); })
+      .filter(Boolean)
+      .filter(function (field, index, list) {
+        return field !== 'email' && field !== 'name' && list.indexOf(field) === index;
+      });
+    fields.unshift('email');
     if (includeName) fields.push('name');
     return fields.join(',');
   }
   function renderFormEditPreview() {
     if (!activeFormEditor || !state.video) return;
     var host = $('form-edit-preview');
-    host.textContent = '';
     var cta = {
       kind: 'gate',
       start_seconds: 0,
@@ -1960,8 +1963,10 @@
       position: 'center',
     };
     var mount = document.createElement('div');
+    var previous = host.firstElementChild;
+    if (previous) previous.style.display = 'none';
     host.appendChild(mount);
-    window.Videokr.mount(mount, {
+    var payload = {
       tracking: false,
       video: {
         id: state.video.id,
@@ -1977,11 +1982,28 @@
       chapters: [],
       ctas: [cta],
       variant: 'a',
-    });
+    };
+    Promise.resolve(window.Videokr.mount(mount, payload))
+      .then(function () {
+        if (previous && previous.parentNode) previous.parentNode.removeChild(previous);
+      })
+      .catch(function () {
+        if (mount.parentNode) mount.parentNode.removeChild(mount);
+        if (previous) previous.style.display = '';
+        else host.innerHTML = '<div class="preview-error">Preview unavailable</div>';
+      });
+  }
+  function scheduleFormEditPreview() {
+    clearTimeout(formPreviewTimer);
+    if (!activeFormEditor) return;
+    formPreviewTimer = setTimeout(renderFormEditPreview, 300);
   }
   function closeFormEditor() {
     if (!activeFormEditor) return;
+    clearTimeout(formPreviewTimer);
+    formPreviewTimer = 0;
     $('form-editor').classList.add('hidden');
+    $('form-panel-head').classList.remove('hidden');
     $('forms-rows').classList.remove('hidden');
     $('add-form').classList.remove('hidden');
     $('ed-form-export').closest('.row').classList.remove('hidden');
@@ -2007,14 +2029,15 @@
     $('form-edit-name').checked = activeFormEditor.snapshot.fields.split(',').indexOf('name') !== -1;
     $('forms-rows').classList.add('hidden');
     $('add-form').classList.add('hidden');
+    $('form-panel-head').classList.add('hidden');
     $('ed-form-export').closest('.row').classList.add('hidden');
     $('ed-form-leads').classList.add('hidden');
     $('form-editor').classList.remove('hidden');
     renderFormEditPreview();
   }
-  $('form-edit-name').addEventListener('change', renderFormEditPreview);
+  $('form-edit-name').addEventListener('change', scheduleFormEditPreview);
   ['form-edit-headline', 'form-edit-body', 'form-edit-button'].forEach(function (id) {
-    $(id).addEventListener('input', renderFormEditPreview);
+    $(id).addEventListener('input', scheduleFormEditPreview);
   });
   $('form-editor-back').addEventListener('click', closeFormEditor);
   $('form-edit-discard').addEventListener('click', function () {
@@ -2024,7 +2047,7 @@
     $('form-edit-body').value = snapshot.body;
     $('form-edit-button').value = snapshot.button_text;
     $('form-edit-name').checked = snapshot.fields.split(',').indexOf('name') !== -1;
-    renderFormEditPreview();
+    closeFormEditor();
   });
   $('form-edit-done').addEventListener('click', function () {
     if (!activeFormEditor) return;

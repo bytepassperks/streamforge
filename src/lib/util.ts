@@ -185,13 +185,14 @@ export function normalizeFontFamily(value: unknown): string {
   return (PLAYER_FONTS as readonly string[]).includes(String(value ?? '')) ? String(value ?? '') : '';
 }
 
+// Keep this in sync with formFieldsWithName in public/app.js.
 export function normalizeFormFields(value: unknown): string {
   const fields = String(value ?? '')
     .split(',')
     .map((field) => field.trim().toLowerCase())
     .filter(Boolean)
-    .filter((field, index, list) => field === 'email' || (field !== 'name' && list.indexOf(field) === index));
-  if (!fields.includes('email')) fields.unshift('email');
+    .filter((field, index, list) => field !== 'email' && field !== 'name' && list.indexOf(field) === index);
+  fields.unshift('email');
   return fields.join(',');
 }
 

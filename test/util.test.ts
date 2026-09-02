@@ -256,8 +256,13 @@ describe('player config', () => {
 
   it('keeps email required while toggling the optional name field', () => {
     expect(normalizeFormFields('email')).toBe('email');
+    expect(normalizeFormFields('email,email')).toBe('email');
+    expect(normalizeFormFields('Email, EMAIL, phone')).toBe('email,phone');
+    expect(normalizeFormFields('email,phone,email')).toBe('email,phone');
     expect(toggleFormNameField('email', true)).toBe('email,name');
     expect(toggleFormNameField('email,name,name', true)).toBe('email,name');
+    expect(toggleFormNameField('email,email', true)).toBe('email,name');
+    expect(toggleFormNameField('email,phone,email', false)).toBe('email,phone');
     expect(toggleFormNameField('name', false)).toBe('email');
     expect(toggleFormNameField('', false)).toBe('email');
   });
