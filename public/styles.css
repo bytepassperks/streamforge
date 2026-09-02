@@ -1096,6 +1096,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .cta-row-card .field, .form-row-card .field { margin-bottom: 0; }
 .cta-timing { grid-column: 1 / -1; }
 .form-when { display: grid; gap: 8px; margin-bottom: 14px; }
+.tab-panel[data-panel="form"] { container-type: inline-size; }
 .choice-card {
   display: flex; align-items: center; gap: 10px; padding: 13px 14px;
   border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer;
@@ -1200,7 +1201,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
   .form-editor { grid-template-columns: 1fr; gap: var(--s4); }
   .cta-timing { grid-template-columns: 1fr 1fr; }
 }
-@media (min-width: 1400px) {
+@container (min-width: 620px) {
   .form-editor { grid-template-columns: minmax(0, .85fr) minmax(300px, 1.15fr); gap: var(--s5); }
   .form-editor-preview { order: 0; }
 }
