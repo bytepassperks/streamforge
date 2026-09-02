@@ -1177,6 +1177,7 @@
   var BRANDING_PREF_KEY = 'videokr-branding-high-contrast';
   var brandingHsv = [0, 1, 1];
   var brandingPreviewTimer = null;
+  var previewToken = 0;
 
   function parseHexColor(value) {
     var match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(value || '').trim());
@@ -1294,6 +1295,15 @@
     $('pc-hex').value = rgbToHex(accent);
     $('pc-radius-value').value = $('pc-radius').value;
     $('pc-radius-value').textContent = $('pc-radius').value;
+    updateBrandingHueUi();
+    var logo = $('pc-logo').value.trim();
+    $('pc-logo-preview').src = logo;
+    $('pc-logo-preview').hidden = !logo;
+    $('pc-logo-dropzone').classList.toggle('has-logo', Boolean(logo));
+    updateBrandingBadge();
+  }
+
+  function updateBrandingHueUi() {
     $('pc-sv').style.setProperty('--pc-hue', brandingHsv[0] + 'deg');
     $('pc-sv-knob').style.left = 'clamp(7.5px, ' + (brandingHsv[1] * 100) + '%, calc(100% - 7.5px))';
     $('pc-sv-knob').style.top = 'clamp(7.5px, ' + ((1 - brandingHsv[2]) * 100) + '%, calc(100% - 7.5px))';
@@ -1302,11 +1312,6 @@
     $('pc-sv').setAttribute('aria-valuetext', Math.round(brandingHsv[1] * 100) + '% saturation, ' + Math.round(brandingHsv[2] * 100) + '% brightness');
     $('pc-hue').setAttribute('aria-valuenow', Math.round(brandingHsv[0]));
     $('pc-hue').setAttribute('aria-valuetext', Math.round(brandingHsv[0]) + ' degrees');
-    var logo = $('pc-logo').value.trim();
-    $('pc-logo-preview').src = logo;
-    $('pc-logo-preview').hidden = !logo;
-    $('pc-logo-dropzone').classList.toggle('has-logo', Boolean(logo));
-    updateBrandingBadge();
   }
 
   function setBrandingAccent(rgb) {
@@ -1341,9 +1346,19 @@
     schedulePreview();
   });
 
-  $('pc-contrast-toggle').checked = localStorage.getItem(BRANDING_PREF_KEY) === '1';
+  var savedContrastPreference = false;
+  try {
+    savedContrastPreference = localStorage.getItem(BRANDING_PREF_KEY) === '1';
+  } catch (err) {
+    savedContrastPreference = false;
+  }
+  $('pc-contrast-toggle').checked = savedContrastPreference;
   $('pc-contrast-toggle').addEventListener('change', function () {
-    localStorage.setItem(BRANDING_PREF_KEY, this.checked ? '1' : '0');
+    try {
+      localStorage.setItem(BRANDING_PREF_KEY, this.checked ? '1' : '0');
+    } catch (err) {
+      /* Sandboxed/private contexts may deny storage; the preference remains session-only. */
+    }
     if (this.checked) {
       var accent = parseHexColor($('pc-accent').value) || [255, 97, 6];
       setBrandingAccent(accent);
@@ -1401,10 +1416,14 @@
       if (id === 'pc-hue') step = event.shiftKey ? 10 : 1;
       var handled = true;
       if (id === 'pc-hue') {
-        if (event.key === 'ArrowRight' || event.key === 'ArrowUp') brandingHsv[0] = (brandingHsv[0] + step) % 360;
+        if (event.key === 'Home') brandingHsv[0] = 0;
+        else if (event.key === 'End') brandingHsv[0] = 360;
+        else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') brandingHsv[0] = (brandingHsv[0] + step) % 360;
         else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') brandingHsv[0] = (brandingHsv[0] - step + 360) % 360;
         else handled = false;
-      } else if (event.key === 'ArrowRight') brandingHsv[1] = Math.min(1, brandingHsv[1] + step);
+      } else if (event.key === 'Home') brandingHsv[1] = 0;
+      else if (event.key === 'End') brandingHsv[1] = 1;
+      else if (event.key === 'ArrowRight') brandingHsv[1] = Math.min(1, brandingHsv[1] + step);
       else if (event.key === 'ArrowLeft') brandingHsv[1] = Math.max(0, brandingHsv[1] - step);
       else if (event.key === 'ArrowUp') brandingHsv[2] = Math.min(1, brandingHsv[2] + step);
       else if (event.key === 'ArrowDown') brandingHsv[2] = Math.max(0, brandingHsv[2] - step);
@@ -1412,6 +1431,10 @@
       if (handled) {
         event.preventDefault();
         setBrandingAccent(hsvToRgb(brandingHsv));
+        if (id === 'pc-hue' && (event.key === 'Home' || event.key === 'End')) {
+          brandingHsv[0] = event.key === 'End' ? 360 : 0;
+          updateBrandingHueUi();
+        }
       }
     });
   });
@@ -1930,6 +1953,7 @@
   var formTimingId = 0;
   var activeFormEditor = null;
   var formPreviewTimer = 0;
+  var formPreviewToken = 0;
   function formField(card, name) {
     return card.querySelector('[data-field="' + name + '"]');
   }
@@ -1947,6 +1971,7 @@
     return fields.join(',');
   }
   function renderFormEditPreview() {
+    var token = ++formPreviewToken;
     if (!activeFormEditor || !state.video) return;
     var host = $('form-edit-preview');
     var cta = {
@@ -1985,9 +2010,19 @@
     };
     Promise.resolve(window.Videokr.mount(mount, payload))
       .then(function () {
-        if (previous && previous.parentNode) previous.parentNode.removeChild(previous);
+        if (token !== formPreviewToken) {
+          if (mount.parentNode) mount.parentNode.removeChild(mount);
+          return;
+        }
+        Array.prototype.slice.call(host.children).forEach(function (child) {
+          if (child !== mount && child.parentNode) child.parentNode.removeChild(child);
+        });
       })
       .catch(function () {
+        if (token !== formPreviewToken) {
+          if (mount.parentNode) mount.parentNode.removeChild(mount);
+          return;
+        }
         if (mount.parentNode) mount.parentNode.removeChild(mount);
         if (previous) previous.style.display = '';
         else host.innerHTML = '<div class="preview-error">Preview unavailable</div>';
@@ -2377,6 +2412,7 @@
   });
 
   function renderPreview() {
+    var token = ++previewToken;
     if (!state.video) return;
     var host = $('preview');
     var mount = document.createElement('div');
@@ -2403,9 +2439,19 @@
     };
     Promise.resolve(window.Videokr.mount(mount, payload))
       .then(function () {
-        if (previous && previous.parentNode) previous.parentNode.removeChild(previous);
+        if (token !== previewToken) {
+          if (mount.parentNode) mount.parentNode.removeChild(mount);
+          return;
+        }
+        Array.prototype.slice.call(host.children).forEach(function (child) {
+          if (child !== mount && child.parentNode) child.parentNode.removeChild(child);
+        });
       })
       .catch(function () {
+        if (token !== previewToken) {
+          if (mount.parentNode) mount.parentNode.removeChild(mount);
+          return;
+        }
         if (mount.parentNode) mount.parentNode.removeChild(mount);
         if (previous) previous.style.display = '';
         else host.innerHTML = '<div class="preview-error">Preview unavailable</div>';
