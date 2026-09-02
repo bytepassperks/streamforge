@@ -889,8 +889,11 @@
       this.titleBar.textContent = this.video.title;
       this.overlay.appendChild(this.titleBar);
     }
+    this.root.classList.remove('sf-logo-top-right');
     if (cfg.logoUrl) {
-      var logo = el('div', 'sf-logo sf-pos-' + (cfg.logoPosition || 'top-right'));
+      var logoPosition = cfg.logoPosition || 'top-right';
+      var logo = el('div', 'sf-logo sf-pos-' + logoPosition);
+      if (logoPosition === 'top-right') this.root.classList.add('sf-logo-top-right');
       var img = document.createElement('img');
       img.src = cfg.logoUrl;
       img.alt = 'brand';
@@ -1466,26 +1469,42 @@
       if (leaving && this.adapter.paused()) this.adapter.play();
     }
     this.ctas.forEach(function (cta) {
-      if (cta.kind === 'endscreen') return;
+      if (cta.kind !== 'gate') return;
       var start = cta.start_seconds || 0;
       var end = cta.end_seconds && cta.end_seconds > start ? cta.end_seconds : duration || start + 15;
       var active = t >= start && t <= end;
       var node = self.ctaLayer.querySelector('[data-cta="' + cta.id + '"]');
       if (self._dismissed[cta.id]) return;
       if (active && !node) {
-        if (cta.kind === 'gate') {
-          if (self._gateShown) return;
-          self._gateShown = true;
-          self.adapter.pause();
-          self.ctaLayer.appendChild(self._renderGate(cta, t));
-        } else {
-          self.ctaLayer.appendChild(self._renderCta(cta));
-        }
+        if (self._gateShown) return;
+        self._gateShown = true;
+        self.adapter.pause();
+        self.ctaLayer.appendChild(self._renderGate(cta, t));
         if (!self._seen[cta.id]) {
           self._seen[cta.id] = true;
           self.track('cta_view', t, duration, cta.id);
         }
-      } else if (!active && node && cta.kind !== 'gate') {
+      }
+    });
+    var gateOn = !!this.ctaLayer.querySelector('.sf-gate');
+    this.ctas.forEach(function (cta) {
+      if (cta.kind === 'gate' || cta.kind === 'endscreen') return;
+      var start = cta.start_seconds || 0;
+      var end = cta.end_seconds && cta.end_seconds > start ? cta.end_seconds : duration || start + 15;
+      var active = t >= start && t <= end;
+      var node = self.ctaLayer.querySelector('[data-cta="' + cta.id + '"]');
+      if (gateOn) {
+        if (node) node.remove();
+        return;
+      }
+      if (self._dismissed[cta.id]) return;
+      if (active && !node) {
+        self.ctaLayer.appendChild(self._renderCta(cta));
+        if (!self._seen[cta.id]) {
+          self._seen[cta.id] = true;
+          self.track('cta_view', t, duration, cta.id);
+        }
+      } else if (!active && node) {
         node.remove();
       }
     });

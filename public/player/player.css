@@ -89,6 +89,15 @@
   .sf-player.sf-cta-top-right.sf-active .sf-titlebar,
   .sf-player.sf-cta-top-right:not(.sf-playing) .sf-titlebar { opacity: 0; }
 }
+/* Branding has priority over a repeated title when both share the top edge. */
+.sf-player.sf-logo-top-right .sf-titlebar {
+  padding-right: 150px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@container (max-width: 520px) {
+  .sf-player.sf-logo-top-right.sf-active .sf-titlebar,
+  .sf-player.sf-logo-top-right:not(.sf-playing) .sf-titlebar { opacity: 0; }
+}
 
 .sf-logo { position: absolute; z-index: 4; opacity: .9; transform: scale(var(--sf-ui, 1)); }
 .sf-pos-top-right { transform-origin: 100% 0; }
@@ -466,6 +475,47 @@
   background: #fff; color: #111827; border-radius: 999px; padding: 7px 13px;
 }
 .sf-cta-style-gradient .sf-cta-close { color: var(--sf-on-accent, #fff); }
+
+/* Short players cannot spare the title-bar clearance used by full-size overlays. */
+.sf-player.sf-short .sf-cta {
+  bottom: 52px;
+  max-width: min(240px, calc(100% - 24px));
+  max-height: calc(100% - 52px);
+  padding: 10px 28px 10px 12px;
+}
+.sf-player.sf-short .sf-cta.sf-pos-top-right,
+.sf-player.sf-short .sf-cta.sf-pos-top-left { bottom: auto; }
+.sf-player.sf-short .sf-cta-headline { margin-bottom: 3px; font-size: 13px; }
+.sf-player.sf-short .sf-cta-body { margin-bottom: 6px; font-size: 11px; }
+.sf-player.sf-short .sf-cta-btn { min-height: 28px; padding: 6px 10px; font-size: 11px; }
+.sf-player.sf-short .sf-cta.sf-cta-banner,
+.sf-player.sf-short .sf-cta.sf-cta-style-bar {
+  bottom: 56px;
+  max-width: none;
+  max-height: none;
+}
+.sf-player.sf-short .sf-cta.sf-cta-banner { padding: 14px 34px; }
+.sf-player.sf-short .sf-cta.sf-cta-style-bar { padding: 10px 14px; }
+.sf-player.sf-short .sf-cta.sf-cta-style-ribbon {
+  top: 0;
+  bottom: auto;
+  max-width: none;
+  max-height: none;
+  padding: 8px 12px;
+}
+.sf-player.sf-short .sf-cta.sf-cta-style-spotlight {
+  bottom: 56px;
+  max-width: min(380px, calc(100% - 24px));
+  max-height: none;
+  padding: 20px;
+}
+@container (max-width: 380px) {
+  .sf-player.sf-short .sf-cta.sf-cta-style-card {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .sf-player.sf-short .sf-cta.sf-cta-style-card .sf-cta-body { margin-bottom: 4px; }
+}
 
 @container (max-width: 420px) {
   .sf-cta-btn.sf-btnstyle-chunky { font-size: 14px; padding: 10px 18px; }
