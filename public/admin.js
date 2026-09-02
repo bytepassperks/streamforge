@@ -205,10 +205,8 @@
           'Free tier: ' +
             data.free_limits.videos +
             ' videos, ' +
-            Math.round(data.free_limits.storageBytes / (1024 * 1024 * 1024)) +
-            ' GB storage, ' +
             data.free_limits.playsPerMonth +
-            ' plays/month. Admins and unlimited overrides ignore all three.',
+            ' plays/month. Admins and unlimited overrides ignore both.',
         ),
       );
     });

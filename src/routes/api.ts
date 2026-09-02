@@ -1100,7 +1100,6 @@ api.get('/billing', async (c) => {
     usage: {
       videos: videos?.n ?? 0,
       video_limit: plan.videos,
-      storage_limit_bytes: plan.storageBytes,
     },
     purchases: results ?? [],
   });

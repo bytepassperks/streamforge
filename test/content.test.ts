@@ -115,7 +115,7 @@ describe('content library', () => {
   });
 
   it('keeps pricing claims consistent with the plans', () => {
-    const facts = [/\$69/, /500 plays/, /10,000/, /150,000/];
+    const facts = [/\$69/, /500 plays/, /10,000/, /unlimited plays/];
     const corpus = pages.map((ref) => `${ref.page.answer}\n${ref.page.body}`).join('\n');
     for (const fact of facts) expect(corpus).toMatch(fact);
     /* Old workers.dev links and any stale price shape must never reappear. */

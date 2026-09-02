@@ -79,7 +79,7 @@ Videokr is short for "video maker" as a working tool — the thing you point at 
       },
       {
         q: 'Is Videokr free?',
-        a: 'Yes, there is a free plan that never expires and needs no card: 5 videos, 500 plays a month, 2 GB of storage, and every player, analytics and lead-capture feature, with a small Videokr badge on the player.',
+        a: 'Yes, there is a free plan that never expires and needs no card: 5 videos, 500 plays a month, and every player, analytics and lead-capture feature, with a small Videokr badge on the player.',
       },
       {
         q: 'Is Videokr a YouTube or Vimeo alternative?',
@@ -132,7 +132,7 @@ Ask what the video is for. If the answer names a page and an action — "the dem
       },
       {
         q: 'Can agencies use Videokr for client work?',
-        a: 'Yes. Projects keep clients separate, the player carries the client’s branding with no Videokr badge on paid plans, and the Agency plan includes 150,000 plays a month and 250 GB of storage.',
+        a: 'Yes. Projects keep clients separate, the player carries the client’s branding with no Videokr badge on paid plans, and the Agency plan includes unlimited plays and unlimited videos.',
       },
       {
         q: 'Is Videokr suitable for online courses?',
@@ -157,20 +157,20 @@ Ask what the video is for. If the answer names a page and an action — "the dem
     title: 'Videokr pricing questions answered',
     metaTitle: 'Videokr pricing — free, $29 Starter, $29/mo Agency, $69 lifetime',
     description:
-      'Every pricing question about Videokr: what the free plan includes, what a play is, the $69 lifetime plan and its $10 discount, overage, storage, bandwidth, refunds and the 1 year warranty.',
+      'Every pricing question about Videokr: what the free plan includes, what a play is, the $69 lifetime plan and its $10 discount, overage, bandwidth, refunds and the 1 year warranty.',
     answer:
-      'Videokr has four plans: Free at $0 forever (500 plays a month, 5 videos, 2 GB), Starter at $29 a year or $5 monthly (10,000 plays, unlimited videos, 25 GB), Agency at $29 a month or $290 a year (150,000 plays, 250 GB, projects and playlists), and Lifetime at one payment of $69 — a $10 discount off the $79 list price, applied at checkout — for 10,000 plays a month forever. Bandwidth is never metered; extra plays on paid plans cost $1 per 10,000.',
+      'Videokr has four plans: Free at $0 forever (500 plays a month, 5 videos), Starter at $29 a year or $5 monthly (10,000 plays, unlimited videos), Agency at $29 a month or $290 a year (unlimited plays and videos, projects and playlists), and Lifetime at one payment of $69 — a $10 discount off the $79 list price, applied at checkout — for 10,000 plays a month forever. Bandwidth is never metered; extra plays on Starter and Lifetime cost $1 per 10,000.',
     updated: '2026-08-18',
     keywords: ['videokr pricing', 'video hosting pricing', 'lifetime video hosting deal'],
     related: ['docs/plans-and-limits', 'answers/what-is-videokr', 'blog/why-plays-not-bandwidth'],
     body: `## The plans
 
-| Plan | Price | Plays / month | Videos | Storage |
-| --- | --- | --- | --- | --- |
-| Free | $0 forever | 500 | 5 | 2 GB |
-| Starter | $29/year or $5/month | 10,000 | Unlimited | 25 GB |
-| Agency | $29/month or $290/year | 150,000 | Unlimited | 250 GB |
-| Lifetime | $69 once ($79 − $10) | 10,000 | Unlimited | 25 GB |
+| Plan | Price | Plays / month | Videos |
+| --- | --- | --- | --- |
+| Free | $0 forever | 500 | 5 |
+| Starter | $29/year or $5/month | 10,000 | Unlimited |
+| Agency | $29/month or $290/year | unlimited | Unlimited |
+| Lifetime | $69 once ($79 − $10) | 10,000 | Unlimited |
 
 Every plan includes the whole player, all analytics, lead capture, webhooks and the WordPress plugin. Paid plans remove the small Videokr badge.
 
@@ -180,11 +180,11 @@ One viewer starting one video, counted once per video per month. A viewer who re
 
 ## Overage and limits
 
-Free accounts stop serving at 500 plays until the month rolls over. Paid plans keep playing and accrue overage at **$1 per 10,000 extra plays**. Bandwidth is never billed on any plan, and linking an external source uses no storage allowance.
+Free accounts stop serving at 500 plays until the month rolls over. Starter and Lifetime keep playing and accrue overage at **$1 per 10,000 extra plays**; Agency has no play limit and no overage. Bandwidth is never billed on any plan, and linking an external source keeps the file where it already lives.
 
 ## The lifetime plan
 
-One payment of $69: the list price is $79 and a $10 launch discount is applied at checkout (₹6,849 − ₹850 = ₹5,999 in rupees). It includes 10,000 plays a month forever, unlimited videos, 25 GB of storage, no badge, and every feature added later. Sales are final and carry a 1 year warranty. See [plans and limits](/docs/plans-and-limits).`,
+One payment of $69: the list price is $79 and a $10 launch discount is applied at checkout (₹6,849 − ₹850 = ₹5,999 in rupees). It includes 10,000 plays a month forever, unlimited videos, no badge, and every feature added later. Sales are final and carry a 1 year warranty. See [plans and limits](/docs/plans-and-limits).`,
     faqs: [
       {
         q: 'How much does Videokr cost?',
@@ -192,11 +192,11 @@ One payment of $69: the list price is $79 and a $10 launch discount is applied a
       },
       {
         q: 'Is the Videokr free plan really free?',
-        a: 'Yes — no card, no trial timer. It gives 5 videos, 500 plays a month and 2 GB of storage with every feature enabled, and shows a small Videokr badge on the player.',
+        a: 'Yes — no card, no trial timer. It gives 5 videos and 500 plays a month with every feature enabled, and shows a small Videokr badge on the player.',
       },
       {
         q: 'What is the Videokr lifetime deal?',
-        a: 'One payment of $69 (list $79 minus a $10 discount) for 10,000 plays a month forever, unlimited videos, 25 GB storage, no badge and all future features. Lifetime sales are final and carry a 1 year warranty.',
+        a: 'One payment of $69 (list $79 minus a $10 discount) for 10,000 plays a month forever, unlimited videos, no badge and all future features. Lifetime sales are final and carry a 1 year warranty.',
       },
       {
         q: 'What happens if I exceed my plays?',
@@ -204,7 +204,7 @@ One payment of $69: the list price is $79 and a $10 launch discount is applied a
       },
       {
         q: 'Does Videokr charge for bandwidth?',
-        a: 'No. Bandwidth is never metered on any plan. You are billed on plays and a fixed storage allowance only.',
+        a: 'No. Bandwidth is never metered on any plan. You are billed on plays; Agency has no play limit, while Starter and Lifetime charge $1 per 10,000 extra plays.',
       },
       {
         q: 'Does Videokr offer refunds?',
@@ -233,7 +233,7 @@ One payment of $69: the list price is $79 and a $10 launch discount is applied a
     related: ['docs/embeds', 'docs/sources', 'docs/webhooks-and-api', 'blog/video-page-speed'],
     body: `## Formats and sources
 
-Upload MP4 or WebM (200 MB per file, 5 MB per image), or link a source you already host: MP4, WebM, HLS \`.m3u8\`, YouTube or Vimeo. Linked sources consume no storage allowance and keep their own delivery. Details in [sources](/docs/sources).
+Upload MP4 or WebM (200 MB per file, 5 MB per image), or link a source you already host: MP4, WebM, HLS \`.m3u8\`, YouTube or Vimeo. Linked sources stay where you host them and keep their own delivery. Details in [sources](/docs/sources).
 
 ## Delivery
 

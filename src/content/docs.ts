@@ -19,14 +19,14 @@ export const docsPages: ContentPage[] = [
     related: ['docs/embeds', 'docs/sources', 'guides/embed-video-on-website'],
     body: `## 1. Create an account
 
-The [free plan](/#pricing) is $0 forever and needs no card: 5 videos, 500 plays a month, 2 GB of storage, and every player, analytics and lead-capture feature switched on. The only difference from a paid plan is a small Videokr badge on the player.
+The [free plan](/#pricing) is $0 forever and needs no card: 5 videos, 500 plays a month, and every player, analytics and lead-capture feature switched on. The only difference from a paid plan is a small Videokr badge on the player.
 
 ## 2. Add a video
 
 In **Library → New video** you can either:
 
 - **Upload** an MP4 or WebM up to 200 MB per file. It is stored by Videokr and delivered from its edge network.
-- **Link a URL** — an MP4, WebM or HLS (\`.m3u8\`) file you already host, or a YouTube or Vimeo link. Linked sources use none of your storage allowance.
+- **Link a URL** — an MP4, WebM or HLS (\`.m3u8\`) file you already host, or a YouTube or Vimeo link. Linked sources keep the file where it already lives.
 
 Then pick a thumbnail. Upload an image (up to 5 MB) or let Videokr grab a frame from the video automatically.
 
@@ -66,7 +66,7 @@ Within a minute of the first viewer, the video's **Analytics** tab shows impress
     faqs: [
       {
         q: 'Do I need a card to start?',
-        a: 'No. The free plan is $0 forever with no card and no trial timer: 5 videos, 500 plays a month, 2 GB of storage.',
+        a: 'No. The free plan is $0 forever with no card and no trial timer: 5 videos and 500 plays a month.',
       },
       {
         q: 'Where is the video stored?',
@@ -153,13 +153,13 @@ A [domain-locked](/docs/privacy) video only plays on the hostnames you list — 
     description:
       'What you can put in a Videokr video: uploaded MP4 or WebM up to 200 MB, or a linked MP4, WebM, HLS stream, YouTube or Vimeo URL.',
     answer:
-      'A Videokr video is either an upload (MP4 or WebM, up to 200 MB per file, stored and delivered by Videokr) or a link to a source you already have: an MP4 or WebM file, an HLS .m3u8 playlist, a YouTube URL or a Vimeo URL. Linked sources use no storage allowance and are still wrapped in your branded player with your chapters, CTAs and analytics.',
+      'A Videokr video is either an upload (MP4 or WebM, up to 200 MB per file, stored and delivered by Videokr) or a link to a source you already have: an MP4 or WebM file, an HLS .m3u8 playlist, a YouTube URL or a Vimeo URL. Linked sources stay where you host them and are still wrapped in your branded player with your chapters, CTAs and analytics.',
     updated: '2026-08-18',
     keywords: ['hls player', 'mp4 hosting', 'youtube embed alternative'],
     related: ['docs/quickstart', 'docs/plans-and-limits', 'compare/youtube-alternative'],
     body: `## Uploads
 
-MP4 (H.264/AAC) is the safest format for the widest device range; WebM is accepted too. The limit is 200 MB per file, which comfortably covers the kind of video that belongs on a marketing page — a demo, a tour, a testimonial, a course lesson. Storage counts against your plan: 2 GB free, 25 GB on Starter and Lifetime, 250 GB on Agency.
+MP4 (H.264/AAC) is the safest format for the widest device range; WebM is accepted too. The limit is 200 MB per file, which comfortably covers the kind of video that belongs on a marketing page — a demo, a tour, a testimonial, a course lesson. Very large libraries are subject to fair use.
 
 ## Linked files
 
@@ -614,7 +614,7 @@ A WordPress player plugin plays files from your own hosting: your server pays fo
     description:
       'What a play is, how it is de-duplicated, what each plan includes, and exactly what happens when you reach your allowance.',
     answer:
-      'A play is one viewer starting one video, counted once per video per calendar month — reloads and rewatches in the same month do not count again. Free stops serving at 500 plays until the month rolls over; paid plans keep playing and extra plays cost $1 per 10,000. Bandwidth is never metered on any plan.',
+      'A play is one viewer starting one video, counted once per video per calendar month — reloads and rewatches in the same month do not count again. Free stops serving at 500 plays until the month rolls over; Starter and Lifetime keep playing and extra plays cost $1 per 10,000, while Agency has no monthly play limit. Bandwidth is never metered on any plan.',
     updated: '2026-08-18',
     keywords: ['video hosting pricing', 'video hosting bandwidth', 'video hosting plans'],
     related: [
@@ -625,12 +625,12 @@ A WordPress player plugin plays files from your own hosting: your server pays fo
     ],
     body: `## The plans
 
-| Plan | Price | Plays / month | Videos | Storage |
-| --- | --- | --- | --- | --- |
-| Free | $0 forever | 500 | 5 | 2 GB |
-| Starter | $29/year or $5/month | 10,000 | Unlimited | 25 GB |
-| Agency | $29/month or $290/year | 150,000 | Unlimited | 250 GB |
-| Lifetime | $69 once | 10,000 forever | Unlimited | 25 GB |
+| Plan | Price | Plays / month | Videos |
+| --- | --- | --- | --- |
+| Free | $0 forever | 500 | 5 |
+| Starter | $29/year or $5/month | 10,000 | Unlimited |
+| Agency | $29/month or $290/year | unlimited | Unlimited |
+| Lifetime | $69 once | 10,000 forever | Unlimited |
 
 Every plan includes the full player, chapters, captions, CTAs, email capture, retention analytics, webhooks, API keys and the WordPress plugin. Paid plans and Lifetime remove the badge.
 
@@ -651,7 +651,7 @@ Impressions — the player loading without anyone pressing play — are reported
 
 ## Bandwidth and storage
 
-There is no metered egress on any plan — a video that goes unexpectedly viral does not produce a bandwidth invoice. Storage is the fixed allowance in the table, and [linking an external source](/docs/sources) uses none of it.
+There is no metered egress on any plan — a video that goes unexpectedly viral does not produce a bandwidth invoice. Plans are defined by their play and video allowances, and [linking an external source](/docs/sources) keeps the file where it already lives.
 
 ## Limits worth knowing
 
@@ -673,7 +673,7 @@ There are none, which is why the free plan is not a trial: test every feature on
       },
       {
         q: 'Is the free plan a trial?',
-        a: 'No. The free plan has no timer and needs no card: 500 plays a month, 5 videos and 2 GB of storage, for as long as you use it.',
+        a: 'No. The free plan has no timer and needs no card: 500 plays a month and 5 videos, for as long as you use it.',
       },
     ],
   },
