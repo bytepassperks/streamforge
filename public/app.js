@@ -1173,6 +1173,7 @@
     ghost: { accent: '#22c1b3', background: '#101114', borderRadius: 10, bigPlayButton: false },
     aurora: { accent: '#22d3ee', background: '#071018', borderRadius: 16, bigPlayButton: true },
     slate: { accent: '#2563eb', background: '#0f172a', borderRadius: 10, bigPlayButton: true },
+    pill: { accent: '#0f8f7a', background: '#0b0f0e', borderRadius: 18, bigPlayButton: true },
   };
 
   var BRANDING_FONTS = ['', 'Inter', 'Figtree', 'Bricolage Grotesque', 'JetBrains Mono'];
