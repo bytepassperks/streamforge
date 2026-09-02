@@ -1107,7 +1107,7 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 .form-edit-action { width: 100%; }
 .form-editor { display: grid; grid-template-columns: 1fr; gap: var(--s4); margin-top: var(--s5); }
 .form-editor-fields { min-width: 0; }
-.form-editor-head { grid-template-columns: 34px minmax(0, 1fr); }
+.form-editor-head { grid-template-columns: 34px minmax(0, 1fr); grid-column: 1 / -1; order: -2; }
 .form-editor-preview { min-width: 0; order: -1; }
 .form-editor-preview h4 { margin: 0 0 var(--s2); }
 .form-editor-preview #form-edit-preview { width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: var(--radius); }
