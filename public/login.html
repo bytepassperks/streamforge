@@ -51,6 +51,8 @@
 <script>
 (function () {
   var mode = new URLSearchParams(location.search).get('mode') === 'signup' ? 'signup' : 'login';
+  var requestedIntent = new URLSearchParams(location.search).get('intent');
+  var intent = ['lifetime', 'starter', 'agency'].indexOf(requestedIntent) !== -1 ? requestedIntent : '';
   var tabs = document.querySelectorAll('.auth-tab');
   var nameField = document.getElementById('name-field');
   var title = document.getElementById('auth-title');
@@ -132,7 +134,7 @@
           note.textContent = 'If that email has an account, the reset link is on its way. It expires in an hour.';
           return;
         }
-        location.href = '/app.html';
+        location.href = '/app.html' + (intent ? '?intent=' + intent : '');
       })
       .catch(function () {
         submit.disabled = false;
@@ -145,7 +147,9 @@
   /* An existing session means there is nothing to sign into. */
   fetch('/api/auth/me', { credentials: 'same-origin' })
     .then(function (res) { return res.json(); })
-    .then(function (result) { if (result.user) location.replace('/app.html'); })
+    .then(function (result) {
+      if (result.user) location.replace('/app.html' + (intent ? '?intent=' + intent : ''));
+    })
     .catch(function () { /* stay on the form */ });
 })();
 </script>

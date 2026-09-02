@@ -3,6 +3,8 @@
   'use strict';
 
   var state = { user: null, projects: [], videos: [], playlists: [], video: null, config: null, publicBase: '' };
+  var requestedIntent = new URLSearchParams(location.search).get('intent');
+  var billingIntent = ['lifetime', 'starter', 'agency'].indexOf(requestedIntent) !== -1 ? requestedIntent : '';
 
   /* Every link a customer copies out of the dashboard has to point at the
      canonical public host, which the server knows and this page may not. */
@@ -3335,9 +3337,9 @@
         grid.appendChild(card);
 
         if (billing.purchases.length) {
-          var history = text('div', 'card');
-          history.appendChild(text('h3', null, 'Purchases'));
-          host.appendChild(history);
+          var historyCard = text('div', 'card');
+          historyCard.appendChild(text('h3', null, 'Purchases'));
+          host.appendChild(historyCard);
           var table = text('table', 'data');
           var head = document.createElement('tr');
           ['Purchase', 'Status', 'Amount', 'Date'].forEach(function (label) {
@@ -3352,7 +3354,16 @@
             row.appendChild(text('td', 'tiny muted', fmtDate(purchase.created_at)));
             table.appendChild(row);
           });
-          history.appendChild(table);
+          historyCard.appendChild(table);
+        }
+        if (billingIntent) {
+          var lifetimeCard = host.querySelector('.plan-card-lt');
+          if (lifetimeCard) lifetimeCard.scrollIntoView({ block: 'nearest' });
+          var params = new URLSearchParams(location.search);
+          params.delete('intent');
+          var query = params.toString();
+          window.history.replaceState(null, '', location.pathname + (query ? '?' + query : '') + location.hash);
+          billingIntent = '';
         }
       })
       .catch(function (error) {
@@ -3444,6 +3455,8 @@
         showView('billing');
         toast(result.user.plan === 'lifetime' ? 'Lifetime unlocked' : 'Payment received — unlocking shortly');
       } else if (params.get('view') === 'billing') {
+        showView('billing');
+      } else if (billingIntent) {
         showView('billing');
       } else {
         showView('videos');
