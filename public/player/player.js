@@ -9,7 +9,7 @@
 
   /* Shipped skins, plus the retired names still stored on older videos. Kept in
      step with PLAYER_SKINS on the server so an old config never renders unstyled. */
-  var SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate'];
+  var SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate', 'pill'];
   var LEGACY_SKINS = {
     'forge-dark': 'videokr',
     'forge-light': 'studio',
@@ -148,6 +148,17 @@
       classes += ' sf-pos-' + (cta.position || 'bottom-right');
     }
     return classes;
+  }
+
+  function shouldPromptUnmute(state) {
+    return !!(
+      state &&
+      state.mutedStart &&
+      !state.everUnmuted &&
+      state.muted &&
+      state.playing &&
+      !state.gateOpen
+    );
   }
 
   function ctaButtonStyle(value) {
@@ -854,6 +865,8 @@
     this._gateShown = false;
     this._lastProgressBucket = -1;
     this._started = false;
+    this.mutedStart = !!(this.config.autoplay || this.config.muted);
+    this.everUnmuted = false;
     this._trackingEnabled = payload.tracking !== false;
   }
 
@@ -921,6 +934,28 @@
 
     this.ctaLayer = el('div', 'sf-cta-layer');
     this.overlay.appendChild(this.ctaLayer);
+    if (cfg.autoplay || cfg.muted) {
+      this.unmuteCard = el(
+        'button',
+        'sf-unmute',
+        '<span class="sf-unmute-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>' +
+          '<span class="sf-unmute-kicker">Tap to</span>' +
+          '<span class="sf-unmute-label">Unmute</span>',
+      );
+      this.unmuteCard.type = 'button';
+      this.unmuteCard.setAttribute('aria-label', 'Unmute');
+      this.unmuteCard.addEventListener('click', function () {
+        var volume = self.volInput ? parseFloat(self.volInput.value) : 0;
+        if (!(volume > 0)) volume = 1;
+        if (self.volInput) self.volInput.value = String(volume);
+        self.adapter.setVolume(volume);
+        self.adapter.setMuted(false);
+        self.everUnmuted = true;
+        self._setVolIcon(false);
+        self._syncUnmutePrompt();
+      });
+      this.ctaLayer.appendChild(this.unmuteCard);
+    }
 
     // End-of-playback surfaces live below the control bar so a viewer can scrub
     // back out of them; a gate, which is meant to block, stays in the cta layer.
@@ -942,6 +977,7 @@
     this.adapter.on('play', function () {
       self.root.classList.add('sf-playing');
       self._setPlayIcon(true);
+      self._syncUnmutePrompt();
       if (!self._started) {
         self._started = true;
         self.track('play');
@@ -950,6 +986,7 @@
     this.adapter.on('pause', function () {
       self.root.classList.remove('sf-playing');
       self._setPlayIcon(false);
+      self._syncUnmutePrompt();
       self.track('pause');
     });
     this.adapter.on('ended', function () {
@@ -1114,7 +1151,9 @@
         var v = parseFloat(self.volInput.value);
         self.adapter.setVolume(v);
         self.adapter.setMuted(v === 0);
+        if (v > 0) self.everUnmuted = true;
         self._setVolIcon(v === 0);
+        self._syncUnmutePrompt();
       });
       volWrap.appendChild(this.muteBtn);
       volWrap.appendChild(this.volInput);
@@ -1141,7 +1180,8 @@
 
     /* One gear holds speed, quality and chapters, so the bar keeps a fixed width no
        matter how many renditions or chapters a video carries. */
-    bar.appendChild(this._buildSettings());
+    this.settingsRoot = this._buildSettings();
+    bar.appendChild(this.settingsRoot);
 
     if (cfg.controls.speed) {
       var speeds = (cfg.speeds && cfg.speeds.length ? cfg.speeds : SPEED_FALLBACK).slice();
@@ -1208,6 +1248,14 @@
       badge.innerHTML =
         '<img src="' + assetBase() + '/brand/mark-64.png" alt="" /><span>Videokr</span>';
       bar.appendChild(badge);
+    }
+
+    if (skinName(cfg.skin) === 'pill') {
+      var group = el('div', 'sf-pill-group');
+      [this.ccBtn, this.pipBtn, this.settingsRoot, this.shareBtn, this.fsBtn].forEach(function (node) {
+        if (node && node.parentNode === bar) group.appendChild(node);
+      });
+      bar.appendChild(group);
     }
 
     /* Kept so the quality menu, built after the source reports its renditions, has
@@ -1435,6 +1483,7 @@
     if (this.durationLabel) this.durationLabel.textContent = fmtTime(duration);
     if (duration > 0 && t > 0) this._savePosition(t);
     this._evaluateCtas(t, duration);
+    this._syncUnmutePrompt();
 
     if (duration > 0 && !this.adapter.paused()) {
       var bucket = Math.floor((t / duration) * 20);
@@ -1447,6 +1496,20 @@
       var ch = this._chapterAt(t);
       this.titleBar.textContent = ch ? this.video.title + ' — ' + ch.title : this.video.title;
     }
+  };
+
+  Player.prototype._syncUnmutePrompt = function () {
+    if (!this.unmuteCard) return;
+    this.unmuteCard.classList.toggle(
+      'sf-visible',
+      shouldPromptUnmute({
+        mutedStart: this.mutedStart,
+        everUnmuted: this.everUnmuted,
+        muted: this.adapter.muted(),
+        playing: this.root.classList.contains('sf-playing'),
+        gateOpen: !!this.ctaLayer.querySelector('.sf-gate'),
+      }),
+    );
   };
 
   /* ----------------------------------------------------------------- CTAs -- */
@@ -1859,8 +1922,10 @@
   Player.prototype.toggleMute = function () {
     var muted = !this.adapter.muted();
     this.adapter.setMuted(muted);
+    if (!muted) this.everUnmuted = true;
     this._setVolIcon(muted);
     if (this.volInput) this.volInput.value = muted ? '0' : '1';
+    this._syncUnmutePrompt();
   };
 
   Player.prototype.toggleFullscreen = function () {
@@ -1970,7 +2035,9 @@
     this.volInput.value = String(next);
     this.adapter.setVolume(next);
     this.adapter.setMuted(next === 0);
+    if (next > 0) this.everUnmuted = true;
     this._setVolIcon(next === 0);
+    this._syncUnmutePrompt();
   };
 
   Player.prototype._stepRate = function (direction) {
@@ -2359,6 +2426,7 @@
     Player: Player,
     formatTime: fmtTime,
     ctaClassName: ctaClassName,
+    shouldPromptUnmute: shouldPromptUnmute,
     accentInk: accentInk,
     contrastRatio: contrastRatio,
   };

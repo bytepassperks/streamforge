@@ -203,10 +203,32 @@ describe('embed payload badge', () => {
     vm.runInNewContext(playerSource, context);
     const streamForge = context.window.StreamForge as {
       ctaClassName: (cta: Record<string, string>) => string;
+      shouldPromptUnmute: (state: Record<string, boolean>) => boolean;
     };
     expect(streamForge.ctaClassName({ kind: 'banner', style: 'card', position: 'top-left' })).not.toContain('sf-pos-');
     expect(streamForge.ctaClassName({ kind: 'overlay', style: 'card', position: 'top-left' })).toContain('sf-pos-top-left');
     expect(streamForge.ctaClassName({ kind: 'overlay', style: 'bar', position: 'top-left' })).not.toContain('sf-pos-');
+  });
+
+  it('prompts only for active playback that started muted and remains unmuted by the viewer', () => {
+    const context = { window: {} as Record<string, unknown> };
+    vm.runInNewContext(playerSource, context);
+    const streamForge = context.window.StreamForge as {
+      shouldPromptUnmute: (state: Record<string, boolean>) => boolean;
+    };
+    const base = {
+      mutedStart: true,
+      everUnmuted: false,
+      muted: true,
+      playing: true,
+      gateOpen: false,
+    };
+    expect(streamForge.shouldPromptUnmute(base)).toBe(true);
+    expect(streamForge.shouldPromptUnmute({ ...base, muted: false })).toBe(false);
+    expect(streamForge.shouldPromptUnmute({ ...base, playing: false })).toBe(false);
+    expect(streamForge.shouldPromptUnmute({ ...base, gateOpen: true })).toBe(false);
+    expect(streamForge.shouldPromptUnmute({ ...base, mutedStart: false })).toBe(false);
+    expect(streamForge.shouldPromptUnmute({ ...base, everUnmuted: true })).toBe(false);
   });
 
   it('hides the player badge for paid and unlimited owners', async () => {

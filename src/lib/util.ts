@@ -177,7 +177,7 @@ export function retentionBucket(position: number, duration: number, buckets = 10
 }
 
 /** Shipped skins. The first is the default every new video and every surface uses. */
-export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate'] as const;
+export const PLAYER_SKINS = ['videokr', 'frame', 'pop', 'studio', 'wave', 'neon', 'cinema', 'ghost', 'aurora', 'slate', 'pill'] as const;
 
 export const PLAYER_FONTS = ['', 'Inter', 'Figtree', 'Bricolage Grotesque', 'JetBrains Mono'] as const;
 
