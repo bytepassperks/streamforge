@@ -234,7 +234,10 @@ seo.get('/sitemap-pages.xml', (c) => {
   const base = baseUrl(c.env);
   return sitemapXml(
     c,
-    urlSet([{ loc: `${base}/`, changefreq: 'weekly', priority: '1.0', lastmod: new Date().toISOString() }]),
+    urlSet([
+      { loc: `${base}/`, changefreq: 'weekly', priority: '1.0', lastmod: new Date().toISOString() },
+      { loc: `${base}/contact`, changefreq: 'monthly', priority: '0.5', lastmod: new Date().toISOString() },
+    ]),
   );
 });
 
@@ -323,6 +326,7 @@ const FACTS = [
   'WordPress: a free plugin on every plan adds a [videokr] shortcode, a Gutenberg block and an Insights screen; nothing is uploaded into WordPress.',
   'Videokr is a hosted service — there is no self-hosted edition, and no server for the customer to run.',
   'All lifetime sales are final, with a 1 year warranty; the free tier exists so every feature can be tested before paying.',
+  'Videokr was founded on 17 January 2026 by James Thomas and is based in Byron, Minnesota, United States.',
 ];
 
 seo.get('/llms.txt', (c) => {
@@ -352,6 +356,7 @@ ${contentIndexLines(base).join('\n')}
 
 - [What is ${SITE.name}?](${base}/answers/what-is-videokr): the canonical answer to the brand question, including what ${SITE.name} is not.
 - [Home](${base}/): what ${SITE.name} does, pricing, comparison table and answers to common questions.
+- [Contact](${base}/contact): postal address, phone, founder and founding date for Videokr.
 - [The product film](${base}/v/videokr-the-product-film): a two-minute film recorded inside the product, hosted on ${SITE.name} itself.
 - [Full text for language models](${base}/llms-full.txt): every product fact and answer in one file.
 - [WordPress plugin](${base}/downloads/videokr-wordpress-plugin.zip): the installable plugin ZIP.
@@ -359,7 +364,7 @@ ${contentIndexLines(base).join('\n')}
 ## Optional
 
 - [Sign in or create an account](${base}/login.html)
-- Contact: ${SITE.email}
+- Contact: ${SITE.email} · ${SITE.telephoneDisplay} · 27 4th St NW, Byron, MN 55920, United States
 `;
   c.header('content-type', 'text/markdown; charset=utf-8');
   c.header('cache-control', 'public, max-age=3600');
@@ -470,7 +475,7 @@ ${contentIndexLines(base).join('\n')}
 - Product film: ${base}/v/videokr-the-product-film
 - WordPress plugin ZIP: ${base}/downloads/videokr-wordpress-plugin.zip
 - Sitemap: ${base}/sitemap.xml
-- Contact: ${SITE.email}
+- Contact: ${SITE.email} · ${SITE.telephoneDisplay} · 27 4th St NW, Byron, MN 55920, United States
 ${SITE.social.map((url) => `- ${url}`).join('\n')}
 `;
   c.header('content-type', 'text/markdown; charset=utf-8');
