@@ -18,6 +18,7 @@ import {
   baseUrl,
   breadcrumbLd,
   graphLd,
+  localBusinessLd,
   organizationLd,
   webSiteLd,
 } from '../lib/seo';
@@ -49,7 +50,7 @@ const FOOT = `<footer class="sf-page-foot sf-lib-foot">
      embed it anywhere, and read second-by-second retention. <a href="/#pricing">Plans from $0</a>.</p>
   <nav aria-label="Library sections">${SECTIONS.map(
     (entry) => `<a href="/${entry.id}">${entry.title}</a>`,
-  ).join('')}<a href="/v/videokr-the-product-film">Product film</a><a href="/downloads/videokr-wordpress-plugin.zip">WordPress plugin</a></nav>
+  ).join('')}<a href="/v/videokr-the-product-film">Product film</a><a href="/downloads/videokr-wordpress-plugin.zip">WordPress plugin</a><a href="/contact">Contact</a></nav>
 </footer>`;
 
 interface Meta {
@@ -114,7 +115,77 @@ function cardsFor(sectionId: string, pages: ContentPage[]): string {
     .join('')}</ul>`;
 }
 
+function socialLabel(url: string): string {
+  const host = new URL(url).hostname.replace(/^www\./, '');
+  const token = host.split('.')[0];
+  if (token === 'x') return 'X';
+  if (token === 'producthunt') return 'Product Hunt';
+  if (token === 'youtube') return 'YouTube';
+  if (token === 'linkedin') return 'LinkedIn';
+  return token.replace(/^./, (letter) => letter.toUpperCase());
+}
+
 /* ------------------------------------------------------------------ hubs ---- */
+
+content.get('/contact', (c) => {
+  const base = baseUrl(c.env);
+  const canonical = `${base}/contact`;
+  const ld = graphLd([
+    organizationLd(base),
+    webSiteLd(base),
+    localBusinessLd(base),
+    breadcrumbLd(base, [
+      { name: 'Videokr', url: '/' },
+      { name: 'Contact', url: '/contact' },
+    ]),
+    {
+      '@type': 'ContactPage',
+      '@id': `${canonical}#page`,
+      name: `Contact ${SITE.name}`,
+      url: canonical,
+      isPartOf: { '@id': `${base}/#website` },
+      about: { '@id': `${base}/#organization` },
+    },
+  ]);
+  const body = `<main class="sf-page-main sf-lib-main" id="sf-main">
+  <nav class="sf-crumbs" aria-label="Breadcrumb"><a href="/">Videokr</a> <span aria-hidden="true">/</span> <span>Contact</span></nav>
+  <h1>Contact Videokr</h1>
+  <p class="sf-answer">Videokr is a hosted video platform for marketing sites, founded on 17 January 2026 by James Thomas and run from Byron, Minnesota. Every way to reach us is below.</p>
+  <dl class="sf-nap">
+    <dt>Business name</dt><dd>Videokr</dd>
+    <dt>Founder</dt><dd>James Thomas</dd>
+    <dt>Founded</dt><dd><time datetime="2026-01-17">January 17, 2026</time></dd>
+    <dt>Address</dt><dd><address>27 4th St NW<br>Byron, MN 55920<br>United States</address></dd>
+    <dt>Phone</dt><dd><a href="tel:+15072022421">(507) 202-2421</a></dd>
+    <dt>Support</dt><dd><a href="mailto:support@videokr.com">support@videokr.com</a></dd>
+    <dt>General and press</dt><dd><a href="mailto:hello@videokr.com">hello@videokr.com</a></dd>
+    <dt>Service area</dt><dd>Worldwide</dd>
+  </dl>
+  <h2>Which address to use</h2>
+  <p>Email <a href="mailto:support@videokr.com">support@videokr.com</a> about an account, a payment or a video that will not play. Use <a href="mailto:hello@videokr.com">hello@videokr.com</a> for press, partnerships, and anything about the company rather than the product.</p>
+  <h2>Elsewhere</h2>
+  <ul>${SITE.social
+    .map((url) => `<li><a href="${escapeHtml(url)}" rel="me">${escapeHtml(socialLabel(url))}</a></li>`)
+    .join('')}</ul>
+  <aside class="sf-lib-cta">
+    <h2>Start free</h2>
+    <p>500 plays a month, 5 videos, every player and analytics feature — $0, no card, no timer.</p>
+    <p><a class="btn" href="/login.html?mode=signup">Start free</a> <a class="sf-quiet-link" href="/v/videokr-the-product-film">or watch the two-minute film</a></p>
+  </aside>
+</main>`;
+  return c.html(
+    shell(
+      {
+        title: `Contact ${SITE.name} — ${SITE.name}`,
+        description:
+          'Contact details for Videokr: postal address in Byron, Minnesota, phone number, support and general email. Videokr was founded on January 17, 2026 by James Thomas.',
+        canonical,
+        ld,
+      },
+      body,
+    ),
+  );
+});
 
 content.get(`/:section{(?:${SECTION_IDS})}`, (c) => {
   const entry = findSection(c.req.param('section'));

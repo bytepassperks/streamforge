@@ -8,6 +8,18 @@ export const SITE = {
   description:
     'Videokr is hosted video for marketing sites: upload or link a video, brand the player, capture emails inside it, embed it anywhere and read second-by-second retention. Free tier forever, $69 lifetime, or metered plans.',
   email: 'hello@videokr.com',
+  supportEmail: 'support@videokr.com',
+  founder: 'James Thomas',
+  foundingDate: '2026-01-17',
+  telephone: '+15072022421',
+  telephoneDisplay: '(507) 202-2421',
+  address: {
+    streetAddress: '27 4th St NW',
+    addressLocality: 'Byron',
+    addressRegion: 'MN',
+    postalCode: '55920',
+    addressCountry: 'US',
+  },
   social: [
     'https://www.youtube.com/@videokr-s7z',
     'https://www.instagram.com/videokrmaker/',
@@ -62,6 +74,12 @@ export function jsonLdScript(data: unknown): string {
   return `<script type="application/ld+json">${json}</script>`;
 }
 
+/** One postal address for every consumer, so a citation on a directory and the
+ *  markup on the site can never disagree. */
+export function postalAddressLd(): Record<string, unknown> {
+  return { '@type': 'PostalAddress', ...SITE.address };
+}
+
 export function organizationLd(base: string): Record<string, unknown> {
   return {
     '@type': 'Organization',
@@ -85,6 +103,42 @@ export function organizationLd(base: string): Record<string, unknown> {
     email: SITE.email,
     sameAs: [...SITE.social],
     mainEntityOfPage: `${base}/answers/what-is-videokr`,
+    founder: { '@type': 'Person', name: SITE.founder },
+    foundingDate: SITE.foundingDate,
+    address: postalAddressLd(),
+    telephone: SITE.telephone,
+    contactPoint: [
+      {
+        '@type': 'ContactPoint',
+        contactType: 'customer support',
+        email: SITE.supportEmail,
+        telephone: SITE.telephone,
+        availableLanguage: 'en',
+      },
+    ],
+  };
+}
+
+/** Directory and map listings verify a business against markup on its own site,
+ *  so the contact page carries the same record as a local-business entity. */
+export function localBusinessLd(base: string): Record<string, unknown> {
+  return {
+    '@type': 'ProfessionalService',
+    '@id': `${base}/#business`,
+    name: SITE.name,
+    url: `${base}/`,
+    image: `${base}/brand/mark-512.png`,
+    logo: `${base}/brand/mark-512.png`,
+    description: SITE.description,
+    founder: { '@type': 'Person', name: SITE.founder },
+    foundingDate: SITE.foundingDate,
+    address: postalAddressLd(),
+    telephone: SITE.telephone,
+    email: SITE.email,
+    priceRange: '$0-$290',
+    areaServed: { '@type': 'Place', name: 'Worldwide' },
+    sameAs: [...SITE.social],
+    parentOrganization: { '@id': `${base}/#organization` },
   };
 }
 
