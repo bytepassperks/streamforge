@@ -25,6 +25,7 @@
       <button class="nav-item" data-view="purchases" type="button"><span>Purchases</span></button>
       <button class="nav-item" data-view="overage" type="button"><span>Overage</span></button>
       <button class="nav-item" data-view="storage" type="button"><span>Storage pool</span></button>
+      <button class="nav-item" data-view="promos" type="button"><span>Promos</span></button>
       <button class="nav-item" data-view="audit" type="button"><span>Audit log</span></button>
     </nav>
     <div class="side-spacer"></div>
@@ -113,6 +114,38 @@
       </div>
       <div id="storage-summary" class="stat-grid"></div>
       <div id="storage-body"></div>
+    </section>
+
+    <!-- Promos ------------------------------------------------------------- -->
+    <section class="view" id="view-promos">
+      <div class="page-head">
+        <div><h1>Promos</h1><p class="muted tiny">Issue card-free plan grants with a fixed redemption window and cap.</p></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <h3>Create promo code</h3>
+        <p class="muted tiny">Leave Code blank to generate one. Lifetime grants never lapse.</p>
+        <div class="grid-2">
+          <div class="field"><label for="pr-code">Code</label><input id="pr-code" placeholder="LAUNCH15"></div>
+          <div class="field"><label for="pr-prefix">Generate prefix</label><input id="pr-prefix" placeholder="PROMO"></div>
+          <div class="field"><label for="pr-plan">Plan</label>
+            <select id="pr-plan"><option value="starter">Starter</option><option value="agency">Agency</option><option value="lifetime">Lifetime</option></select>
+          </div>
+          <div class="field"><label for="pr-duration">Grant duration</label>
+            <select id="pr-duration">
+              <option value="15">15 days</option><option value="30">1 month</option><option value="90">3 months</option>
+              <option value="180">6 months</option><option value="365">1 year</option><option value="0">Lifetime (never lapses)</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </div>
+          <div class="field hidden" id="pr-custom-wrap"><label for="pr-custom">Custom days</label><input id="pr-custom" type="number" min="0" max="3650" step="1"></div>
+          <div class="field"><label for="pr-redeem-by">Redeem by</label><input id="pr-redeem-by" type="date"><span class="tiny muted">Blank means no deadline.</span></div>
+          <div class="field"><label for="pr-max">Max redemptions</label><input id="pr-max" type="number" min="0" step="1" value="0"><span class="tiny muted">0 = unlimited</span></div>
+          <div class="field"><label for="pr-note">Note</label><input id="pr-note" placeholder="Sept launch push"></div>
+        </div>
+        <div class="form-error" id="pr-error"></div>
+        <button class="btn" id="pr-create" type="button">Create code</button>
+      </div>
+      <div id="promos-body"></div>
     </section>
 
     <!-- Audit -------------------------------------------------------------- -->

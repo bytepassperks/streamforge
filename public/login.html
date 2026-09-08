@@ -53,6 +53,7 @@
   var mode = new URLSearchParams(location.search).get('mode') === 'signup' ? 'signup' : 'login';
   var requestedIntent = new URLSearchParams(location.search).get('intent');
   var intent = ['lifetime', 'starter', 'agency'].indexOf(requestedIntent) !== -1 ? requestedIntent : '';
+  var promoCode = new URLSearchParams(location.search).get('code') || '';
   var tabs = document.querySelectorAll('.auth-tab');
   var nameField = document.getElementById('name-field');
   var title = document.getElementById('auth-title');
@@ -63,10 +64,16 @@
   var note = document.getElementById('auth-note');
   var forgotRow = document.getElementById('forgot-row');
   var passwordField = document.getElementById('password').parentNode;
+  var codeRow = document.createElement('div');
+  codeRow.className = 'field';
+  codeRow.innerHTML = '<label for="promo-code">Code</label><input id="promo-code" readonly>';
+  document.getElementById('name-field').parentNode.insertBefore(codeRow, document.getElementById('email').parentNode);
 
   function render() {
     tabs.forEach(function (tab) { tab.classList.toggle('active', tab.dataset.mode === mode); });
     nameField.classList.toggle('hidden', mode !== 'signup');
+    codeRow.classList.toggle('hidden', mode !== 'signup' || !promoCode);
+    if (promoCode) document.getElementById('promo-code').value = promoCode;
     title.textContent = mode === 'signup' ? 'Create your workspace' : 'Welcome back';
     sub.textContent = mode === 'signup'
       ? 'Free forever — no card. Upgrade to lifetime whenever you want.'
@@ -105,6 +112,7 @@
       password: document.getElementById('password').value
     };
     if (mode === 'signup') payload.name = document.getElementById('name').value.trim();
+    if (mode === 'signup' && promoCode) payload.code = promoCode;
     if (mode === 'forgot') {
       delete payload.password;
       if (!payload.email) {
@@ -127,6 +135,9 @@
         if (!result.ok) {
           error.textContent = result.body.error || 'Something went wrong.';
           return;
+        }
+        if (mode === 'signup' && result.body.promo && !result.body.promo.ok) {
+          note.textContent = result.body.promo.error || 'The code could not be redeemed.';
         }
         if (mode === 'forgot') {
           /* The answer is the same for an unknown address, so nobody can probe

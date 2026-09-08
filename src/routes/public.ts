@@ -28,7 +28,7 @@ import {
 } from '../lib/seo';
 import {
   countPlay,
-  isPaid,
+  isEntitled,
   lifetimeDiscount,
   offerForSeats,
   planForProduct,
@@ -296,9 +296,9 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     .bind(video.id)
     .all<Omit<Cta, 'video_id'>>();
   const thumbnail = variant === 'b' && video.thumbnail_url_b ? video.thumbnail_url_b : video.thumbnail_url;
-  const owner = await env.DB.prepare('SELECT id, plan, role, unlimited FROM users WHERE id = ?')
+  const owner = await env.DB.prepare('SELECT id, plan, role, unlimited, grant_plan, grant_until FROM users WHERE id = ?')
     .bind(video.user_id)
-    .first<{ id: string; plan: string; role: string; unlimited: number }>();
+    .first<{ id: string; plan: string; role: string; unlimited: number; grant_plan: string; grant_until: number }>();
   /* Free accounts stop at their monthly play allowance; paid plans keep serving and
      accrue overage instead, so a customer's audience is never cut off mid-campaign. */
   const usage = owner ? await playUsage(env, owner) : null;
@@ -331,7 +331,7 @@ async function buildEmbedPayload(env: Env, video: Video, variant: 'a' | 'b'): Pr
     chapters: chapters.results ?? [],
     ctas: ctas.results ?? [],
     variant,
-    badge: !(owner && isPaid(owner)),
+    badge: !(owner && isEntitled(owner)),
     share: shareLinks(env, video.slug),
     related: related?.results ?? [],
     capped: Boolean(usage?.blocked),
@@ -465,10 +465,10 @@ pub.post('/api/track', async (c) => {
   if (kind === 'play') {
     await countPlay(c.env, video.user_id, video.id, String(body.view_id ?? 'anon').slice(0, 40));
     const owner = await c.env.DB.prepare(
-      'SELECT id, plan, role, unlimited FROM users WHERE id = ?',
+      'SELECT id, plan, role, unlimited, grant_plan, grant_until FROM users WHERE id = ?',
     )
       .bind(video.user_id)
-      .first<{ id: string; plan: string; role: string; unlimited: number }>();
+      .first<{ id: string; plan: string; role: string; unlimited: number; grant_plan: string; grant_until: number }>();
     capped = owner ? (await playUsage(c.env, owner)).blocked : false;
   }
   if (kind === 'play' || kind === 'complete' || kind === 'cta_click') {

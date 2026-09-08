@@ -1,4 +1,5 @@
 import type { Env, User } from './types';
+import { now } from './util';
 
 /** Launch ladder. Seats are counted from real paid purchases, never invented. */
 export const LIFETIME_TIERS = [
@@ -75,12 +76,35 @@ export const FREE_LIMITS = {
   playsPerMonth: PLANS.free.plays,
 };
 
+const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, lifetime: 2, agency: 3 };
+
+export interface Grant {
+  grant_plan?: string;
+  grant_until?: number;
+  grant_code?: string;
+}
+
+/** The granted plan id while the grant is live, else ''. */
+export function grantedPlanId(user: Partial<Grant>, at: number = now()): string {
+  const plan = (user.grant_plan ?? '').trim();
+  if (!plan || !PLANS[plan]) return '';
+  const until = Number(user.grant_until ?? 0);
+  if (until !== 0 && until <= at) return '';
+  return plan;
+}
+
 /** The plan an account is actually entitled to, honouring admin overrides. */
-export function planFor(user: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>): Plan {
+export function planFor(
+  user: Partial<Pick<User, 'plan' | 'role' | 'unlimited'> & Grant>,
+  at: number = now(),
+): Plan {
   if (Number(user.unlimited) === 1 || user.role === 'admin') {
     return { ...PLANS.agency, id: 'unlimited', name: 'Unlimited', plays: Infinity, hardStop: false };
   }
-  return PLANS[user.plan ?? 'free'] ?? PLANS.free;
+  const owned = PLANS[user.plan ?? 'free'] ?? PLANS.free;
+  const grantedId = grantedPlanId(user, at);
+  const granted = grantedId ? PLANS[grantedId] : null;
+  return granted && PLAN_RANK[granted.id] > PLAN_RANK[owned.id] ? granted : owned;
 }
 
 /** Billing period key: the UTC calendar month, as 'YYYY-MM'. */
@@ -103,7 +127,7 @@ export interface PlayUsage {
 
 export async function playUsage(
   env: Env,
-  user: Pick<User, 'id' | 'plan' | 'role' | 'unlimited'>,
+  user: Pick<User, 'id' | 'plan' | 'role' | 'unlimited'> & Grant,
   period: string = periodKey(),
 ): Promise<PlayUsage> {
   const plan = planFor(user);
@@ -249,6 +273,14 @@ export function isLifetime(user: Partial<Pick<User, 'plan' | 'role' | 'unlimited
 /** Anything that lifts the free-tier caps: a subscription, lifetime or an override. */
 export function isPaid(user: Partial<Pick<User, 'plan' | 'role' | 'unlimited'>>): boolean {
   return isLifetime(user) || user.plan === 'starter' || user.plan === 'agency';
+}
+
+/** True when the account is entitled to paid behaviour, by purchase or grant. */
+export function isEntitled(
+  user: Partial<Pick<User, 'plan' | 'role' | 'unlimited'> & Grant>,
+  at: number = now(),
+): boolean {
+  return isPaid(user) || planFor(user, at).id !== 'free';
 }
 
 export type Cycle = 'monthly' | 'annual';

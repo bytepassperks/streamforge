@@ -91,6 +91,19 @@
     return n.toFixed(i ? 1 : 0) + ' ' + units[i];
   }
 
+  function copyText(value) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(value);
+    }
+    var input = document.createElement('textarea');
+    input.value = value;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    input.remove();
+    return Promise.resolve();
+  }
+
   function empty(message) {
     return text('div', 'empty', message);
   }
@@ -659,6 +672,141 @@
     });
   }
 
+  /* ---------------------------------------------------------------- promos -- */
+
+  function promoPill(status) {
+    var cls = status === 'active' ? 'pill pill-ok' : status === 'claimed' ? 'pill' : 'chip';
+    return text('span', cls, status);
+  }
+
+  function promoDuration(days) {
+    return Number(days) === 0 ? 'Lifetime' : String(days) + ' days';
+  }
+
+  function loadPromoRedemptions(promo, detailRow, button, refresh) {
+    if (!refresh && !detailRow.classList.contains('hidden')) {
+      detailRow.classList.add('hidden');
+      return;
+    }
+    button.disabled = true;
+    api('/admin/promos/' + promo.id + '/redemptions')
+      .then(function (data) {
+        var cell = detailRow.querySelector('td');
+        cell.textContent = '';
+        if (!data.redemptions.length) {
+          cell.appendChild(text('span', 'tiny muted', 'No redemptions yet.'));
+        } else {
+          data.redemptions.forEach(function (redemption) {
+            var row = text('div', 'row spread', null);
+            row.style.marginBottom = '8px';
+            var label = text(
+              'span',
+              'tiny',
+              (redemption.email || redemption.user_id) +
+                ' · ' +
+                fmtDate(redemption.created_at) +
+                ' · ' +
+                (redemption.granted_until ? 'ends ' + fmtDate(redemption.granted_until) : 'never lapses'),
+            );
+            row.appendChild(label);
+            var revoke = text('button', 'btn btn-danger btn-sm', redemption.live ? 'Revoke' : 'Revoked');
+            revoke.type = 'button';
+            revoke.disabled = !redemption.live;
+            revoke.addEventListener('click', function () {
+              api('/admin/promos/redemptions/' + redemption.id + '/revoke', { method: 'POST' })
+                .then(function () {
+                  toast('Grant revoked when it still matched this redemption');
+                  return loadPromoRedemptions(promo, detailRow, button, true);
+                })
+                .catch(fail);
+            });
+            row.appendChild(revoke);
+            cell.appendChild(row);
+          });
+        }
+        detailRow.classList.remove('hidden');
+      })
+      .catch(fail)
+      .then(function () {
+        button.disabled = false;
+      });
+  }
+
+  function loadPromos() {
+    return api('/admin/promos').then(function (data) {
+      var body = $('promos-body');
+      body.textContent = '';
+      if (!data.promos.length) {
+        body.appendChild(empty('No promo codes yet.'));
+        return;
+      }
+      var rows = [];
+      data.promos.forEach(function (promo) {
+        var tr = document.createElement('tr');
+        var code = text('div', null, promo.code);
+        var copy = text('button', 'btn btn-ghost btn-sm', 'Copy');
+        copy.type = 'button';
+        copy.addEventListener('click', function () {
+          copyText(promo.code).then(function () { toast('Code copied'); }).catch(fail);
+        });
+        code.appendChild(document.createTextNode(' '));
+        code.appendChild(copy);
+        tr.appendChild((function () {
+          var td = document.createElement('td');
+          td.appendChild(code);
+          return td;
+        })());
+        cell(tr, promo.plan);
+        cell(tr, promoDuration(promo.grant_days));
+        cell(tr, fmtDate(promo.redeem_by), 'tiny muted');
+        cell(tr, String(promo.redemptions) + ' / ' + (promo.max_redemptions || '∞'));
+        var status = document.createElement('td');
+        status.appendChild(promoPill(promo.status));
+        tr.appendChild(status);
+        var actions = document.createElement('td');
+        var signup = text('button', 'btn btn-ghost btn-sm', 'Copy signup link');
+        signup.type = 'button';
+        signup.addEventListener('click', function () {
+          copyText('https://videokr.com/login?mode=signup&code=' + encodeURIComponent(promo.code))
+            .then(function () { toast('Signup link copied'); }).catch(fail);
+        });
+        actions.appendChild(signup);
+        var pause = text('button', 'btn btn-ghost btn-sm', Number(promo.active) ? 'Pause' : 'Resume');
+        pause.type = 'button';
+        pause.addEventListener('click', function () {
+          api('/admin/promos/' + promo.id, { method: 'PATCH', body: { active: !Number(promo.active) } })
+            .then(function () { return loadPromos(); }).catch(fail);
+        });
+        actions.appendChild(pause);
+        var del = text('button', 'btn btn-danger btn-sm', 'Delete');
+        del.type = 'button';
+        del.addEventListener('click', function () {
+          if (!confirm('Delete ' + promo.code + '? Existing grants stay intact.')) return;
+          api('/admin/promos/' + promo.id, { method: 'DELETE' })
+            .then(function () { return loadPromos(); }).catch(fail);
+        });
+        actions.appendChild(del);
+        var expand = text('button', 'btn btn-ghost btn-sm', 'Redemptions');
+        expand.type = 'button';
+        actions.appendChild(expand);
+        tr.appendChild(actions);
+        var detail = document.createElement('tr');
+        detail.className = 'hidden';
+        var detailCell = document.createElement('td');
+        detailCell.colSpan = 7;
+        detailCell.className = 'tiny';
+        detail.appendChild(detailCell);
+        expand.addEventListener('click', function () {
+          loadPromoRedemptions(promo, detail, expand);
+        });
+        rows.push(tr, detail);
+      });
+      var promoTable = table(['Code', 'Plan', 'Grant', 'Redeem by', 'Claimed', 'Status', ''], rows);
+      promoTable.classList.add('storage-table');
+      body.appendChild(promoTable);
+    });
+  }
+
   /* ----------------------------------------------------------------- audit -- */
 
   function loadAudit() {
@@ -691,6 +839,7 @@
     purchases: loadPurchases,
     overage: loadOverage,
     storage: loadStorage,
+    promos: loadPromos,
     audit: loadAudit,
   };
 
@@ -863,6 +1012,45 @@
       })
       .catch(function (error) {
         $('st-error').textContent = error.message;
+      })
+      .then(function () {
+        button.disabled = false;
+      });
+  });
+
+  $('pr-duration').addEventListener('change', function () {
+    $('pr-custom-wrap').classList.toggle('hidden', $('pr-duration').value !== 'custom');
+  });
+
+  $('pr-create').addEventListener('click', function () {
+    var selected = $('pr-duration').value;
+    var days = selected === 'custom' ? Number($('pr-custom').value) : Number(selected);
+    var redeemBy = $('pr-redeem-by').value
+      ? Math.floor(new Date($('pr-redeem-by').value + 'T23:59:59Z').getTime() / 1000)
+      : 0;
+    var button = $('pr-create');
+    button.disabled = true;
+    $('pr-error').textContent = '';
+    api('/admin/promos', {
+      method: 'POST',
+      body: {
+        code: $('pr-code').value,
+        prefix: $('pr-prefix').value,
+        plan: $('pr-plan').value,
+        grant_days: days,
+        redeem_by: redeemBy,
+        max_redemptions: Number($('pr-max').value || 0),
+        note: $('pr-note').value,
+      },
+    })
+      .then(function (data) {
+        toast('Created ' + data.promo.code);
+        $('pr-code').value = '';
+        $('pr-note').value = '';
+        return loadPromos();
+      })
+      .catch(function (error) {
+        $('pr-error').textContent = error.message;
       })
       .then(function () {
         button.disabled = false;
