@@ -917,7 +917,7 @@
     renderLibCount();
     if (!state.videos.length) {
       host.appendChild(
-        emptyState('No videos yet', 'Paste a link or choose a file above to add your first one.'),
+        emptyState('No videos yet', 'Paste a link above to add your first one.'),
       );
       return;
     }
@@ -3105,6 +3105,15 @@
     }
   }
 
+  function effectivePlanName(user) {
+    var ranks = { free: 0, starter: 1, lifetime: 2, agency: 3 };
+    var names = { free: 'Free', starter: 'Starter', lifetime: 'Lifetime', agency: 'Agency' };
+    var owned = String(user.plan || 'free');
+    var granted = String(user.grant_plan || '');
+    var selected = ranks[granted] > ranks[owned] ? granted : owned;
+    return names[selected] || 'Free';
+  }
+
   /* The top-bar pill quotes the live discount when one is running and the price
      otherwise, and disappears once the account already owns lifetime, so it
      never advertises what it cannot sell. */
@@ -3489,7 +3498,7 @@
       $('who').textContent = label;
       $('user-initial').textContent = label.slice(0, 1).toUpperCase();
       var lifetime = result.user.plan === 'lifetime' || Number(result.user.unlimited) === 1;
-      planChip({ lifetime: lifetime });
+      planChip({ lifetime: lifetime, plan_name: effectivePlanName(result.user) });
       offerPill({ lifetime: lifetime });
       if (!lifetime) {
         fetch('/api/public/offer')
