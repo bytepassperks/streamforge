@@ -46,6 +46,9 @@ export interface User {
   lead_emails: number;
   subscription_id: string;
   plan_renews_at: number;
+  grant_plan?: string;
+  grant_until?: number;
+  grant_code?: string;
   created_at: number;
 }
 

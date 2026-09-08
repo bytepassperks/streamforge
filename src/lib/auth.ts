@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import type { Env, User } from './types';
 import { newId, now } from './util';
+import { settleGrant } from './promos';
 
 const SESSION_COOKIE = 'sf_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -75,7 +76,8 @@ export async function currentUser<E extends AuthEnv>(c: Context<E>): Promise<Use
   if (!id) return null;
   const row = await c.env.DB.prepare(
     `SELECT u.id, u.email, u.name, u.plan, u.role, u.unlimited, u.suspended, u.lead_emails,
-            u.subscription_id, u.plan_renews_at, u.created_at, s.expires_at
+            u.subscription_id, u.plan_renews_at, u.grant_plan, u.grant_until, u.grant_code,
+            u.created_at, s.expires_at
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.id = ?`,
   )
@@ -86,7 +88,7 @@ export async function currentUser<E extends AuthEnv>(c: Context<E>): Promise<Use
     await c.env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(id).run();
     return null;
   }
-  return {
+  return settleGrant(c.env, {
     id: row.id,
     email: row.email,
     name: row.name,
@@ -97,6 +99,9 @@ export async function currentUser<E extends AuthEnv>(c: Context<E>): Promise<Use
     lead_emails: row.lead_emails,
     subscription_id: row.subscription_id,
     plan_renews_at: row.plan_renews_at,
+    grant_plan: row.grant_plan,
+    grant_until: row.grant_until,
+    grant_code: row.grant_code,
     created_at: row.created_at,
-  };
+  });
 }

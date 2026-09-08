@@ -6,6 +6,7 @@
  */
 import type { Env, User } from './types';
 import { now } from './util';
+import { settleGrant } from './promos';
 
 export interface ApiKeyRow {
   id: string;
@@ -45,7 +46,8 @@ export async function userForApiKey(env: Env, key: string): Promise<User | null>
   const hash = await hashApiKey(key);
   const row = await env.DB.prepare(
     `SELECT k.id AS key_id, u.id, u.email, u.name, u.plan, u.role, u.unlimited, u.suspended,
-            u.lead_emails, u.subscription_id, u.plan_renews_at, u.created_at
+            u.lead_emails, u.subscription_id, u.plan_renews_at, u.grant_plan, u.grant_until,
+            u.grant_code, u.created_at
        FROM api_keys k JOIN users u ON u.id = k.user_id
       WHERE k.key_hash = ? AND k.revoked_at = 0`,
   )
@@ -54,7 +56,7 @@ export async function userForApiKey(env: Env, key: string): Promise<User | null>
   if (!row) return null;
   if (Number(row.suspended) === 1) return null;
   await env.DB.prepare('UPDATE api_keys SET last_used_at = ? WHERE id = ?').bind(now(), row.key_id).run();
-  return {
+  return settleGrant(env, {
     id: row.id,
     email: row.email,
     name: row.name,
@@ -65,6 +67,9 @@ export async function userForApiKey(env: Env, key: string): Promise<User | null>
     lead_emails: row.lead_emails,
     subscription_id: row.subscription_id,
     plan_renews_at: row.plan_renews_at,
+    grant_plan: row.grant_plan,
+    grant_until: row.grant_until,
+    grant_code: row.grant_code,
     created_at: row.created_at,
-  };
+  });
 }

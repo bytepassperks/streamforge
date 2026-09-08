@@ -15,6 +15,7 @@ import {
   type StorageBucketRow,
 } from '../lib/storage';
 import { newId, now } from '../lib/util';
+import { generateCode, normaliseCode } from '../lib/promos';
 
 type Vars = { user: User };
 
@@ -24,6 +25,7 @@ const ASSIGNABLE_PLANS = new Set(Object.keys(PLANS));
 const ROLES = new Set(['user', 'admin']);
 const PURCHASE_STATUSES = new Set(['pending', 'paid', 'refunded', 'failed']);
 const STORAGE_STATUSES = new Set(['active', 'disabled', 'draining']);
+const PROMO_PLANS = new Set(['starter', 'agency', 'lifetime']);
 
 async function audit(
   env: Env,
@@ -53,6 +55,18 @@ function storageError(error: unknown, secrets: string[] = []): string {
     if (secret) message = message.split(secret).join('[redacted]');
   }
   return message.slice(0, 300);
+}
+
+function promoStatus(row: {
+  active: number;
+  redeem_by: number;
+  max_redemptions: number;
+  redemptions: number;
+}): 'active' | 'paused' | 'expired' | 'claimed' {
+  if (Number(row.max_redemptions) > 0 && Number(row.redemptions) >= Number(row.max_redemptions)) return 'claimed';
+  if (Number(row.active) === 0) return 'paused';
+  if (Number(row.redeem_by) !== 0 && Number(row.redeem_by) <= now()) return 'expired';
+  return 'active';
 }
 
 async function probeStorageTarget(
@@ -263,6 +277,174 @@ admin.delete('/storage/:id', async (c) => {
   return c.json({ ok: true });
 });
 
+/* --------------------------------------------------------------- promos ---- */
+
+admin.get('/promos', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, code, plan, grant_days, redeem_by, max_redemptions, redemptions, active, note, created_at
+       FROM promo_codes ORDER BY created_at DESC`,
+  ).all<{
+    id: string;
+    code: string;
+    plan: string;
+    grant_days: number;
+    redeem_by: number;
+    max_redemptions: number;
+    redemptions: number;
+    active: number;
+    note: string;
+    created_at: number;
+  }>();
+  return c.json({
+    promos: (results ?? []).map((row) => ({ ...row, status: promoStatus(row) })),
+  });
+});
+
+admin.post('/promos', async (c) => {
+  const body = await c.req.json<{
+    code?: string;
+    prefix?: string;
+    plan?: string;
+    grant_days?: number;
+    redeem_by?: number;
+    max_redemptions?: number;
+    note?: string;
+  }>();
+  const plan = String(body.plan ?? '');
+  const grantDays = Number(body.grant_days);
+  const maxRedemptions = body.max_redemptions === undefined ? 0 : Number(body.max_redemptions);
+  const redeemBy = body.redeem_by === undefined ? 0 : Number(body.redeem_by);
+  if (!PROMO_PLANS.has(plan)) return c.json({ error: 'plan must be starter, agency or lifetime' }, 400);
+  if (!Number.isInteger(grantDays) || grantDays < 0 || grantDays > 3650) {
+    return c.json({ error: 'grant_days must be an integer from 0 to 3650' }, 400);
+  }
+  if (!Number.isInteger(maxRedemptions) || maxRedemptions < 0) {
+    return c.json({ error: 'max_redemptions must be a non-negative integer' }, 400);
+  }
+  if (!Number.isInteger(redeemBy) || (redeemBy !== 0 && redeemBy <= now())) {
+    return c.json({ error: 'redeem_by must be 0 or a future timestamp' }, 400);
+  }
+  const code = body.code ? normaliseCode(body.code) : generateCode(body.prefix ?? 'PROMO');
+  if (!code) return c.json({ error: 'code must contain 3 to 32 letters, numbers or dashes' }, 400);
+  const id = newId('pco');
+  const created = now();
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO promo_codes
+       (id, code, plan, grant_days, redeem_by, max_redemptions, redemptions, active, note, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 0, 1, ?, ?)`,
+    )
+      .bind(id, code, plan, grantDays, redeemBy, maxRedemptions, String(body.note ?? '').trim().slice(0, 300), created)
+      .run();
+  } catch {
+    return c.json({ error: 'that code already exists' }, 409);
+  }
+  await audit(c.env, c.get('user'), 'promo.create', id, {
+    code,
+    plan,
+    grant_days: grantDays,
+    redeem_by: redeemBy,
+    max_redemptions: maxRedemptions,
+  });
+  return c.json({ promo: { id, code, plan, grant_days: grantDays, redeem_by: redeemBy, max_redemptions: maxRedemptions } }, 201);
+});
+
+admin.patch('/promos/:id', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json<{
+    active?: boolean | number;
+    redeem_by?: number;
+    max_redemptions?: number;
+    note?: string;
+    plan?: string;
+    grant_days?: number;
+  }>();
+  if (body.plan !== undefined || body.grant_days !== undefined) {
+    return c.json({ error: 'plan and grant_days cannot be changed' }, 400);
+  }
+  const existing = await c.env.DB.prepare('SELECT id, code FROM promo_codes WHERE id = ?')
+    .bind(id)
+    .first<{ id: string; code: string }>();
+  if (!existing) return c.json({ error: 'no such promo code' }, 404);
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  if (body.active !== undefined) {
+    if (body.active !== true && body.active !== false && body.active !== 0 && body.active !== 1) {
+      return c.json({ error: 'active must be a boolean' }, 400);
+    }
+    sets.push('active = ?');
+    values.push(body.active ? 1 : 0);
+  }
+  if (body.redeem_by !== undefined) {
+    const redeemBy = Number(body.redeem_by);
+    if (!Number.isInteger(redeemBy) || (redeemBy !== 0 && redeemBy <= now())) {
+      return c.json({ error: 'redeem_by must be 0 or a future timestamp' }, 400);
+    }
+    sets.push('redeem_by = ?');
+    values.push(redeemBy);
+  }
+  if (body.max_redemptions !== undefined) {
+    const max = Number(body.max_redemptions);
+    if (!Number.isInteger(max) || max < 0) return c.json({ error: 'max_redemptions must be a non-negative integer' }, 400);
+    sets.push('max_redemptions = ?');
+    values.push(max);
+  }
+  if (body.note !== undefined) {
+    sets.push('note = ?');
+    values.push(String(body.note).trim().slice(0, 300));
+  }
+  if (!sets.length) return c.json({ error: 'nothing to update' }, 400);
+  values.push(id);
+  await c.env.DB.prepare(`UPDATE promo_codes SET ${sets.join(', ')} WHERE id = ?`).bind(...values).run();
+  await audit(c.env, c.get('user'), 'promo.update', id, { code: existing.code, ...body });
+  return c.json({ ok: true });
+});
+
+admin.delete('/promos/:id', async (c) => {
+  const id = c.req.param('id');
+  const row = await c.env.DB.prepare('SELECT id, code FROM promo_codes WHERE id = ?')
+    .bind(id)
+    .first<{ id: string; code: string }>();
+  if (!row) return c.json({ error: 'no such promo code' }, 404);
+  await c.env.DB.prepare('DELETE FROM promo_codes WHERE id = ?').bind(id).run();
+  await audit(c.env, c.get('user'), 'promo.delete', id, { code: row.code });
+  return c.json({ ok: true });
+});
+
+admin.get('/promos/:id/redemptions', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT r.id, r.code, r.user_id, u.email, r.plan, r.granted_until, r.created_at
+       FROM promo_redemptions r LEFT JOIN users u ON u.id = r.user_id
+      WHERE r.code_id = ? ORDER BY r.created_at DESC`,
+  )
+    .bind(c.req.param('id'))
+    .all<{ id: string; code: string; user_id: string; email: string; plan: string; granted_until: number; created_at: number }>();
+  const at = now();
+  return c.json({
+    redemptions: (results ?? []).map((row) => ({
+      ...row,
+      live: Number(row.granted_until) === 0 || Number(row.granted_until) > at,
+    })),
+  });
+});
+
+admin.post('/promos/redemptions/:id/revoke', async (c) => {
+  const id = c.req.param('id');
+  const row = await c.env.DB.prepare(
+    'SELECT id, code, user_id FROM promo_redemptions WHERE id = ?',
+  )
+    .bind(id)
+    .first<{ id: string; code: string; user_id: string }>();
+  if (!row) return c.json({ error: 'no such redemption' }, 404);
+  await c.env.DB.prepare(
+    "UPDATE users SET grant_plan = '', grant_until = 0, grant_code = '' WHERE id = ? AND grant_code = ?",
+  )
+    .bind(row.user_id, row.code)
+    .run();
+  await audit(c.env, c.get('user'), 'promo.revoke', id, { code: row.code, user_id: row.user_id });
+  return c.json({ ok: true });
+});
+
 /* ------------------------------------------------------------- overview ---- */
 
 admin.get('/overview', async (c) => {
@@ -308,7 +490,7 @@ admin.get('/users', async (c) => {
   const q = `%${(c.req.query('q') ?? '').trim().toLowerCase()}%`;
   const { results } = await c.env.DB.prepare(
     `SELECT u.id, u.email, u.name, u.plan, u.role, u.unlimited, u.suspended, u.notes,
-            u.created_at, u.lifetime_at,
+            u.created_at, u.lifetime_at, u.grant_plan, u.grant_until, u.grant_code,
             (SELECT COUNT(*) FROM videos v WHERE v.user_id = u.id) AS videos,
             (SELECT COUNT(*) FROM leads l WHERE l.user_id = u.id) AS leads,
             (SELECT COUNT(*) FROM purchases p WHERE p.user_id = u.id AND p.status = 'paid') AS paid
@@ -326,7 +508,7 @@ admin.get('/users/:id', async (c) => {
   const id = c.req.param('id');
   const user = await c.env.DB.prepare(
     `SELECT id, email, name, plan, role, unlimited, suspended, notes, created_at, lifetime_at,
-            subscription_id, plan_renews_at
+            subscription_id, plan_renews_at, grant_plan, grant_until, grant_code
        FROM users WHERE id = ?`,
   )
     .bind(id)
@@ -648,7 +830,7 @@ admin.post('/overage/users/:id', async (c) => {
   const { period } = await c.req.json<{ period?: string }>().catch(() => ({ period: undefined }));
   const target = /^\d{4}-\d{2}$/.test(period ?? '') ? (period as string) : previousPeriod();
   const account = await c.env.DB.prepare(
-    'SELECT id, plan, role, unlimited, subscription_id FROM users WHERE id = ?',
+    'SELECT id, plan, role, unlimited, subscription_id, grant_plan, grant_until, grant_code FROM users WHERE id = ?',
   )
     .bind(id)
     .first<{ id: string; plan: string; role: string; unlimited: number; subscription_id: string }>();

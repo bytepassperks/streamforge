@@ -1,5 +1,5 @@
 import type { Env, User } from './types';
-import { OVERAGE_PER_10K_USD, apiBase, periodKey, planFor } from './billing';
+import { OVERAGE_PER_10K_USD, apiBase, isPaid, periodKey, planFor } from './billing';
 import { newId } from './util';
 
 export interface OverageRow {
@@ -21,7 +21,10 @@ export interface OverageRow {
   updated_at: number;
 }
 
-type Account = Pick<User, 'id' | 'plan' | 'role' | 'unlimited' | 'subscription_id'>;
+type Account = Pick<
+  User,
+  'id' | 'plan' | 'role' | 'unlimited' | 'subscription_id' | 'grant_plan' | 'grant_until' | 'grant_code'
+>;
 
 /** Cents owed for plays past the allowance, rounded up to the nearest cent. */
 export function overageCents(over: number): number {
@@ -77,6 +80,7 @@ export async function recordOverage(
   period: string,
   at: number = Date.now(),
 ): Promise<OverageRow | null> {
+  if (!isPaid(account)) return null;
   const plan = planFor(account);
   if (plan.hardStop || !Number.isFinite(plan.plays)) return null;
   const usage = await env.DB.prepare('SELECT plays FROM play_usage WHERE user_id = ? AND period = ?')
@@ -182,9 +186,9 @@ export interface CloseSummary {
  */
 export async function closePeriod(env: Env, period: string, at: number = Date.now()): Promise<CloseSummary> {
   const { results } = await env.DB.prepare(
-    `SELECT u.id, u.plan, u.role, u.unlimited, u.subscription_id
+    `SELECT u.id, u.plan, u.role, u.unlimited, u.subscription_id, u.grant_plan, u.grant_until, u.grant_code
        FROM users u JOIN play_usage p ON p.user_id = u.id
-      WHERE p.period = ? AND u.unlimited = 0 AND u.role != 'admin' AND u.plan != 'free'`,
+      WHERE p.period = ? AND u.unlimited = 0 AND u.role != 'admin'`,
   )
     .bind(period)
     .all<Account>();

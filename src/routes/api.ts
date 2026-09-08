@@ -8,6 +8,7 @@ import {
   PLANS,
   createCheckout,
   isAdmin,
+  grantedPlanId,
   isLifetime,
   isPaid,
   lifetimeDiscount,
@@ -17,6 +18,7 @@ import {
   productIdFor,
   seatsSold,
 } from '../lib/billing';
+import { redeemCode } from '../lib/promos';
 import type { Cycle } from '../lib/billing';
 import { announce } from '../lib/indexnow';
 import { isWorthIndexing } from '../lib/seo';
@@ -86,7 +88,12 @@ api.route('/admin', admin);
 /* ---------------------------------------------------------------- auth ---- */
 
 api.post('/auth/signup', async (c) => {
-  const { email, password, name } = await c.req.json<{ email?: string; password?: string; name?: string }>();
+  const { email, password, name, code } = await c.req.json<{
+    email?: string;
+    password?: string;
+    name?: string;
+    code?: string;
+  }>();
   const cleanEmail = (email ?? '').trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) return c.json({ error: 'invalid email' }, 400);
   if (!password || password.length < 8) return c.json({ error: 'password must be at least 8 characters' }, 400);
@@ -103,7 +110,28 @@ api.post('/auth/signup', async (c) => {
     .bind(id, cleanEmail, (name ?? '').trim(), hash, salt, 'free', now())
     .run();
   await createSession(c, id);
-  return c.json({ user: { id, email: cleanEmail, name: (name ?? '').trim(), plan: 'free' } }, 201);
+  let promo: { ok: boolean; error?: string } = { ok: true };
+  if (code?.trim()) {
+    const account = {
+      id,
+      email: cleanEmail,
+      name: (name ?? '').trim(),
+      plan: 'free',
+      role: 'user',
+      unlimited: 0,
+      suspended: 0,
+      lead_emails: 1,
+      subscription_id: '',
+      plan_renews_at: 0,
+      grant_plan: '',
+      grant_until: 0,
+      grant_code: '',
+      created_at: now(),
+    } as User;
+    const result = await redeemCode(c.env, account, code);
+    if (!result.ok) promo = { ok: false, error: result.error };
+  }
+  return c.json({ user: { id, email: cleanEmail, name: (name ?? '').trim(), plan: 'free' }, promo }, 201);
 });
 
 api.post('/auth/login', async (c) => {
@@ -141,7 +169,10 @@ api.get('/auth/me', (c) => {
   // Embed and share snippets have to carry the canonical public host, not the
   // host the dashboard happens to be open on (a preview url, an ip, localhost).
   const publicBase = (c.env.PUBLIC_BASE_URL || new URL(c.req.url).origin).replace(/\/$/, '');
-  return user ? c.json({ user, public_base: publicBase }) : c.json({ user: null }, 200);
+  if (!user) return c.json({ user: null }, 200);
+  const safeUser = { ...user };
+  delete safeUser.grant_until;
+  return c.json({ user: safeUser, public_base: publicBase });
 });
 
 /**
@@ -1082,9 +1113,22 @@ api.get('/billing', async (c) => {
     .bind(user.id)
     .all();
   const plan = planFor(user);
+  const grantId = grantedPlanId(user);
+  const grant = grantId
+    ? { plan: grantId, plan_name: PLANS[grantId].name, code: user.grant_code }
+    : null;
+  const lapsedRow = !grant
+    ? await c.env.DB.prepare(
+        `SELECT plan, code FROM promo_redemptions
+          WHERE user_id = ? AND granted_until != 0 AND granted_until <= ?
+          ORDER BY created_at DESC LIMIT 1`,
+      )
+        .bind(user.id, now())
+        .first<{ plan: string; code: string }>()
+    : null;
   const plays = await playUsage(c.env, user);
   return c.json({
-    plan: user.plan,
+    plan: plan.id,
     plan_name: plan.name,
     lifetime: isLifetime(user),
     paid: isPaid(user),
@@ -1093,6 +1137,10 @@ api.get('/billing', async (c) => {
     subscription_ready: Boolean(c.env.DODO_PAYMENTS_API_KEY && c.env.DODO_STARTER_PRODUCT_ID),
     subscription_id: user.subscription_id ?? '',
     plan_renews_at: user.plan_renews_at ?? 0,
+    grant,
+    grant_lapsed: lapsedRow
+      ? { plan_name: PLANS[lapsedRow.plan]?.name ?? lapsedRow.plan, code: lapsedRow.code }
+      : null,
     offer,
     plans: PLANS,
     overage_per_10k_usd: OVERAGE_PER_10K_USD,
@@ -1103,6 +1151,13 @@ api.get('/billing', async (c) => {
     },
     purchases: results ?? [],
   });
+});
+
+api.post('/promo/redeem', async (c) => {
+  const body = await c.req.json<{ code?: string }>().catch(() => ({ code: undefined }));
+  const result = await redeemCode(c.env, c.get('user'), String(body.code ?? ''));
+  if (!result.ok) return c.json({ error: result.error }, result.status);
+  return c.json({ plan: result.plan, plan_name: PLANS[result.plan].name, code: result.code });
 });
 
 /**

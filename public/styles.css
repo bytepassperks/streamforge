@@ -1577,6 +1577,8 @@ table.data td a:hover { color: var(--accent); border-bottom-color: var(--accent-
 }
 .upgrade-banner p { margin: 0; font-size: 14px; }
 .upgrade-banner .hand { display: block; margin-bottom: 2px; color: var(--accent-ink); }
+.promo-redeem .row { align-items: center; flex-wrap: wrap; }
+.promo-redeem input { flex: 1 1 220px; }
 
 /* ------------------------------------------------------- public v/ + pl/ --- */
 .sf-page { background: var(--bg); }

@@ -3246,6 +3246,45 @@
     return card;
   }
 
+  function promoCard() {
+    var card = text('div', 'card promo-redeem');
+    card.appendChild(text('h3', null, 'Have a code?'));
+    card.appendChild(text('p', 'muted tiny', 'Redeem an admin-issued code to unlock a plan without a card.'));
+    var row = text('div', 'row');
+    var input = document.createElement('input');
+    input.id = 'promo-code-input';
+    input.placeholder = 'LAUNCH15';
+    input.autocomplete = 'off';
+    row.appendChild(input);
+    var button = text('button', 'btn', 'Redeem');
+    button.type = 'button';
+    row.appendChild(button);
+    card.appendChild(row);
+    var error = text('div', 'form-error', '');
+    card.appendChild(error);
+    button.addEventListener('click', function () {
+      var code = input.value.trim();
+      if (!code) {
+        error.textContent = 'Enter a code.';
+        return;
+      }
+      error.textContent = '';
+      button.disabled = true;
+      api('/promo/redeem', { method: 'POST', body: { code: code } })
+        .then(function (result) {
+          toast(result.plan_name + ' granted by code ' + result.code);
+          return loadBilling();
+        })
+        .catch(function (failure) {
+          error.textContent = failure.message;
+        })
+        .then(function () {
+          button.disabled = false;
+        });
+    });
+    return card;
+  }
+
   function loadBilling() {
     api('/billing')
       .then(function (billing) {
@@ -3254,6 +3293,20 @@
         var host = $('billing-body');
         host.textContent = '';
 
+        host.appendChild(promoCard());
+        if (billing.grant) {
+          host.appendChild(
+            text('div', 'upgrade-banner', billing.grant.plan_name + ' — granted by code ' + billing.grant.code),
+          );
+        } else if (billing.grant_lapsed) {
+          host.appendChild(
+            text(
+              'div',
+              'upgrade-banner',
+              'Your ' + billing.grant_lapsed.plan_name + ' access from code ' + billing.grant_lapsed.code + ' has ended.',
+            ),
+          );
+        }
         host.appendChild(usageCard(billing));
         /* Plans sit side by side so they can be compared, instead of one
            full-width card per plan stacked down the page. */

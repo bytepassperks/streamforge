@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { Env } from '../src/lib/types';
 import {
   LIFETIME_TIERS,
+  grantedPlanId,
   isAdmin,
+  isEntitled,
   isLifetime,
+  isPaid,
   lifetimeDiscount,
   offerForSeats,
+  planFor,
   verifyDodoSignature,
 } from '../src/lib/billing';
 
@@ -59,6 +63,30 @@ describe('isLifetime', () => {
     expect(isLifetime({ plan: 'free', unlimited: 1 })).toBe(true);
     expect(isLifetime({ plan: 'free', role: 'admin' })).toBe(true);
     expect(isLifetime({ plan: 'free', unlimited: 0, role: 'user' })).toBe(false);
+  });
+
+  it('lets a live grant lift free without changing purchase ownership', () => {
+    const user = { plan: 'free', role: 'user', unlimited: 0, grant_plan: 'starter', grant_until: 9_999_999_999 };
+    expect(grantedPlanId(user, 1_700_000_000)).toBe('starter');
+    expect(planFor(user, 1_700_000_000).id).toBe('starter');
+    expect(isEntitled(user, 1_700_000_000)).toBe(true);
+    expect(isPaid(user)).toBe(false);
+    expect(isLifetime(user)).toBe(false);
+  });
+
+  it('ignores a lapsed grant, preserves never-lapsing grants, and lets ownership win ties', () => {
+    expect(grantedPlanId({ grant_plan: 'starter', grant_until: 1_699_999_999 }, 1_700_000_000)).toBe('');
+    expect(planFor({ plan: 'free', grant_plan: 'starter', grant_until: 0 }, 1_700_000_000).id).toBe('starter');
+    expect(planFor({ plan: 'agency', grant_plan: 'starter', grant_until: 9_999_999 }, 1_700_000_000).id).toBe('agency');
+    const lapsed = { plan: 'free', role: 'user', unlimited: 0, grant_plan: 'starter', grant_until: 1_699_999_999 };
+    expect(isEntitled(lapsed, 1_700_000_000)).toBe(false);
+    expect(isPaid(lapsed)).toBe(false);
+    expect(isLifetime(lapsed)).toBe(false);
+  });
+
+  it('leaves admin and unlimited accounts unaffected by grants', () => {
+    expect(planFor({ plan: 'free', role: 'admin', unlimited: 0, grant_plan: 'starter' }).id).toBe('unlimited');
+    expect(planFor({ plan: 'free', role: 'user', unlimited: 1, grant_plan: 'starter' }).id).toBe('unlimited');
   });
 });
 
