@@ -9,11 +9,11 @@ export const docsPages: ContentPage[] = [
   {
     slug: 'quickstart',
     title: 'Quickstart: host a video and embed it',
-    metaTitle: 'Videokr quickstart — upload, brand, embed',
+    metaTitle: 'Videokr quickstart — add, brand, embed',
     description:
-      'Create a free Videokr account, add a video by upload or URL, brand the player and paste the embed on any website. Five minutes, no card.',
+      'Create a free Videokr account, add a video by URL, brand the player and paste the embed on any website. Five minutes, no card.',
     answer:
-      'Sign up, add a video (upload an MP4 or WebM up to 200 MB, or paste an MP4, WebM, HLS, YouTube or Vimeo URL), choose a thumbnail, then copy either the iframe or the one-line script embed from the video’s Share panel and paste it into your page. The video is hosted and delivered by Videokr, so nothing is stored on your own server.',
+      'Sign up, add a video by pasting an MP4, WebM, HLS, YouTube or Vimeo URL, choose a thumbnail, then copy either the iframe or the one-line script embed from the video’s Share panel and paste it into your page. The source stays where you host it, while Videokr wraps it in your player and analytics.',
     updated: '2026-08-18',
     keywords: ['video hosting', 'embed video on website', 'hosted video player'],
     related: ['docs/embeds', 'docs/sources', 'guides/embed-video-on-website'],
@@ -23,10 +23,11 @@ The [free plan](/#pricing) is $0 forever and needs no card: 5 videos, 500 plays 
 
 ## 2. Add a video
 
-In **Library → New video** you can either:
+In **Library → New video**, paste the source you already have:
 
-- **Upload** an MP4 or WebM up to 200 MB per file. It is stored by Videokr and delivered from its edge network.
-- **Link a URL** — an MP4, WebM or HLS (\`.m3u8\`) file you already host, or a YouTube or Vimeo link. Linked sources keep the file where it already lives.
+- **Direct file** — an MP4 or WebM URL. The file stays where you host it.
+- **HLS** — an \`.m3u8\` URL for adaptive streaming.
+- **YouTube or Vimeo** — a normal link, wrapped in your branded player.
 
 Then pick a thumbnail. Upload an image (up to 5 MB) or let Videokr grab a frame from the video automatically.
 
@@ -70,7 +71,7 @@ Within a minute of the first viewer, the video's **Analytics** tab shows impress
       },
       {
         q: 'Where is the video stored?',
-        a: 'Uploads are stored and delivered by Videokr. If you link an external MP4, WebM, HLS, YouTube or Vimeo URL, the file stays where it is and Videokr wraps it in your player.',
+        a: 'The source stays where you host it when you link an MP4, WebM, HLS, YouTube or Vimeo URL, and Videokr wraps it in your player.',
       },
     ],
   },
@@ -151,19 +152,19 @@ A [domain-locked](/docs/privacy) video only plays on the hostnames you list — 
     title: 'Sources: MP4, WebM, HLS, YouTube and Vimeo',
     metaTitle: 'Video sources — MP4, WebM, HLS, YouTube, Vimeo',
     description:
-      'What you can put in a Videokr video: uploaded MP4 or WebM up to 200 MB, or a linked MP4, WebM, HLS stream, YouTube or Vimeo URL.',
+      'What you can put in a Videokr video: an MP4, WebM, HLS stream, YouTube or Vimeo URL.',
     answer:
-      'A Videokr video is either an upload (MP4 or WebM, up to 200 MB per file, stored and delivered by Videokr) or a link to a source you already have: an MP4 or WebM file, an HLS .m3u8 playlist, a YouTube URL or a Vimeo URL. Linked sources stay where you host them and are still wrapped in your branded player with your chapters, CTAs and analytics.',
+      'A Videokr video points to a source you already have: an MP4 or WebM file, an HLS .m3u8 playlist, a YouTube URL or a Vimeo URL. The source stays where you host it and is wrapped in your branded player with your chapters, CTAs and analytics.',
     updated: '2026-08-18',
     keywords: ['hls player', 'mp4 hosting', 'youtube embed alternative'],
     related: ['docs/quickstart', 'docs/plans-and-limits', 'compare/youtube-alternative'],
-    body: `## Uploads
+body: `## Direct files
 
-MP4 (H.264/AAC) is the safest format for the widest device range; WebM is accepted too. The limit is 200 MB per file, which comfortably covers the kind of video that belongs on a marketing page — a demo, a tour, a testimonial, a course lesson. Very large libraries are subject to fair use.
+MP4 (H.264/AAC) is the safest format for the widest device range; WebM is accepted too. Paste a direct URL to a file you already host and Videokr wraps it without imposing a video file-size limit.
 
 ## Linked files
 
-Paste a direct \`https://\` URL to an MP4 or WebM and Videokr plays it in your player without copying it. Useful when the master already lives in S3, R2, Bunny or a company file store, or when the file is larger than the upload limit.
+Paste a direct \`https://\` URL to an MP4 or WebM and Videokr plays it in your player without copying it. Useful when the master already lives in S3, R2, Bunny or a company file store.
 
 ## HLS
 
@@ -173,15 +174,14 @@ Paste an \`.m3u8\` URL for adaptive streaming: the player switches rendition by 
 
 Paste a normal YouTube or Vimeo link and Videokr plays it inside your player chrome, with your chapters, CTAs and lead forms layered on top, and reports plays in your own analytics.
 
-The honest caveat: YouTube's and Vimeo's own terms and player behaviour still apply to the underlying stream, so treat this as a way to reuse footage you have not moved yet, not as a way to strip their platform rules. For a page whose job is conversion, host the file with Videokr — no third-party recommendations, no branding, no cookie surprises. See [Videokr vs YouTube](/compare/youtube-alternative).
+The honest caveat: YouTube's and Vimeo's own terms and player behaviour still apply to the underlying stream, so treat this as a way to reuse footage you have not moved yet, not as a way to strip their platform rules. For a page whose job is conversion, link the source with Videokr — no third-party recommendations, no branding, no cookie surprises. See [Videokr vs YouTube](/compare/youtube-alternative).
 
 ## Which to choose
 
 | Situation | Best source |
 | --- | --- |
-| Marketing page hero, demo, testimonial | Upload |
-| Master file over 200 MB | Link the MP4 |
-| Hour-long lesson or webinar replay | HLS |
+| Marketing page hero, demo, testimonial | Direct MP4/WebM URL |
+| Long or high-bitrate lesson or webinar replay | HLS URL |
 | Footage still living on a channel | YouTube or Vimeo link |
 
 ## Replacing a source
@@ -189,8 +189,8 @@ The honest caveat: YouTube's and Vimeo's own terms and player behaviour still ap
 You can change a video's source without changing its id, slug, embed code or analytics history — so a re-cut film keeps its URL, its play count and its retention baseline.`,
     faqs: [
       {
-        q: 'Can I host video larger than 200 MB?',
-        a: 'Yes, by linking it: host the master anywhere and paste its MP4, WebM or HLS URL. Videokr wraps it in your player without storing it.',
+        q: 'Is there a file-size limit?',
+        a: 'No. The video stays where you host it when you link an MP4, WebM or HLS source, so its file size is not a Videokr constraint.',
       },
       {
         q: 'Does linking a YouTube video count plays?',
@@ -551,9 +551,9 @@ One key per integration is the sane pattern: it means you can revoke the WordPre
     title: 'WordPress plugin: install, connect, embed',
     metaTitle: 'Videokr WordPress plugin — setup guide',
     description:
-      'Install the free Videokr plugin, connect it with an API key, and embed hosted video with the [videokr] shortcode, the Gutenberg block or the Insights screen.',
+      'Install the free Videokr plugin, connect it with an API key, and embed linked video sources with the [videokr] shortcode, the Gutenberg block or the Insights screen.',
     answer:
-      'The Videokr WordPress plugin is free on every plan. Install the ZIP, paste an API key created in Videokr → Integrations, and you can embed any video with [videokr id="vid_..."] or the Gutenberg block with a visual picker. Media stays hosted on Videokr, so your WordPress host serves no video bytes.',
+      'The Videokr WordPress plugin is free on every plan. Install the ZIP, paste an API key created in Videokr → Integrations, and you can embed any linked video source with [videokr id="vid_..."] or the Gutenberg block with a visual picker. The source stays where you host it, so your WordPress host serves no video bytes.',
     updated: '2026-08-18',
     keywords: ['video hosting for wordpress', 'wordpress video player plugin', 'wordpress video plugin'],
     related: ['guides/video-hosting-for-wordpress', 'compare/fluentplayer-alternative', 'docs/embeds'],
@@ -587,11 +587,11 @@ Or add the **Videokr** block in the editor and pick a video from your library, t
 
 ## What stays in Videokr
 
-Uploads, player configuration, chapters, CTAs, retention curves and billing live in the Videokr dashboard. The plugin is deliberately a thin client: embedding, library browsing and reporting. That is what keeps it safe to install on a client site.
+Sources, player configuration, chapters, CTAs, retention curves and billing live in the Videokr dashboard. The plugin is deliberately a thin client: embedding, library browsing and reporting. That is what keeps it safe to install on a client site.
 
 ## Why not a self-hosted player plugin
 
-A WordPress player plugin plays files from your own hosting: your server pays for every byte of video, a traffic spike is your problem, and analytics stop at the boundary of that one site. With Videokr the same video is delivered from an edge network, embeds work on any site, and one dashboard reports all of it. See [Videokr vs FluentPlayer](/compare/fluentplayer-alternative) and [video hosting for WordPress](/guides/video-hosting-for-wordpress).`,
+A WordPress player plugin plays files from your own hosting: your server pays for every byte of video, a traffic spike is your problem, and analytics stop at the boundary of that one site. With Videokr the linked source stays where you host it, embeds work on any site, and one dashboard reports all of it. See [Videokr vs FluentPlayer](/compare/fluentplayer-alternative) and [video hosting for WordPress](/guides/video-hosting-for-wordpress).`,
     faqs: [
       {
         q: 'Does the plugin cost anything?',
@@ -653,9 +653,12 @@ Impressions — the player loading without anyone pressing play — are reported
 
 There is no metered egress on any plan — a video that goes unexpectedly viral does not produce a bandwidth invoice. Plans are defined by their play and video allowances, and [linking an external source](/docs/sources) keeps the file where it already lives.
 
+## Fair use
+
+Unlimited plays on Agency is fair use: it covers normal marketing, course and client-portfolio traffic, not reselling Videokr hosting and not traffic generated by bots or automated refreshes. If an account's traffic is extreme enough to affect other customers we will contact you first — nothing is throttled or cut off without a conversation.
+
 ## Limits worth knowing
 
-- 200 MB per uploaded video file; larger masters can be linked.
 - 5 MB per image (thumbnails, logos).
 - Free is capped at 5 videos; every paid plan is unlimited.
 

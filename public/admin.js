@@ -75,6 +75,24 @@
     });
   }
 
+  var PLAN_RANK = { free: 0, starter: 1, lifetime: 2, agency: 3 };
+  var PLAN_NAMES = { free: 'Free', starter: 'Starter', lifetime: 'Lifetime', agency: 'Agency' };
+
+  function activeGrant(user) {
+    var plan = String(user.grant_plan || '');
+    if (!Object.prototype.hasOwnProperty.call(PLAN_RANK, plan) || plan === 'free') return null;
+    var until = Number(user.grant_until || 0);
+    if (until !== 0 && until * 1000 <= Date.now()) return null;
+    return { plan: plan, until: until, code: String(user.grant_code || '—') };
+  }
+
+  function effectivePlan(user) {
+    if (Number(user.unlimited) === 1) return 'unlimited';
+    var owned = Object.prototype.hasOwnProperty.call(PLAN_RANK, user.plan) ? user.plan : 'free';
+    var grant = activeGrant(user);
+    return grant && PLAN_RANK[grant.plan] > PLAN_RANK[owned] ? grant.plan : owned;
+  }
+
   function money(cents, currency) {
     return (currency || 'USD') + ' ' + (Number(cents || 0) / 100).toFixed(2);
   }
@@ -228,9 +246,10 @@
   /* ----------------------------------------------------------------- users -- */
 
   function planPill(user) {
-    if (Number(user.unlimited) === 1) return ['pill pill-ok', 'unlimited'];
-    if (user.plan === 'lifetime') return ['pill', 'lifetime'];
-    if (user.plan === 'starter' || user.plan === 'agency') return ['pill', user.plan];
+    var plan = effectivePlan(user);
+    if (plan === 'unlimited') return ['pill pill-ok', 'unlimited'];
+    if (plan === 'lifetime') return ['pill', 'lifetime'];
+    if (plan === 'starter' || plan === 'agency') return ['pill', plan];
     return ['chip', 'free'];
   }
 
@@ -254,6 +273,17 @@
         var planCell = document.createElement('td');
         var pill = planPill(user);
         planCell.appendChild(text('span', pill[0], pill[1]));
+        var grant = activeGrant(user);
+        if (grant) {
+          planCell.appendChild(text('span', 'chip', 'granted'));
+          planCell.appendChild(
+            text(
+              'div',
+              'tiny muted',
+              grant.code + ' · ' + (grant.until === 0 ? 'no lapse' : 'until ' + fmtDate(grant.until)),
+            ),
+          );
+        }
         if (user.role === 'admin') planCell.appendChild(text('span', 'chip chip-hot', 'admin'));
         if (Number(user.suspended) === 1) planCell.appendChild(text('span', 'chip', 'suspended'));
         tr.appendChild(planCell);
@@ -324,6 +354,20 @@
           (data.plays.allowance === null ? ' (unlimited)' : ' of ' + data.plays.allowance) +
           (data.plays.blocked ? ' · BLOCKED, over allowance' : '') +
           (data.plays.over && !data.plays.blocked ? ' · ' + data.plays.over + ' over ($' + data.plays.overage_usd + ')' : '');
+        var grant = activeGrant(data.user);
+        if (grant) {
+          $('mu-meta').appendChild(
+            text(
+              'div',
+              'tiny muted',
+              PLAN_NAMES[grant.plan] +
+                ' grant · ' +
+                grant.code +
+                ' · ' +
+                (grant.until === 0 ? 'no lapse' : 'until ' + fmtDate(grant.until)),
+            ),
+          );
+        }
         openModal('modal-user');
       })
       .catch(fail);

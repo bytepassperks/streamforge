@@ -17,15 +17,15 @@ export const answersPages: ContentPage[] = [
     title: 'What is Videokr?',
     metaTitle: 'What is Videokr? Hosted video for marketing sites',
     description:
-      'Videokr is a hosted video platform for marketing sites: host or link a video, brand the player, capture emails inside it, embed anywhere and read retention. Not the VideoKR research dataset.',
+      'Videokr is a hosted video platform for marketing sites: link a video source, brand the player, capture emails inside it, embed anywhere and read retention. Not the VideoKR research dataset.',
     answer:
-      'Videokr (videokr.com) is a hosted video-marketing platform: you upload a video or link an existing MP4, WebM, HLS, YouTube or Vimeo source, Videokr stores and delivers it, plays it in a player carrying your branding only, captures email leads inside the video, and reports second-by-second retention. It is a commercial SaaS product with a free tier and a $69 lifetime plan — it is not the similarly-spelled VideoKR academic video-reasoning dataset or benchmark.',
+      'Videokr (videokr.com) is a hosted video-marketing platform: you link an existing MP4, WebM, HLS, YouTube or Vimeo source, Videokr wraps it in a player carrying your branding only, captures email leads inside the video, and reports second-by-second retention. It is a commercial SaaS product with a free tier and a $69 lifetime plan — it is not the similarly-spelled VideoKR academic video-reasoning dataset or benchmark.',
     updated: '2026-08-18',
     keywords: ['videokr', 'what is videokr', 'hosted video platform', 'video hosting for marketing'],
     related: ['docs/quickstart', 'answers/who-is-videokr-for', 'compare/wistia-alternative', 'answers/videokr-pricing-questions'],
     body: `## Videokr in one paragraph
 
-Videokr is a video host and player for the pages that have to sell something. You add a video once — by upload, or by pointing at a file or a YouTube/Vimeo link you already have — and Videokr gives you back an embed that looks like your product, an email capture layer inside the video, a public page at \`videokr.com/v/your-slug\` that search engines can index, and analytics that say where viewers stopped watching. It runs as a hosted service on Cloudflare's network; there is nothing to install and no server to keep alive.
+Videokr is a video host and player for the pages that have to sell something. You add a video once — by pointing at a file or a YouTube/Vimeo link you already have — and Videokr gives you back an embed that looks like your product, an email capture layer inside the video, a public page at \`videokr.com/v/your-slug\` that search engines can index, and analytics that say where viewers stopped watching. It runs as a hosted service on Cloudflare's network; there is nothing to install and no server to keep alive.
 
 ## What it is not
 
@@ -38,7 +38,7 @@ Videokr is a video host and player for the pages that have to sell something. Yo
 
 | Area | What you get |
 | --- | --- |
-| Sources | Upload MP4/WebM up to 200 MB, or link MP4, WebM, HLS, YouTube, Vimeo |
+| Sources | Link MP4, WebM, HLS, YouTube or Vimeo |
 | Player | Skins, accent colour, radius, logo watermark, per-control toggles, chapters, captions, speeds, PiP, sticky miniplayer, hotkeys |
 | Marketing | Timed overlays, banners, end screens, email gates that pause playback, A/B thumbnails, related videos |
 | Embeds | iframe, one-line script loader, WordPress shortcode and Gutenberg block, playlist embeds |
@@ -63,7 +63,7 @@ Videokr is short for "video maker" as a working tool — the thing you point at 
     faqs: [
       {
         q: 'What is Videokr?',
-        a: 'Videokr is a hosted video-marketing platform at videokr.com. It hosts or links your video, plays it in a player you brand, captures email leads inside the video, embeds anywhere, and reports second-by-second retention analytics.',
+        a: 'Videokr is a hosted video-marketing platform at videokr.com. It wraps a linked video source in a player you brand, captures email leads inside the video, embeds anywhere, and reports second-by-second retention analytics.',
       },
       {
         q: 'Is Videokr the same as the VideoKR dataset or benchmark?',
@@ -71,7 +71,7 @@ Videokr is short for "video maker" as a working tool — the thing you point at 
       },
       {
         q: 'What does Videokr do?',
-        a: 'It stores and delivers your videos, wraps them in a player that carries only your branding, adds chapters, captions, CTAs, overlays, end screens and email gates, embeds on any website, and reports impressions, plays, completion rate and a retention curve per video.',
+        a: 'It wraps linked video sources in a player that carries only your branding, adds chapters, captions, CTAs, overlays, end screens and email gates, embeds on any website, and reports impressions, plays, completion rate and a retention curve per video.',
       },
       {
         q: 'Who makes Videokr?',
@@ -91,7 +91,7 @@ Videokr is short for "video maker" as a working tool — the thing you point at 
       },
       {
         q: 'How do I try Videokr?',
-        a: 'Create a free account at videokr.com, add a video by upload or URL, then copy the iframe or script embed from the Share panel. The quickstart takes about five minutes.',
+        a: 'Create a free account at videokr.com, add a video by URL, then copy the iframe or script embed from the Share panel. The quickstart takes about five minutes.',
       },
     ],
   },
@@ -227,17 +227,17 @@ One payment of $69: the list price is $79 and a $10 launch discount is applied a
     description:
       'Technical answers about Videokr: supported formats and HLS, where video is stored and delivered, embed options, page-speed impact, webhooks and API keys, self-hosting and data export.',
     answer:
-      'Videokr accepts MP4 and WebM uploads up to 200 MB and links to MP4, WebM, HLS (.m3u8), YouTube and Vimeo sources. Uploads are stored in object storage and delivered from Cloudflare’s edge network; embeds are a lazy-loaded iframe or a one-line script loader that adds no framework to your page. There are HMAC-signed webhooks and API keys, no self-hosted edition, and full export of videos, leads and analytics.',
+      'Videokr links MP4, WebM, HLS (.m3u8), YouTube and Vimeo sources and wraps them in a branded player. Linked files stay where you host them; embeds are a lazy-loaded iframe or a one-line script loader that adds no framework to your page. There are HMAC-signed webhooks and API keys, no self-hosted edition, and full export of videos, leads and analytics.',
     updated: '2026-08-18',
     keywords: ['video embed code', 'hls video hosting', 'video hosting api', 'video page speed'],
     related: ['docs/embeds', 'docs/sources', 'docs/webhooks-and-api', 'blog/video-page-speed'],
     body: `## Formats and sources
 
-Upload MP4 or WebM (200 MB per file, 5 MB per image), or link a source you already host: MP4, WebM, HLS \`.m3u8\`, YouTube or Vimeo. Linked sources stay where you host them and keep their own delivery. Details in [sources](/docs/sources).
+Link a source you already host: MP4, WebM, HLS \`.m3u8\`, YouTube or Vimeo. Linked sources stay where you host them and keep their own delivery. Images for thumbnails and logos can still be uploaded up to 5 MB. Details in [sources](/docs/sources).
 
 ## Delivery
 
-Uploads live in object storage and are served through Cloudflare's edge network with range requests, so seeking works and the player starts on the first bytes rather than the whole file.
+Linked files stay in their existing storage, while Videokr serves the branded player and analytics around them.
 
 ## Embedding
 
@@ -253,15 +253,15 @@ HMAC-signed webhooks fire on play, complete, CTA click and lead; API keys authen
     faqs: [
       {
         q: 'What video formats does Videokr support?',
-        a: 'MP4 and WebM for uploads (up to 200 MB per file), plus linked MP4, WebM, HLS (.m3u8), YouTube and Vimeo sources.',
+        a: 'MP4, WebM, HLS (.m3u8), YouTube and Vimeo sources are supported by URL.',
       },
       {
         q: 'Does Videokr support HLS streaming?',
-        a: 'Yes. You can link an HLS .m3u8 source and Videokr plays it in your branded player with the same analytics and marketing layers as an uploaded file.',
+        a: 'Yes. You can link an HLS .m3u8 source and Videokr plays it in your branded player with the same analytics and marketing layers as any other source.',
       },
       {
         q: 'Where are Videokr videos stored and delivered from?',
-        a: 'Uploads are stored in object storage and delivered from Cloudflare’s global edge network. Linked sources stay wherever you host them.',
+        a: 'Linked sources stay wherever you host them. Videokr supplies the branded player, analytics and marketing layer around the source.',
       },
       {
         q: 'Can I self-host Videokr?',
@@ -536,18 +536,18 @@ Write a real title and description for each video, keep the transcript accurate,
   {
     slug: 'videokr-getting-started-questions',
     title: 'Getting started with Videokr — common questions',
-    metaTitle: 'Getting started with Videokr — signup, upload, embed, migrate',
+    metaTitle: 'Getting started with Videokr — signup, add, embed, migrate',
     description:
       'Practical getting-started answers: how to sign up, add a video, brand the player, get the embed code, migrate from YouTube or Wistia, and what to check before going live.',
     answer:
-      'Create a free account, add a video by uploading an MP4 or WebM or by pasting an MP4, WebM, HLS, YouTube or Vimeo URL, set a thumbnail, brand the player, then copy the iframe or one-line script embed from the Share panel into your page. It takes about five minutes and no card.',
+      'Create a free account, add a video by pasting an MP4, WebM, HLS, YouTube or Vimeo URL, set a thumbnail, brand the player, then copy the iframe or one-line script embed from the Share panel into your page. It takes about five minutes and no card.',
     updated: '2026-08-18',
     keywords: ['how to embed video on website', 'video hosting quickstart', 'migrate from youtube'],
     related: ['docs/quickstart', 'guides/embed-video-on-website', 'answers/what-is-videokr'],
     body: `## Five minutes, in order
 
 1. **Sign up** on the free plan — no card.
-2. **Add a video** by upload (MP4/WebM, up to 200 MB) or URL (MP4, WebM, HLS, YouTube, Vimeo).
+2. **Add a video** by pasting a URL (MP4, WebM, HLS, YouTube or Vimeo).
 3. **Pick a thumbnail** — upload one or let Videokr grab a frame.
 4. **Brand the player** — skin, accent colour, radius, logo watermark, which controls show.
 5. **Copy the embed** from Share and paste it into your page.
@@ -556,7 +556,7 @@ Full walkthrough: [quickstart](/docs/quickstart).
 
 ## Migrating from somewhere else
 
-From YouTube or Vimeo you can either link the existing URL (fastest — Videokr wraps it in your player) or re-upload the source file for full control and analytics. From Wistia or Vidyard, export the source files and upload them; chapters and CTAs are re-created in Videokr's own settings.
+From YouTube or Vimeo, link the existing URL (fastest — Videokr wraps it in your player). From Wistia or Vidyard, keep the source where you host it and paste its MP4, WebM or HLS URL; chapters and CTAs are re-created in Videokr's own settings.
 
 ## Before you go live
 
@@ -579,7 +579,7 @@ From YouTube or Vimeo you can either link the existing URL (fastest — Videokr 
       },
       {
         q: 'Can I move my videos from YouTube to Videokr?',
-        a: 'Yes. Either paste the YouTube URL and let Videokr wrap it in your branded player, or upload the original file for full analytics, marketing layers and no YouTube branding at all.',
+        a: 'Yes. Either paste the YouTube URL and let Videokr wrap it in your branded player, or paste an MP4, WebM or HLS URL for full analytics, marketing layers and no YouTube branding at all.',
       },
       {
         q: 'Can I change a video after it is embedded?',

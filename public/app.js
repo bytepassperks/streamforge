@@ -3233,7 +3233,7 @@
         'p',
         'muted tiny',
         unlimited
-          ? 'Unlimited plays a month, unlimited videos. No overage.'
+          ? 'Unlimited plays a month, unlimited videos. No overage, fair use applies.'
           : thousands(plan.plays) +
             ' plays a month, unlimited videos. Extra plays are $' +
             billing.overage_per_10k_usd +
