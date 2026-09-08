@@ -76,7 +76,7 @@ export const FREE_LIMITS = {
   playsPerMonth: PLANS.free.plays,
 };
 
-const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, lifetime: 2, agency: 3 };
+export const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, lifetime: 2, agency: 3 };
 
 export interface Grant {
   grant_plan?: string;

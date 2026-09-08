@@ -154,6 +154,28 @@ describe('recordOverage', () => {
     expect(store.charges).toHaveLength(0);
   });
 
+  it('never bills a grant while a purchased Starter account still accrues overage', async () => {
+    store.usage.set('usr_grant|2026-08', 15000);
+    const grant = {
+      id: 'usr_grant',
+      plan: 'free',
+      role: 'user',
+      unlimited: 0,
+      subscription_id: '',
+      grant_plan: 'starter',
+      grant_until: 9_999_999_999,
+    };
+    expect(await recordOverage(env, grant, '2026-08')).toBe(null);
+
+    store.usage.set('usr_paid|2026-08', 15000);
+    const purchased = { ...paid, id: 'usr_paid' };
+    expect(await recordOverage(env, purchased, '2026-08')).toMatchObject({
+      over: 5000,
+      amount_cents: 50,
+      plan: 'starter',
+    });
+  });
+
   it('records nothing when the account stayed inside its allowance', async () => {
     store.usage.set('usr_1|2026-08', 9000);
     expect(await recordOverage(env, paid, '2026-08')).toBe(null);

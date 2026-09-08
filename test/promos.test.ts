@@ -313,6 +313,23 @@ describe('promo grants', () => {
     expect(await me.json()).not.toHaveProperty('user.grant_until');
   });
 
+  it('preserves the existing auth/me user fields without exposing grant duration', async () => {
+    const setup = envFor();
+    const response = await request(setup.env, '/auth/me');
+    const body = await response.json();
+    expect(body).toMatchObject({
+      user: {
+        lead_emails: 1,
+        unlimited: 0,
+        subscription_id: '',
+        created_at: 1_700_000_000,
+        grant_plan: '',
+        grant_code: '',
+      },
+    });
+    expect(body).not.toHaveProperty('user.grant_until');
+  });
+
   it('uses entitlement for embed badges, not purchase ownership', async () => {
     const setup = envFor({ ownerGrant: { grant_plan: 'starter', grant_until: 9_999_999_999 } });
     const response = await pub.request('/api/embed/demo', {}, setup.env);

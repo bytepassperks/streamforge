@@ -169,18 +169,10 @@ api.get('/auth/me', (c) => {
   // Embed and share snippets have to carry the canonical public host, not the
   // host the dashboard happens to be open on (a preview url, an ip, localhost).
   const publicBase = (c.env.PUBLIC_BASE_URL || new URL(c.req.url).origin).replace(/\/$/, '');
-  return user
-    ? c.json({
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          plan: user.plan,
-          role: user.role,
-        },
-        public_base: publicBase,
-      })
-    : c.json({ user: null }, 200);
+  if (!user) return c.json({ user: null }, 200);
+  const safeUser = { ...user };
+  delete safeUser.grant_until;
+  return c.json({ user: safeUser, public_base: publicBase });
 });
 
 /**

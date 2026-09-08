@@ -1,5 +1,5 @@
 import type { Env, User } from './types';
-import { OVERAGE_PER_10K_USD, apiBase, periodKey, planFor } from './billing';
+import { OVERAGE_PER_10K_USD, apiBase, isPaid, periodKey, planFor } from './billing';
 import { newId } from './util';
 
 export interface OverageRow {
@@ -80,6 +80,7 @@ export async function recordOverage(
   period: string,
   at: number = Date.now(),
 ): Promise<OverageRow | null> {
+  if (!isPaid(account)) return null;
   const plan = planFor(account);
   if (plan.hardStop || !Number.isFinite(plan.plays)) return null;
   const usage = await env.DB.prepare('SELECT plays FROM play_usage WHERE user_id = ? AND period = ?')

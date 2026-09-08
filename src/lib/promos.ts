@@ -1,5 +1,5 @@
 import type { Env, User } from './types';
-import { PLANS } from './billing';
+import { PLAN_RANK, PLANS } from './billing';
 import type { Grant } from './billing';
 import { newId, now } from './util';
 
@@ -41,7 +41,9 @@ export async function redeemCode(env: Env, user: User, rawCode: string): Promise
   const code = normaliseCode(rawCode);
   if (!code) return { ok: false, status: 404, error: 'that code is not valid' };
   const account = await settleGrant(env, user);
-  const row = await env.DB.prepare('SELECT * FROM promo_codes WHERE code = ?')
+  const row = await env.DB.prepare(
+    'SELECT id, code, plan, grant_days, redeem_by, max_redemptions, redemptions, active FROM promo_codes WHERE code = ?',
+  )
     .bind(code)
     .first<{
       id: string;
@@ -69,11 +71,8 @@ export async function redeemCode(env: Env, user: User, rawCode: string): Promise
   }
   const owned = PLANS[account.plan] ?? PLANS.free;
   const target = PLANS[row.plan];
-  if (!target || (target.id !== 'free' && target.id !== 'starter' && target.id !== 'agency' && target.id !== 'lifetime')) {
-    return { ok: false, status: 404, error: 'that code is not valid' };
-  }
-  const rank: Record<string, number> = { free: 0, starter: 1, lifetime: 2, agency: 3 };
-  if (rank[owned.id] >= rank[target.id]) {
+  if (!target) return { ok: false, status: 404, error: 'that code is not valid' };
+  if (PLAN_RANK[owned.id] >= PLAN_RANK[target.id]) {
     return { ok: false, status: 409, error: 'your plan already includes this' };
   }
   const claimed = await env.DB.prepare(
