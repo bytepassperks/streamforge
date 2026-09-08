@@ -160,11 +160,7 @@ A [domain-locked](/docs/privacy) video only plays on the hostnames you list — 
     related: ['docs/quickstart', 'docs/plans-and-limits', 'compare/youtube-alternative'],
     body: `## Direct files
 
-MP4 (H.264/AAC) is the safest format for the widest device range; WebM is accepted too. Paste a direct URL to a file you already host and Videokr wraps it without imposing a video file-size limit.
-
-## Linked files
-
-Paste a direct \`https://\` URL to an MP4 or WebM and Videokr plays it in your player without copying it. Useful when the master already lives in S3, R2, Bunny or a company file store.
+Paste an \`https://\` URL to an MP4 or WebM and Videokr plays it in your player without copying it — useful when the master already lives in S3, R2, Bunny or a company file store. MP4 (H.264/AAC) is the safest format for the widest device range; WebM works too. Because the file is never copied, its size is not a Videokr limit.
 
 ## HLS
 
