@@ -158,7 +158,7 @@ A [domain-locked](/docs/privacy) video only plays on the hostnames you list — 
     updated: '2026-08-18',
     keywords: ['hls player', 'mp4 hosting', 'youtube embed alternative'],
     related: ['docs/quickstart', 'docs/plans-and-limits', 'compare/youtube-alternative'],
-body: `## Direct files
+    body: `## Direct files
 
 MP4 (H.264/AAC) is the safest format for the widest device range; WebM is accepted too. Paste a direct URL to a file you already host and Videokr wraps it without imposing a video file-size limit.
 
