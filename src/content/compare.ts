@@ -59,7 +59,7 @@ Be honest about this before you migrate:
 ## Migrating, practically
 
 1. Export or download your masters.
-2. Upload to Videokr (200 MB per file) or [link the file](/docs/sources) where it already lives — including HLS.
+2. [Link the source](/docs/sources) where it already lives — including direct MP4/WebM files and HLS.
 3. Rebuild chapters, CTAs and gates. This is the manual part; budget an hour for a dozen videos.
 4. Swap the embed codes, then keep both live for a week and compare play counts before removing anything.
 
@@ -80,9 +80,9 @@ ${FAIRNESS}`,
     title: 'Videokr as a Vidyard alternative',
     metaTitle: 'Vidyard alternative — Videokr compared',
     description:
-      'For marketing video on your own pages: hosted delivery, a branded player, in-video CTAs and retention analytics, priced per play instead of per seat.',
+      'For marketing video on your own pages: a branded player around linked sources, in-video CTAs and retention analytics, priced per play instead of per seat.',
     answer:
-      'Vidyard is built around sales video — personal recordings sent to prospects, with CRM integration. Videokr is built around marketing video that lives on your pages: hosted delivery, a branded player, in-video CTAs and email capture, per-video retention, embeddable anywhere, priced on plays rather than seats.',
+      'Vidyard is built around sales video — personal recordings sent to prospects, with CRM integration. Videokr is built around marketing video that lives on your pages: a branded player around linked sources, in-video CTAs and email capture, per-video retention, embeddable anywhere, priced on plays rather than seats.',
     updated: '2026-08-18',
     keywords: ['vidyard alternative', 'vidyard competitor', 'video for marketing pages'],
     related: ['compare/wistia-alternative', 'guides/video-landing-page', 'docs/analytics'],
@@ -97,7 +97,7 @@ Vidyard's centre of gravity is the first. Videokr does the second: [public video
 
 ## What you get with Videokr
 
-- Hosted delivery of an upload or a linked MP4/WebM/HLS/YouTube/Vimeo [source](/docs/sources).
+- A branded player around a linked MP4/WebM/HLS/YouTube/Vimeo [source](/docs/sources).
 - A [player](/docs/player) with no vendor branding on paid plans and Lifetime.
 - Overlays, end screens and email gates; leads to CSV, email and signed webhooks.
 - A hundred-bucket [retention curve](/docs/analytics) per video, with referrer, device and country splits.
@@ -118,7 +118,7 @@ Seat-based pricing is the thing to compare against your own reality: if two peop
 
 ## Migrating
 
-Download masters, upload or link them in Videokr, rebuild CTAs and chapters, swap embeds, run both for a week and compare plays before you switch anything off.
+Keep the masters where they are and link them in Videokr, rebuild CTAs and chapters, swap embeds, run both for a week and compare plays before you switch anything off.
 
 ${FAIRNESS}`,
     faqs: [
@@ -135,7 +135,7 @@ ${FAIRNESS}`,
     description:
       'When you want hosted video for a marketing site rather than a video community: branded player, in-video lead capture, retention curves and per-play pricing.',
     answer:
-      'Vimeo is a video platform with a community, a showcase and a broad feature surface. Videokr is narrower on purpose: host the file, brand the player, capture emails inside it, embed it anywhere, and report where viewers dropped off — priced on de-duplicated plays with no bandwidth meter.',
+      'Vimeo is a video platform with a community, a showcase and a broad feature surface. Videokr is narrower on purpose: link the source, brand the player, capture emails inside it, embed it anywhere, and report where viewers dropped off — priced on de-duplicated plays with no bandwidth meter.',
     updated: '2026-08-18',
     keywords: ['vimeo alternative', 'vimeo competitor', 'video hosting alternative'],
     related: ['guides/best-video-hosting', 'docs/privacy', 'guides/password-protect-video'],
@@ -167,11 +167,10 @@ Timed overlays, banners, end screens, email gates that pause playback, A/B thumb
 - You want an audience: a public channel, followers, a showcase people browse.
 - You need live streaming or events.
 - You want creation tooling — editing, stock, templates.
-- You need 4K masters and hours of footage: 200 MB per upload is a marketing-video limit, though larger files can be linked.
 
 ## Migrating
 
-Download your masters (or keep them where they are and link them), upload or link into Videokr, rebuild chapters and CTAs, swap the embed codes, and keep both live briefly to compare play counts.
+Keep your masters where they are and link them into Videokr, rebuild chapters and CTAs, swap the embed codes, and keep both live briefly to compare play counts.
 
 ${FAIRNESS}`,
     faqs: [

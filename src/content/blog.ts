@@ -143,7 +143,7 @@ No logo animation. No "hi, I'm…". Show the finished result — the thing the v
 
 A demo should show one workflow all the way through, not nine features for twenty seconds each. A viewer who understands one complete thing believes the product works. A viewer shown nine fragments remembers none of them.
 
-Choose the workflow that is both quick and commercially decisive. For a video platform that is upload → brand → embed → see the retention curve, not the settings screen.
+Choose the workflow that is both quick and commercially decisive. For a video platform that is source URL → brand → embed → see the retention curve, not the settings screen.
 
 ## Real data, always
 
@@ -244,7 +244,7 @@ See [plans and limits](/docs/plans-and-limits) for the exact numbers, and [how t
     related: ['blog/anatomy-of-a-product-demo', 'guides/video-landing-page', 'docs/chapters-and-captions'],
     body: `## The constraint we set
 
-No placeholder footage, no stock, no mock-ups. Every frame is the shipped product, with a populated account behind it — real uploads, real plays, real leads — because an empty dashboard is the least convincing thing a software video can show.
+No placeholder footage, no stock, no mock-ups. Every frame is the shipped product, with a populated account behind it — real sources, real plays, real leads — because an empty dashboard is the least convincing thing a software video can show.
 
 ## Script before capture
 
@@ -252,7 +252,7 @@ The film was written shot by shot first: what is on screen, what the narration s
 
 ## Structure
 
-About two minutes, eight [chapters](/docs/chapters-and-captions). The first twelve seconds carry the whole pitch, because most viewers only give you that. The chapters exist so the minority who want the analytics section can jump to it and skip the upload flow.
+About two minutes, eight [chapters](/docs/chapters-and-captions). The first twelve seconds carry the whole pitch, because most viewers only give you that. The chapters exist so the minority who want the analytics section can jump to it and skip the source-linking flow.
 
 ## Annotations, and two rules we learned by breaking them
 
@@ -538,7 +538,7 @@ More than a completion certificate does:
 - Long lessons: host the master where it already lives and [link it as HLS](/docs/sources) so mobile students get adaptive quality.
 - Captions on every lesson. Non-native speakers rely on them more than anyone.
 - No autoplay between lessons; students hate losing their place.
-- Fixed 200 MB per upload — a real limit for hour-long lessons, and the reason linking is the usual pattern for a full course.
+- Linking or HLS is the usual pattern for a full course, because the master can stay where it already lives.
 
 ## Cost shape
 
@@ -670,7 +670,7 @@ The vendor's mark on the player. Free tiers usually show one; check exactly whic
 
 ## Unlimited
 
-Almost never literally unlimited. Look for the fair-use clause and the per-file size cap. Videokr states the specific upload limits: 200 MB per file and 5 MB per image.`,
+Almost never literally unlimited. Look for the fair-use clause and the limits that still exist. Videokr allows 5 MB per image and 1 MB per caption file, and Agency's unlimited plays are fair use.`,
     faqs: [
       {
         q: 'What is the difference between a play and a view?',

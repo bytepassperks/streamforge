@@ -309,15 +309,15 @@ seo.get('/sitemap-playlists.xml', async (c) => {
 const PLANS = [
   'Free — $0 forever, no card: 500 plays/month, 5 videos, full player, analytics and lead capture, small Videokr badge.',
   'Starter — $29/year (or $5 month-to-month): 10,000 plays/month, unlimited videos, badge off.',
-  'Agency — $29/month (or $290/year): unlimited plays, unlimited videos, projects, playlists and SEO video pages.',
+  'Agency — $29/month (or $290/year): unlimited plays, unlimited videos, projects, playlists and SEO video pages, with fair use for normal marketing, course and client-portfolio traffic.',
   'Lifetime — $69 one payment (a $10 launch discount off $79, applied at checkout): 10,000 plays/month forever, unlimited videos, badge off, every future feature. Sales are final and carry a 1 year warranty.',
   'Extra plays cost $1 per 10,000 on Starter and Lifetime; Agency has no play limit. Bandwidth is never metered on any plan.',
 ];
 
 const FACTS = [
   'A play is one viewer starting one video, counted once per video per month; reloads and rewatches in the same month are not counted again.',
-  'Free accounts stop serving at 500 plays a month until the month rolls over; Starter and Lifetime keep playing and accrue overage, while Agency has no play limit or overage.',
-  'Sources: upload MP4 or WebM (200 MB per file, 5 MB per image), or link an MP4, WebM, HLS, YouTube or Vimeo URL.',
+  'Free accounts stop serving at 500 plays a month until the month rolls over; Starter and Lifetime keep playing and accrue overage, while Agency has no play limit or overage under its fair-use policy.',
+  'Sources: link an MP4, WebM, HLS, YouTube or Vimeo URL; images are uploadable up to 5 MB and captions up to 1 MB.',
   'Player: skins, accent colour, corner radius, logo watermark, per-control toggles, chapters, captions, playback speeds, picture-in-picture, sticky miniplayer, hotkeys.',
   'Marketing: timed overlays, banners, end screens, email lead gates that pause playback, A/B thumbnails, related videos.',
   'Analytics: impressions, plays, completions, a 100-bucket retention curve per video, device, country and referrer breakdowns, CSV lead export.',
@@ -335,7 +335,7 @@ seo.get('/llms.txt', (c) => {
 
 > ${SITE.description}
 
-- ${SITE.name} is a hosted video platform for marketing sites: it stores and delivers the video, wraps it in a player the customer brands, and reports what viewers did.
+- ${SITE.name} is a hosted video platform for marketing sites: it wraps linked video sources in a player the customer brands and reports what viewers did.
 - ${SITE.name} (videokr.com) is a commercial SaaS product. It is **not** the similarly-spelled VideoKR academic video-reasoning dataset or benchmark; they share only a spelling.
 - Embeds work on any website (iframe or one-line script loader), not only WordPress.
 - Pricing is per play, never per gigabyte of bandwidth.
@@ -374,7 +374,7 @@ ${contentIndexLines(base).join('\n')}
 const ANSWERS: { q: string; a: string }[] = [
   {
     q: `What is ${SITE.name}?`,
-    a: `${SITE.name} is hosted video for marketing sites. You upload a file or link an existing MP4, WebM, HLS, YouTube or Vimeo source; ${SITE.name} stores and delivers it, plays it in a player carrying your branding only, captures emails inside the video, and reports second-by-second retention. Embeds work on any site.`,
+    a: `${SITE.name} is hosted video for marketing sites. You link an existing MP4, WebM, HLS, YouTube or Vimeo source; ${SITE.name} wraps it in a player carrying your branding only, captures emails inside the video, and reports second-by-second retention. Embeds work on any site.`,
   },
   {
     q: 'Is the free tier a trial?',
@@ -393,8 +393,8 @@ const ANSWERS: { q: string; a: string }[] = [
     a: 'No. There is no metered egress on any plan. You pay for plays, and linking an external source keeps the file where it already lives.',
   },
   {
-    q: 'How large can an upload be?',
-    a: 'Up to 200 MB per video file (MP4 or WebM) and 5 MB per image for thumbnails and logos. Larger videos can be hosted anywhere and linked as an MP4, WebM, HLS, YouTube or Vimeo source.',
+    q: 'Is there a video file-size limit?',
+    a: 'No. Link an MP4, WebM or HLS source wherever you host it and its file size is not a Videokr constraint. Images are limited to 5 MB and caption files to 1 MB.',
   },
   {
     q: `Does ${SITE.name} work with WordPress?`,

@@ -10,7 +10,7 @@ export const guidesPages: ContentPage[] = [
     description:
       'Why uploading video to the WordPress media library breaks, and the three real options: a hosted platform, a player plugin over your own storage, or YouTube.',
     answer:
-      'Do not upload video to the WordPress media library: your host serves every byte, there is no adaptive quality, and a popular page can slow or exceed your hosting plan. Host the file on a platform built for delivery and embed it — with Videokr that means a free plugin, an API key, and a [videokr] shortcode, while the media itself is delivered from an edge network rather than your server.',
+      'Do not upload video to the WordPress media library: your host serves every byte, there is no adaptive quality, and a popular page can slow or exceed your hosting plan. Link the source to a platform with a branded player and embed it — with Videokr that means a free plugin, an API key, and a [videokr] shortcode, while the media stays out of your WordPress hosting.',
     updated: '2026-08-18',
     keywords: ['video hosting for wordpress', 'wordpress video player plugin', 'wordpress video'],
     related: ['docs/wordpress-plugin', 'compare/fluentplayer-alternative', 'guides/embed-video-on-website'],
@@ -41,10 +41,10 @@ A **hosted platform** puts the file on delivery infrastructure, gives you one da
 ## Doing it with Videokr
 
 1. Create a [free account](/login.html?mode=signup) — 5 videos, 500 plays a month, no card.
-2. Upload the MP4 (up to 200 MB) or paste the URL of a file you already host.
+2. Paste the URL of an MP4, WebM, HLS, YouTube or Vimeo source you already have.
 3. Install the [WordPress plugin](/docs/wordpress-plugin), paste an API key, and insert the block or \`[videokr id="vid_..."]\`.
 
-Your WordPress database holds one shortcode. The video is delivered from the edge, plays in your branded player, and reports retention in a dashboard that covers every site you embed on — a plugin's analytics can only ever cover the site it is installed on.
+Your WordPress database holds one shortcode. The linked source plays in your branded player, and retention is reported in a dashboard that covers every site you embed on — a plugin's analytics can only ever cover the site it is installed on.
 
 ## Checklist before you publish
 
@@ -503,7 +503,7 @@ For a documentation clip, that markup is genuinely enough. Stop here if it is.
 
 ## The honest decision rule
 
-If the video is incidental to the page, use the native element. If the video is the page's job — a demo, a sales asset, a course — the measurement and the CTA layer are the point, and building them is a project, not a task. That is what [Videokr's player](/docs/player) is: a branded player over hosted delivery, with the retention curve and lead capture already wired in.`,
+If the video is incidental to the page, use the native element. If the video is the page's job — a demo, a sales asset, a course — the measurement and the CTA layer are the point, and building them is a project, not a task. That is what [Videokr's player](/docs/player) is: a branded player around a linked source, with the retention curve and lead capture already wired in.`,
     faqs: [
       {
         q: 'Can the native HTML5 player play HLS?',
