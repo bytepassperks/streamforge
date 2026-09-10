@@ -35,12 +35,27 @@ const PLAN_CARD_PATHS = new Set(['/', '/pricing']);
 const SIGNUP_CLICK_SCRIPT =
   '<script>document.addEventListener("click",function(e){var t=e.target;var a=t&&t.closest?t.closest("a[data-videokr-signup]"):null;if(!a)return;e.preventDefault();e.stopPropagation();window.location.assign(a.getAttribute("href"));},true);</script>';
 
-// The Fazier directory listing (mapHoneyEdge) rewards a free listing when a
-// launch badge is visible on the product homepage. The badge links back to the
-// listing and is required by Fazier's Basic (free) route; it is injected only
-// on the root path so other pages stay free of directory link placements.
+// The Fazier directory listing rewards a free listing when a launch badge is
+// visible on the product homepage. The badge links back to the listing and is
+// required by Fazier's Basic (free) route; it is injected only on the root
+// path so other pages stay free of directory link placements. It is pinned to
+// the viewport (not the footer) so it stays fully visible on desktop and
+// mobile, inside safe-area spacing, without conflicting with fixed elements.
 const FAZIER_BADGE =
-  '<a href="https://fazier.com/launches/videokr.com" target="_blank"><img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="120" alt="Fazier badge" /></a>';
+  '<style>' +
+  '.fazier-badge{position:fixed !important;left:max(16px,env(safe-area-inset-left)) !important;' +
+  'bottom:max(16px,env(safe-area-inset-bottom)) !important;z-index:9999 !important;' +
+  'max-width:calc(100vw - 32px) !important;height:auto !important;transform:none !important;' +
+  'margin:0 !important;padding:0 !important;line-height:0 !important;pointer-events:auto !important;' +
+  'contain:content !important}' +
+  '.fazier-badge a,.fazier-badge img{display:block !important;max-width:100% !important;width:auto !important;' +
+  'height:auto !important;transform:none !important;margin:0 !important;padding:0 !important;' +
+  'border:0 !important;box-shadow:none !important;vertical-align:bottom !important}' +
+  '</style>' +
+  '<div class="fazier-badge">' +
+  '<a href="https://fazier.com/launches/videokr.com" target="_blank" rel="noopener">' +
+  '<img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="120" alt="Fazier badge" />' +
+  '</a></div>';
 
 function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
