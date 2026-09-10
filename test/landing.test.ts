@@ -127,7 +127,7 @@ describe('mergeLanding', () => {
     );
   });
 
-  it('keeps the Fazier badge fixed and fully inside the viewport', () => {
+  it('keeps the Fazier badge in flow and subtle, not pinned to the viewport', () => {
     const merged = mergeLanding(
       '<head></head><body><p>Videokr</p></body>',
       BASE,
@@ -136,18 +136,19 @@ describe('mergeLanding', () => {
       '/',
     );
     expect(merged).toContain('<style>');
-    expect(merged).toContain('position:fixed !important');
-    expect(merged).toContain('left:max(16px,env(safe-area-inset-left)) !important');
-    expect(merged).toContain('bottom:max(16px,env(safe-area-inset-bottom)) !important');
-    expect(merged).toContain('z-index:9999 !important');
-    expect(merged).toContain('max-width:calc(100vw - 32px) !important');
-    expect(merged).toContain('transform:none !important');
-    expect(merged).toContain('margin:0 !important');
+    expect(merged).toContain('.fazier-badge{display:flex');
+    expect(merged).toContain('justify-content:center');
+    expect(merged).toContain('padding:16px 16px 40px');
+    expect(merged).toContain('opacity:.45');
     expect(merged).toContain('<div class="fazier-badge">');
     expect(merged).toContain('https://fazier.com/launches/videokr.com" target="_blank" rel="noopener"');
-    expect(merged).not.toMatch(/left\s*:\s*-/);
-    expect(merged).not.toMatch(/bottom\s*:\s*-/);
-    expect(merged).not.toMatch(/transform\s*:\s*translate\([^)]*-/);
+    expect(merged).toContain('width="84"');
+    expect(merged).not.toMatch(/position\s*:\s*fixed/);
+    expect(merged).not.toMatch(/z-index\s*:\s*9999/);
+    expect(merged).not.toMatch(/translate\(/);
+    expect(merged.indexOf('https://fazier.com/launches/videokr.com')).toBeLessThan(
+      merged.indexOf('</body>'),
+    );
   });
 
   it('does not inject the Fazier badge on non-root paths', () => {

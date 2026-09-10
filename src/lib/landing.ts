@@ -38,23 +38,20 @@ const SIGNUP_CLICK_SCRIPT =
 // The Fazier directory listing rewards a free listing when a launch badge is
 // visible on the product homepage. The badge links back to the listing and is
 // required by Fazier's Basic (free) route; it is injected only on the root
-// path so other pages stay free of directory link placements. It is pinned to
-// the viewport (not the footer) so it stays fully visible on desktop and
-// mobile, inside safe-area spacing, without conflicting with fixed elements.
+// path so other pages stay free of directory link placements. It renders in
+// normal document flow at the very end of the page (after the footer), small
+// and low-opacity so it reads as a subtle footer credit rather than a pinned
+// element that follows the viewport.
 const FAZIER_BADGE =
   '<style>' +
-  '.fazier-badge{position:fixed !important;left:max(16px,env(safe-area-inset-left)) !important;' +
-  'bottom:max(16px,env(safe-area-inset-bottom)) !important;z-index:9999 !important;' +
-  'max-width:calc(100vw - 32px) !important;height:auto !important;transform:none !important;' +
-  'margin:0 !important;padding:0 !important;line-height:0 !important;pointer-events:auto !important;' +
-  'contain:content !important}' +
-  '.fazier-badge a,.fazier-badge img{display:block !important;max-width:100% !important;width:auto !important;' +
-  'height:auto !important;transform:none !important;margin:0 !important;padding:0 !important;' +
-  'border:0 !important;box-shadow:none !important;vertical-align:bottom !important}' +
+  '.fazier-badge{display:flex;justify-content:center;align-items:center;' +
+  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
+  '.fazier-badge a,.fazier-badge img{display:block;max-width:100%;height:auto;' +
+  'border:0;opacity:1}' +
   '</style>' +
   '<div class="fazier-badge">' +
   '<a href="https://fazier.com/launches/videokr.com" target="_blank" rel="noopener">' +
-  '<img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="120" alt="Fazier badge" />' +
+  '<img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="84" alt="Fazier badge" />' +
   '</a></div>';
 
 function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
