@@ -35,6 +35,13 @@ const PLAN_CARD_PATHS = new Set(['/', '/pricing']);
 const SIGNUP_CLICK_SCRIPT =
   '<script>document.addEventListener("click",function(e){var t=e.target;var a=t&&t.closest?t.closest("a[data-videokr-signup]"):null;if(!a)return;e.preventDefault();e.stopPropagation();window.location.assign(a.getAttribute("href"));},true);</script>';
 
+// The Fazier directory listing (mapHoneyEdge) rewards a free listing when a
+// launch badge is visible on the product homepage. The badge links back to the
+// listing and is required by Fazier's Basic (free) route; it is injected only
+// on the root path so other pages stay free of directory link placements.
+const FAZIER_BADGE =
+  '<a href="https://fazier.com/launches/videokr.com" target="_blank"><img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="120" alt="Fazier badge" /></a>';
+
 function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
   const contactAnchor =
@@ -135,6 +142,9 @@ export function mergeLanding(
     merged = closeBody.test(merged)
       ? merged.replace(closeBody, `${SIGNUP_CLICK_SCRIPT}$&`)
       : merged.replace(closeHead, `${SIGNUP_CLICK_SCRIPT}$&`);
+  }
+  if (path === '/' && /<\/body\s*>/i.test(merged)) {
+    merged = merged.replace(/<\/body\s*>/i, `${FAZIER_BADGE}$&`);
   }
   return merged;
 }

@@ -110,6 +110,35 @@ describe('mergeLanding', () => {
     expect(merged.indexOf('<script>')).toBeLessThan(merged.indexOf('</body>'));
   });
 
+  it('injects the Fazier badge on the root path before the body closes', () => {
+    const merged = mergeLanding(
+      '<head></head><body><p>Videokr</p></body>',
+      BASE,
+      SOURCE,
+      '',
+      '/',
+    );
+    expect(merged).toContain('https://fazier.com/launches/videokr.com');
+    expect(merged).toContain('launch_badges.svg');
+    expect(merged).toContain('alt="Fazier badge"');
+    expect(merged.indexOf('www.fazier.com')).toBe(-1);
+    expect(merged.indexOf('https://fazier.com/launches/videokr.com')).toBeLessThan(
+      merged.indexOf('</body>'),
+    );
+  });
+
+  it('does not inject the Fazier badge on non-root paths', () => {
+    const merged = mergeLanding(
+      '<head></head><body><p>Pricing</p></body>',
+      BASE,
+      SOURCE,
+      '',
+      '/pricing',
+    );
+    expect(merged).not.toContain('https://fazier.com/launches/videokr.com');
+    expect(merged).not.toContain('alt="Fazier badge"');
+  });
+
   it('does not inject a click handler when no signup CTA is rewritten', () => {
     const merged = mergeLanding(
       '<head></head><body><a href="./contact">Contact</a></body>',
