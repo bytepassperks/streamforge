@@ -48,22 +48,22 @@ const SIGNUP_CLICK_SCRIPT =
 const BADGE_ITEMS: Array<string> = [
   // Fazier — required by Fazier's Basic (free) route.
   '<a href="https://fazier.com/launches/videokr.com" target="_blank" rel="noopener">' +
-    '<img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="84" alt="Fazier badge" loading="lazy" /></a>',
+    '<img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="84" alt="Fazier badge" /></a>',
   // LaunchIgniter — required by its Free Launch badge verification.
   '<a href="https://launchigniter.com/product/videokr?ref=badge-videokr" target="_blank" rel="noopener">' +
-    '<img src="https://launchigniter.com/api/badge/videokr?theme=light" width="212" height="55" alt="Featured on LaunchIgniter" loading="lazy" /></a>',
+    '<img src="https://launchigniter.com/api/badge/videokr?theme=light" width="212" height="55" alt="Featured on LaunchIgniter" /></a>',
   // StartupBase — required by its free priority queue verification.
   '<a href="https://startupbase.io/products/videokr?utm_source=startupbase&utm_medium=badge&utm_campaign=featured-badge-light" target="_blank" rel="noopener noreferrer">' +
-    '<img src="https://statics.startupbase.io/site/badges/featured-on-sb.svg" alt="Featured on StartupBase" loading="lazy" /></a>',
+    '<img src="https://statics.startupbase.io/site/badges/featured-on-sb.svg" alt="Featured on StartupBase" /></a>',
   // StartupTrusted — required by its free submission verification.
   '<a href="https://startuptrusted.com?ref=videokr.com" target="_blank" rel="noopener">' +
-    '<img src="https://startuptrusted.com/api/badge?type=featured&style=light" alt="Videokr on StartupTrusted" width="240" height="54" loading="lazy" /></a>',
+    '<img src="https://startuptrusted.com/api/badge?type=featured&style=light" alt="Videokr on StartupTrusted" width="240" height="54" /></a>',
   // OutDR — required by its free listing verification.
   '<a href="https://www.outdr.lol/card/videokr.com" target="_blank" rel="noopener">' +
-    '<img src="https://www.outdr.lol/badge/videokr.com.svg?theme=light" alt="Domain Rating 2 on outdr.lol" width="168" height="40" loading="lazy" /></a>',
+    '<img src="https://www.outdr.lol/badge/videokr.com.svg?theme=light" alt="Domain Rating 2 on outdr.lol" width="168" height="40" /></a>',
   // SaaSGrow — required by its free listing verification.
   '<a href="https://saasgrow.app?ref=videokr.com" target="_blank" rel="noopener">' +
-    '<img src="https://saasgrow.app/api/badge?type=featured&style=light" alt="Videokr on SaaSGrow" width="240" height="54" loading="lazy" /></a>',
+    '<img src="https://saasgrow.app/api/badge?type=featured&style=light" alt="Videokr on SaaSGrow" width="240" height="54" /></a>',
 ];
 
 const BADGES_SECTION_STYLE =
