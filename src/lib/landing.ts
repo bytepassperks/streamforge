@@ -83,6 +83,34 @@ const STARTUPBASE_BADGE =
   '<img src="https://statics.startupbase.io/site/badges/featured-on-sb.svg" alt="Featured on StartupBase" height="55" style="height:55px;width:auto;" />' +
   '</a></div>';
 
+// Required by StartupTrusted's free submission; their checker looks for a
+// StartupTrusted badge link on the homepage.
+const STARTUPTRUSTED_BADGE =
+  '<style>' +
+  '.startuptrusted-badge{display:flex;justify-content:center;align-items:center;' +
+  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
+  '.startuptrusted-badge a,.startuptrusted-badge img{display:block;max-width:100%;height:auto;' +
+  'border:0;opacity:1}' +
+  '</style>' +
+  '<div class="startuptrusted-badge">' +
+  '<a href="https://startuptrusted.com?ref=videokr.com" target="_blank" rel="noopener">' +
+  '<img src="https://startuptrusted.com/api/badge?type=featured&style=light" alt="Videokr on StartupTrusted" width="240" height="54" />' +
+  '</a></div>';
+
+// Required by OutDR's free listing; their checker looks for the OutDR badge
+// link on the homepage (rank is set by Domain Rating either way).
+const OUTDR_BADGE =
+  '<style>' +
+  '.outdr-badge{display:flex;justify-content:center;align-items:center;' +
+  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
+  '.outdr-badge a,.outdr-badge img{display:block;max-width:100%;height:auto;' +
+  'border:0;opacity:1}' +
+  '</style>' +
+  '<div class="outdr-badge">' +
+  '<a href="https://www.outdr.lol/card/videokr.com" target="_blank" rel="noopener">' +
+  '<img src="https://www.outdr.lol/badge/videokr.com.svg?theme=light" alt="Domain Rating 2 on outdr.lol" width="168" height="40" />' +
+  '</a></div>';
+
 function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
   const contactAnchor =
@@ -187,7 +215,7 @@ export function mergeLanding(
   if (path === '/' && /<\/body\s*>/i.test(merged)) {
     merged = merged.replace(
       /<\/body\s*>/i,
-      `${FAZIER_BADGE}${LAUNCHIGNITER_BADGE}${STARTUPBASE_BADGE}$&`,
+      `${FAZIER_BADGE}${LAUNCHIGNITER_BADGE}${STARTUPBASE_BADGE}${STARTUPTRUSTED_BADGE}${OUTDR_BADGE}$&`,
     );
   }
   return merged;
