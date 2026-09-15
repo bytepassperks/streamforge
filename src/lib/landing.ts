@@ -35,95 +35,59 @@ const PLAN_CARD_PATHS = new Set(['/', '/pricing']);
 const SIGNUP_CLICK_SCRIPT =
   '<script>document.addEventListener("click",function(e){var t=e.target;var a=t&&t.closest?t.closest("a[data-videokr-signup]"):null;if(!a)return;e.preventDefault();e.stopPropagation();window.location.assign(a.getAttribute("href"));},true);</script>';
 
-// The Fazier directory listing rewards a free listing when a launch badge is
-// visible on the product homepage. The badge links back to the listing and is
-// required by Fazier's Basic (free) route; it is injected only on the root
-// path so other pages stay free of directory link placements. It renders in
-// normal document flow at the very end of the page (after the footer), small
-// and low-opacity so it reads as a subtle footer credit rather than a pinned
-// element that follows the viewport.
-const FAZIER_BADGE =
-  '<style>' +
-  '.fazier-badge{display:flex;justify-content:center;align-items:center;' +
-  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
-  '.fazier-badge a,.fazier-badge img{display:block;max-width:100%;height:auto;' +
-  'border:0;opacity:1}' +
-  '</style>' +
-  '<div class="fazier-badge">' +
+// Directory badges ("Featured on"). Several directories (Fazier, LaunchIgniter,
+// StartupBase, StartupTrusted, OutDR, SaaSGrow) require a badge link on the
+// product homepage. All badges render as ONE section placed directly after the
+// footer (injected before </body> on the root path only, so other pages stay
+// free of directory link placements). The section stays in normal document
+// flow and sizes itself from the number of badges via a centered auto-fit
+// grid — no fixed heights, spacer divs or hard-coded offsets. Images keep
+// their aspect ratio and are dimmed slightly so the block reads as a subtle
+// footer credit. Adding a badge to BADGE_ITEMS automatically creates a new
+// grid cell.
+const BADGE_ITEMS: Array<string> = [
+  // Fazier — required by Fazier's Basic (free) route.
   '<a href="https://fazier.com/launches/videokr.com" target="_blank" rel="noopener">' +
-  '<img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="84" alt="Fazier badge" />' +
-  '</a></div>';
-
-// Required by LaunchIgniter's Free Launch route; badge verification checks that
-// this markup exists on the homepage. Rendered in the same subtle in-flow
-// footer style as the Fazier badge.
-const LAUNCHIGNITER_BADGE =
-  '<style>' +
-  '.launchigniter-badge{display:flex;justify-content:center;align-items:center;' +
-  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
-  '.launchigniter-badge a,.launchigniter-badge img{display:block;max-width:100%;height:auto;' +
-  'border:0;opacity:1}' +
-  '</style>' +
-  '<div class="launchigniter-badge">' +
+    '<img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="84" alt="Fazier badge" loading="lazy" /></a>',
+  // LaunchIgniter — required by its Free Launch badge verification.
   '<a href="https://launchigniter.com/product/videokr?ref=badge-videokr" target="_blank" rel="noopener">' +
-  '<img src="https://launchigniter.com/api/badge/videokr?theme=light" width="212" height="55" alt="Featured on LaunchIgniter" />' +
-  '</a></div>';
-
-// Required by StartupBase's free priority queue; their checker looks for a
-// StartupBase badge link on the homepage. Same subtle in-flow footer style.
-const STARTUPBASE_BADGE =
-  '<style>' +
-  '.startupbase-badge{display:flex;justify-content:center;align-items:center;' +
-  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
-  '.startupbase-badge a,.startupbase-badge img{display:block;max-width:100%;height:auto;' +
-  'border:0;opacity:1}' +
-  '</style>' +
-  '<div class="startupbase-badge">' +
+    '<img src="https://launchigniter.com/api/badge/videokr?theme=light" width="212" height="55" alt="Featured on LaunchIgniter" loading="lazy" /></a>',
+  // StartupBase — required by its free priority queue verification.
   '<a href="https://startupbase.io/products/videokr?utm_source=startupbase&utm_medium=badge&utm_campaign=featured-badge-light" target="_blank" rel="noopener noreferrer">' +
-  '<img src="https://statics.startupbase.io/site/badges/featured-on-sb.svg" alt="Featured on StartupBase" height="55" style="height:55px;width:auto;" />' +
-  '</a></div>';
-
-// Required by StartupTrusted's free submission; their checker looks for a
-// StartupTrusted badge link on the homepage.
-const STARTUPTRUSTED_BADGE =
-  '<style>' +
-  '.startuptrusted-badge{display:flex;justify-content:center;align-items:center;' +
-  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
-  '.startuptrusted-badge a,.startuptrusted-badge img{display:block;max-width:100%;height:auto;' +
-  'border:0;opacity:1}' +
-  '</style>' +
-  '<div class="startuptrusted-badge">' +
+    '<img src="https://statics.startupbase.io/site/badges/featured-on-sb.svg" alt="Featured on StartupBase" loading="lazy" /></a>',
+  // StartupTrusted — required by its free submission verification.
   '<a href="https://startuptrusted.com?ref=videokr.com" target="_blank" rel="noopener">' +
-  '<img src="https://startuptrusted.com/api/badge?type=featured&style=light" alt="Videokr on StartupTrusted" width="240" height="54" />' +
-  '</a></div>';
-
-// Required by OutDR's free listing; their checker looks for the OutDR badge
-// link on the homepage (rank is set by Domain Rating either way).
-const OUTDR_BADGE =
-  '<style>' +
-  '.outdr-badge{display:flex;justify-content:center;align-items:center;' +
-  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
-  '.outdr-badge a,.outdr-badge img{display:block;max-width:100%;height:auto;' +
-  'border:0;opacity:1}' +
-  '</style>' +
-  '<div class="outdr-badge">' +
+    '<img src="https://startuptrusted.com/api/badge?type=featured&style=light" alt="Videokr on StartupTrusted" width="240" height="54" loading="lazy" /></a>',
+  // OutDR — required by its free listing verification.
   '<a href="https://www.outdr.lol/card/videokr.com" target="_blank" rel="noopener">' +
-  '<img src="https://www.outdr.lol/badge/videokr.com.svg?theme=light" alt="Domain Rating 2 on outdr.lol" width="168" height="40" />' +
-  '</a></div>';
-
-// Required by SaaSGrow's free listing; their checker looks for a SaaSGrow
-// badge link on the homepage.
-const SAASGROW_BADGE =
-  '<style>' +
-  '.saasgrow-badge{display:flex;justify-content:center;align-items:center;' +
-  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
-  '.saasgrow-badge a,.saasgrow-badge img{display:block;max-width:100%;height:auto;' +
-  'border:0;opacity:1}' +
-  '</style>' +
-  '<div class="saasgrow-badge">' +
+    '<img src="https://www.outdr.lol/badge/videokr.com.svg?theme=light" alt="Domain Rating 2 on outdr.lol" width="168" height="40" loading="lazy" /></a>',
+  // SaaSGrow — required by its free listing verification.
   '<a href="https://saasgrow.app?ref=videokr.com" target="_blank" rel="noopener">' +
-  '<img src="https://saasgrow.app/api/badge?type=featured&style=light" alt="Videokr on SaaSGrow" width="240" height="54" />' +
-  '</a></div>';
+    '<img src="https://saasgrow.app/api/badge?type=featured&style=light" alt="Videokr on SaaSGrow" width="240" height="54" loading="lazy" /></a>',
+];
+
+const BADGES_SECTION_STYLE =
+  '<style>' +
+  '.badges-section{width:100%;margin:0;padding:clamp(24px,4vw,56px) 16px;background:#ffffff}' +
+  '.badges-container{width:min(100%,1100px);margin:0 auto}' +
+  '.badges-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,200px));' +
+  'justify-content:center;align-items:center;gap:clamp(16px,3vw,32px)}' +
+  '.badge-item{display:flex;align-items:center;justify-content:center;width:100%}' +
+  '.badge-item a{display:block}' +
+  '.badge-item img{display:block;width:100%;max-width:200px;height:auto;' +
+  'object-fit:contain;opacity:.45}' +
+  '</style>';
+
+function badgesSection(): string {
+  const items = BADGE_ITEMS.map((item) => `<div class="badge-item">${item}</div>`).join('');
+  return (
+    BADGES_SECTION_STYLE +
+    '<section class="badges-section" aria-label="Featured on">' +
+    '<div class="badges-container">' +
+    `<div class="badges-grid">${items}</div>` +
+    '</div></section>'
+  );
+}
 
 function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
@@ -227,10 +191,7 @@ export function mergeLanding(
       : merged.replace(closeHead, `${SIGNUP_CLICK_SCRIPT}$&`);
   }
   if (path === '/' && /<\/body\s*>/i.test(merged)) {
-    merged = merged.replace(
-      /<\/body\s*>/i,
-      `${FAZIER_BADGE}${LAUNCHIGNITER_BADGE}${STARTUPBASE_BADGE}${STARTUPTRUSTED_BADGE}${OUTDR_BADGE}${SAASGROW_BADGE}$&`,
-    );
+    merged = merged.replace(/<\/body\s*>/i, `${badgesSection()}$&`);
   }
   return merged;
 }

@@ -127,7 +127,7 @@ describe('mergeLanding', () => {
     );
   });
 
-  it('keeps the Fazier badge in flow and subtle, not pinned to the viewport', () => {
+  it('keeps the badges in flow and subtle, not pinned to the viewport', () => {
     const merged = mergeLanding(
       '<head></head><body><p>Videokr</p></body>',
       BASE,
@@ -136,19 +136,47 @@ describe('mergeLanding', () => {
       '/',
     );
     expect(merged).toContain('<style>');
-    expect(merged).toContain('.fazier-badge{display:flex');
+    expect(merged).toContain('.badges-grid{display:grid');
+    expect(merged).toContain('grid-template-columns:repeat(auto-fit,minmax(140px,200px))');
     expect(merged).toContain('justify-content:center');
-    expect(merged).toContain('padding:16px 16px 40px');
-    expect(merged).toContain('opacity:.45');
-    expect(merged).toContain('<div class="fazier-badge">');
+    expect(merged).toContain('<section class="badges-section" aria-label="Featured on">');
+    expect(merged).toContain('<div class="badge-item">');
     expect(merged).toContain('https://fazier.com/launches/videokr.com" target="_blank" rel="noopener"');
-    expect(merged).toContain('width="84"');
+    expect(merged).toContain('opacity:.45');
     expect(merged).not.toMatch(/position\s*:\s*fixed/);
     expect(merged).not.toMatch(/z-index\s*:\s*9999/);
     expect(merged).not.toMatch(/translate\(/);
     expect(merged.indexOf('https://fazier.com/launches/videokr.com')).toBeLessThan(
       merged.indexOf('</body>'),
     );
+  });
+
+  it('renders every directory badge inside the single grid section', () => {
+    const merged = mergeLanding(
+      '<head></head><body><p>Videokr</p></body>',
+      BASE,
+      SOURCE,
+      '',
+      '/',
+    );
+    expect(merged.match(/<div class="badge-item">/g)).toHaveLength(6);
+    expect(merged.match(/class="badges-section"/g)).toHaveLength(1);
+    for (const marker of [
+      'alt="Fazier badge"',
+      'alt="Featured on LaunchIgniter"',
+      'alt="Featured on StartupBase"',
+      'alt="Videokr on StartupTrusted"',
+      'alt="Domain Rating 2 on outdr.lol"',
+      'alt="Videokr on SaaSGrow"',
+    ]) {
+      expect(merged).toContain(marker);
+    }
+    const sectionStart = merged.indexOf('<section class="badges-section"');
+    const footerClose = merged.lastIndexOf('</footer>');
+    if (footerClose !== -1) {
+      expect(sectionStart).toBeGreaterThan(footerClose);
+    }
+    expect(sectionStart).toBeLessThan(merged.indexOf('</body>'));
   });
 
   it('does not inject the Fazier badge on non-root paths', () => {
