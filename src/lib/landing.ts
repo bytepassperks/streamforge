@@ -54,6 +54,21 @@ const FAZIER_BADGE =
   '<img src="https://fazier.com/api/v1/public/badges/launch_badges.svg?badge_type=launched&theme=light" width="84" alt="Fazier badge" />' +
   '</a></div>';
 
+// Required by LaunchIgniter's Free Launch route; badge verification checks that
+// this markup exists on the homepage. Rendered in the same subtle in-flow
+// footer style as the Fazier badge.
+const LAUNCHIGNITER_BADGE =
+  '<style>' +
+  '.launchigniter-badge{display:flex;justify-content:center;align-items:center;' +
+  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
+  '.launchigniter-badge a,.launchigniter-badge img{display:block;max-width:100%;height:auto;' +
+  'border:0;opacity:1}' +
+  '</style>' +
+  '<div class="launchigniter-badge">' +
+  '<a href="https://launchigniter.com/product/videokr?ref=badge-videokr" target="_blank" rel="noopener">' +
+  '<img src="https://launchigniter.com/api/badge/videokr?theme=light" width="212" height="55" alt="Featured on LaunchIgniter" />' +
+  '</a></div>';
+
 function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
   const contactAnchor =
@@ -156,7 +171,10 @@ export function mergeLanding(
       : merged.replace(closeHead, `${SIGNUP_CLICK_SCRIPT}$&`);
   }
   if (path === '/' && /<\/body\s*>/i.test(merged)) {
-    merged = merged.replace(/<\/body\s*>/i, `${FAZIER_BADGE}$&`);
+    merged = merged.replace(
+      /<\/body\s*>/i,
+      `${FAZIER_BADGE}${LAUNCHIGNITER_BADGE}$&`,
+    );
   }
   return merged;
 }
