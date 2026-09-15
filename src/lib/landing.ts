@@ -111,6 +111,20 @@ const OUTDR_BADGE =
   '<img src="https://www.outdr.lol/badge/videokr.com.svg?theme=light" alt="Domain Rating 2 on outdr.lol" width="168" height="40" />' +
   '</a></div>';
 
+// Required by SaaSGrow's free listing; their checker looks for a SaaSGrow
+// badge link on the homepage.
+const SAASGROW_BADGE =
+  '<style>' +
+  '.saasgrow-badge{display:flex;justify-content:center;align-items:center;' +
+  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
+  '.saasgrow-badge a,.saasgrow-badge img{display:block;max-width:100%;height:auto;' +
+  'border:0;opacity:1}' +
+  '</style>' +
+  '<div class="saasgrow-badge">' +
+  '<a href="https://saasgrow.app?ref=videokr.com" target="_blank" rel="noopener">' +
+  '<img src="https://saasgrow.app/api/badge?type=featured&style=light" alt="Videokr on SaaSGrow" width="240" height="54" />' +
+  '</a></div>';
+
 function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
   const contactAnchor =
@@ -215,7 +229,7 @@ export function mergeLanding(
   if (path === '/' && /<\/body\s*>/i.test(merged)) {
     merged = merged.replace(
       /<\/body\s*>/i,
-      `${FAZIER_BADGE}${LAUNCHIGNITER_BADGE}${STARTUPBASE_BADGE}${STARTUPTRUSTED_BADGE}${OUTDR_BADGE}$&`,
+      `${FAZIER_BADGE}${LAUNCHIGNITER_BADGE}${STARTUPBASE_BADGE}${STARTUPTRUSTED_BADGE}${OUTDR_BADGE}${SAASGROW_BADGE}$&`,
     );
   }
   return merged;
