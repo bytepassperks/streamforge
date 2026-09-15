@@ -69,6 +69,20 @@ const LAUNCHIGNITER_BADGE =
   '<img src="https://launchigniter.com/api/badge/videokr?theme=light" width="212" height="55" alt="Featured on LaunchIgniter" />' +
   '</a></div>';
 
+// Required by StartupBase's free priority queue; their checker looks for a
+// StartupBase badge link on the homepage. Same subtle in-flow footer style.
+const STARTUPBASE_BADGE =
+  '<style>' +
+  '.startupbase-badge{display:flex;justify-content:center;align-items:center;' +
+  'background:#ffffff;padding:16px 16px 40px;opacity:.45}' +
+  '.startupbase-badge a,.startupbase-badge img{display:block;max-width:100%;height:auto;' +
+  'border:0;opacity:1}' +
+  '</style>' +
+  '<div class="startupbase-badge">' +
+  '<a href="https://startupbase.io/products/videokr?utm_source=startupbase&utm_medium=badge&utm_campaign=featured-badge-light" target="_blank" rel="noopener noreferrer">' +
+  '<img src="https://statics.startupbase.io/site/badges/featured-on-sb.svg" alt="Featured on StartupBase" height="55" style="height:55px;width:auto;" />' +
+  '</a></div>';
+
 function rewriteSignupCtas(html: string, base: string, path: string): [string, number] {
   const contactHref = /href\s*=\s*(["'])\.\/contact\1/gi;
   const contactAnchor =
@@ -173,7 +187,7 @@ export function mergeLanding(
   if (path === '/' && /<\/body\s*>/i.test(merged)) {
     merged = merged.replace(
       /<\/body\s*>/i,
-      `${FAZIER_BADGE}${LAUNCHIGNITER_BADGE}$&`,
+      `${FAZIER_BADGE}${LAUNCHIGNITER_BADGE}${STARTUPBASE_BADGE}$&`,
     );
   }
   return merged;
