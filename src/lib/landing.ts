@@ -67,6 +67,9 @@ const BADGE_ITEMS: Array<string> = [
   // TinyShelf — required for its free dofollow listing (badge checker rules).
   '<a href="https://www.tinyshelf.co/?ref=videokr.com" target="_blank" rel="noopener">' +
     '<img src="https://www.tinyshelf.co/badge/tinyshelf-badge-dark-f4d1216a.svg" alt="Featured on TinyShelf" width="216" height="64" /></a>',
+  // LaunchKiwi — required to publish its free dofollow listing.
+  '<a href="https://launchkiwi.com/p/videokr" target="_blank" rel="noopener">' +
+    '<img src="https://launchkiwi.com/badge-light.svg" alt="Featured on LaunchKiwi" width="198" height="62" /></a>',
 ];
 
 const BADGES_SECTION_STYLE =
