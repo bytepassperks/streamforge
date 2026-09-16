@@ -64,6 +64,9 @@ const BADGE_ITEMS: Array<string> = [
   // SaaSGrow — required by its free listing verification.
   '<a href="https://saasgrow.app?ref=videokr.com" target="_blank" rel="noopener">' +
     '<img src="https://saasgrow.app/api/badge?type=featured&style=light" alt="Videokr on SaaSGrow" width="240" height="54" /></a>',
+  // TinyShelf — required for its free dofollow listing (badge checker rules).
+  '<a href="https://www.tinyshelf.co/?ref=videokr.com" target="_blank" rel="noopener">' +
+    '<img src="https://www.tinyshelf.co/badge/tinyshelf-badge-dark-f4d1216a.svg" alt="Featured on TinyShelf" width="216" height="64" /></a>',
 ];
 
 const BADGES_SECTION_STYLE =

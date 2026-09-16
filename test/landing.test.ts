@@ -159,7 +159,7 @@ describe('mergeLanding', () => {
       '',
       '/',
     );
-    expect(merged.match(/<div class="badge-item">/g)).toHaveLength(6);
+    expect(merged.match(/<div class="badge-item">/g)).toHaveLength(7);
     expect(merged.match(/class="badges-section"/g)).toHaveLength(1);
     for (const marker of [
       'alt="Fazier badge"',
@@ -168,6 +168,7 @@ describe('mergeLanding', () => {
       'alt="Videokr on StartupTrusted"',
       'alt="Domain Rating 2 on outdr.lol"',
       'alt="Videokr on SaaSGrow"',
+      'alt="Featured on TinyShelf"',
     ]) {
       expect(merged).toContain(marker);
     }
