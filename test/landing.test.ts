@@ -159,7 +159,7 @@ describe('mergeLanding', () => {
       '',
       '/',
     );
-    expect(merged.match(/<div class="badge-item">/g)).toHaveLength(8);
+    expect(merged.match(/<div class="badge-item">/g)).toHaveLength(9);
     expect(merged.match(/class="badges-section"/g)).toHaveLength(1);
     for (const marker of [
       'alt="Fazier badge"',

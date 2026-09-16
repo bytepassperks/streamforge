@@ -70,6 +70,9 @@ const BADGE_ITEMS: Array<string> = [
   // LaunchKiwi — required to publish its free dofollow listing.
   '<a href="https://launchkiwi.com/p/videokr" target="_blank" rel="noopener">' +
     '<img src="https://launchkiwi.com/badge-light.svg" alt="Featured on LaunchKiwi" width="198" height="62" /></a>',
+  // Dang.ai — free listing requires a crawlable dofollow link to dang.ai.
+  '<a href="https://dang.ai" target="_blank" rel="dofollow noopener">' +
+    '<img src="https://assets.dang.ai/badges/dang-verified-dark.png" alt="Verified on DANG!" width="260" height="94" /></a>',
 ];
 
 const BADGES_SECTION_STYLE =
