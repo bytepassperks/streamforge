@@ -163,7 +163,7 @@ pub.post('/api/billing/dodo/webhook', async (c) => {
       return c.json({ ok: true, plan: 'free' });
     }
     const productId = data.product_id ?? data.product_cart?.[0]?.product_id ?? '';
-    const plan = data.metadata?.plan ?? planForProduct(c.env, productId) ?? '';
+    const plan = planForProduct(c.env, productId);
     if (plan !== 'starter' && plan !== 'agency') return c.json({ ok: true, unmatched: 'product' });
     const renews = Date.parse(data.next_billing_date ?? '');
     await c.env.DB.prepare('UPDATE users SET plan = ?, subscription_id = ?, plan_renews_at = ? WHERE id = ?')
@@ -174,8 +174,8 @@ pub.post('/api/billing/dodo/webhook', async (c) => {
 
   /* One-time payment: only the lifetime product grants the lifetime licence. */
   const paidProduct = data.product_cart?.[0]?.product_id ?? data.product_id ?? '';
-  const paidPlan = data.metadata?.plan ?? planForProduct(c.env, paidProduct) ?? 'lifetime';
-  if (paidPlan !== 'lifetime') return c.json({ ok: true, ignored: `payment for ${paidPlan}` });
+  const paidPlan = planForProduct(c.env, paidProduct);
+  if (paidPlan !== 'lifetime') return c.json({ ok: true, ignored: `payment for ${paidPlan ?? data.metadata?.plan ?? 'other_product'}` });
   await c.env.DB.prepare("UPDATE users SET plan = 'lifetime', lifetime_at = ? WHERE id = ?")
     .bind(ts, user.id)
     .run();
