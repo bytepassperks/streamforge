@@ -5,7 +5,10 @@
   var data = window.__SF_PLAYLIST__;
   var stage = document.getElementById('sf-player');
   var list = document.getElementById('sf-playlist-list');
-  if (!data || !stage || !list || !data.items.length) return;
+  /* An empty playlist still renders a page whose height the host should
+     adopt, so only missing wiring returns here — the item guard sits with
+     play() below and the height reporter at the bottom always runs. */
+  if (!data || !stage || !list) return;
 
   var index = 0;
   var player = null;
@@ -62,7 +65,7 @@
     render();
   }
 
-  play(0, false);
+  if (data.items.length) play(0, false);
 
   /* Embedded on somebody else's page the host cannot measure us, so the bare page reports
      its own height and the loader sizes the iframe to it instead of guessing a ratio. */
