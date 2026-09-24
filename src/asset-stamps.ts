@@ -5,11 +5,11 @@ export const ASSET_STAMPS: Record<string, string> = {
   '/landing.js': '7c9d2cc6d4',
   '/fonts/fonts.css': 'b5069f5acf',
   '/player/player.css': '6658a256fb',
-  '/player/player.js': 'afc20a78ea',
+  '/player/player.js': 'b312e5cc82',
   '/app.js': '4d2f31b930',
   '/admin.js': '993d65d516',
   '/page.js': '7ec44f4e3c',
   '/playlist.js': 'cc476bfa1a',
   '/hills.js': '4443d1365d',
-  '/embed.js': '5a19926f3c',
+  '/embed.js': '0a90e0a104',
 };

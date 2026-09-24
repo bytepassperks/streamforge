@@ -516,6 +516,9 @@
       self.emit('ended');
     });
     video.addEventListener('loadedmetadata', function () {
+      var width = video.videoWidth;
+      var height = video.videoHeight;
+      if (width > 0 && height > 0) self.emit('ratio', width / height);
       self.emit('ready');
     });
 
@@ -870,6 +873,23 @@
     this._trackingEnabled = payload.tracking !== false;
   }
 
+  /** One-way channel to a page that embedded this player in an iframe. */
+  Player.prototype.postToParent = function (message) {
+    if (window.parent === window) return;
+    try {
+      window.parent.postMessage(message, '*');
+    } catch (e) {
+      /* Only a broken window graph could throw here; playback must not care. */
+    }
+  };
+
+  /** Hand the embedding page the video's real shape once its metadata lands. */
+  Player.prototype.postEmbedRatio = function (ratio) {
+    var value = Number(ratio);
+    if (!isFinite(value) || value <= 0) return;
+    this.postToParent({ videokr: 'ratio', ratio: Math.round(value * 1000) / 1000 });
+  };
+
   Player.prototype.mount = function () {
     var self = this;
     var cfg = this.config;
@@ -968,6 +988,13 @@
 
     this.adapter.on('ready', function () {
       self._onReady();
+    });
+    /* A vertical upload letterboxed into a 16:9 box is the classic embed
+       complaint; the HTML adapter knows the real shape as soon as metadata
+       lands and the parent page can adopt it. YouTube and Vimeo iframes stay
+       on the box the embedder chose. */
+    this.adapter.on('ratio', function (ratio) {
+      self.postEmbedRatio(ratio);
     });
     /* An adaptive stream only knows its renditions once the manifest has parsed,
        which lands after 'ready'. */

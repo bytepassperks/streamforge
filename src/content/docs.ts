@@ -103,7 +103,7 @@ Use the iframe when the host page restricts scripts (many CMS and email-builder 
 <script src="https://videokr.com/embed.js" data-video="vid_abc123" async></script>
 \`\`\`
 
-The loader replaces itself with a correctly-shaped, responsive box, sets the iframe \`allow\` list and \`loading="lazy"\` for you, and — for a playlist — listens for the player's own height message so the queue is never clipped.
+The loader replaces itself with a correctly-shaped, responsive box, sets the iframe \`allow\` list and \`loading="lazy"\` for you, and — for a playlist — listens for the player's own height message so the queue is never clipped. For a video it starts in 16/9 and then listens for the player's real ratio, so a vertical upload reshapes itself into a vertical box as soon as its metadata loads — no \`data-ratio\` needed. An explicit \`data-ratio\` is kept as-is.
 
 Attributes:
 
@@ -113,7 +113,7 @@ Attributes:
 | \`data-playlist\` | Playlist id or slug (instead of \`data-video\`). |
 | \`data-target\` | CSS selector to mount into, instead of in place. |
 | \`data-width\` | Any CSS width; defaults to \`100%\`. |
-| \`data-ratio\` | \`16/9\` for a video, \`16/11\` default for a playlist. |
+| \`data-ratio\` | \`16/9\` for a video, \`16/11\` default for a playlist. Optional for videos: a vertical upload adopts its real shape automatically. |
 | \`data-autoplay\` | Start playback when allowed by the browser. |
 | \`data-muted\` | Required alongside autoplay in most browsers. |
 | \`data-start\` | Start at N seconds. |
@@ -575,7 +575,7 @@ Shortcode:
 [videokr playlist="onboarding" ratio="16/9"]
 \`\`\`
 
-Or add the **Videokr** block in the editor and pick a video from your library, thumbnails and all. The block writes the same embed the shortcode does — an iframe pointing at your Videokr player, sized responsively and lazily loaded.
+Or add the **Videokr** block in the editor and pick a video from your library, thumbnails and all. The block writes the same embed the shortcode does — an iframe pointing at your Videokr player, sized responsively and lazily loaded. Vertical videos need no \`ratio\` attribute: the embed starts in 16/9 and the player reports the real shape, so a vertical upload reshapes its box as soon as it loads. An explicit \`ratio\` is kept as-is.
 
 ## Insights
 

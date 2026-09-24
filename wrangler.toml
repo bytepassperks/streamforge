@@ -1,4 +1,7 @@
 name = "streamforge"
+# Explicit so deploys never need the /memberships lookup, which a scoped
+# API token cannot perform.
+account_id = "ed43fb9aedda947029c20ca03959f8da"
 main = "src/index.ts"
 compatibility_date = "2025-02-24"
 compatibility_flags = ["nodejs_compat"]

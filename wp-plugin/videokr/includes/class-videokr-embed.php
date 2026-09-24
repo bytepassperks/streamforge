@@ -11,7 +11,8 @@ defined( 'ABSPATH' ) || exit;
  * The iframe is rendered server-side rather than by loading Videokr's
  * `embed.js`, so a page works with JavaScript-heavy caching plugins and the
  * markup is visible to crawlers. The only script the plugin ships is the
- * playlist height listener, mirroring the loader's behaviour.
+ * embed-size listener: playlists post their height, videos post their real
+ * aspect ratio, mirroring the loader's behaviour.
  */
 class Videokr_Embed {
 
@@ -77,10 +78,16 @@ class Videokr_Embed {
 		if ( in_array( $atts['align'], array( 'left', 'center', 'right', 'wide', 'full' ), true ) ) {
 			$classes[] = 'videokr-align-' . $atts['align'];
 		}
-		if ( ! $is_video && '' === (string) $atts['ratio'] ) {
-			/* The playlist page measures itself and posts its height back. */
-			$classes[] = 'videokr-autoheight';
+		if ( '' === (string) $atts['ratio'] ) {
 			wp_enqueue_script( 'videokr-embed' );
+			if ( $is_video ) {
+				/* A vertical video reports its real shape once its metadata has
+				   loaded, and the box adopts it instead of guessing 16/9. */
+				$classes[] = 'videokr-autoratio';
+			} else {
+				/* The playlist page measures itself and posts its height back. */
+				$classes[] = 'videokr-autoheight';
+			}
 		}
 		wp_enqueue_style( 'videokr-embed' );
 
@@ -108,7 +115,10 @@ class Videokr_Embed {
 	 * against the *containing block*, so a fixed-width embed inside a wider
 	 * column would get a wildly wrong height.
 	 *
-	 * A playlist starts taller because its queue sits beside the stage.
+	 * An empty ratio falls back to 16/9, but the embed then listens for the
+	 * player's ratio message, so a vertical video reshapes itself once its
+	 * metadata has loaded. A playlist starts taller because its queue sits
+	 * beside the stage.
 	 *
 	 * @param string $ratio    Ratio such as `16/9`.
 	 * @param bool   $is_video Whether this is a single video.

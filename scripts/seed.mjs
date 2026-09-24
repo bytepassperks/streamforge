@@ -4,6 +4,7 @@
  * set SEED_EMAIL / SEED_PASSWORD to choose the credentials).
  */
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { pbkdf2Sync, randomBytes } from 'node:crypto';
 
 const EMAIL = process.env.SEED_EMAIL || 'demo@videokr.test';
@@ -121,9 +122,13 @@ statements.push(
 
 const target = process.argv.includes('--remote') ? '--remote' : '--local';
 const sql = statements.join('\n');
+/* Spawn wrangler's JS entry through the current node binary: a bare `npx`
+   is not an executable on Windows, and the .cmd shim is blocked by modern
+   node without a shell (EINVAL), while the JS path works everywhere. */
+const wranglerEntry = fileURLToPath(new URL('../node_modules/wrangler/bin/wrangler.js', import.meta.url));
 execFileSync(
-  'npx',
-  ['wrangler', 'd1', 'execute', 'streamforge', target, '--yes', '--command', sql],
+  process.execPath,
+  [wranglerEntry, 'd1', 'execute', 'streamforge', target, '--yes', '--command', sql],
   { stdio: 'inherit' },
 );
 

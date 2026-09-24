@@ -15,8 +15,15 @@ const version = /^\s*\*\s*Version:\s*(\S+)/m.exec(header);
 
 mkdirSync(dirname(out), { recursive: true });
 rmSync(out, { force: true });
-execFileSync('zip', ['-qr', out, 'videokr', '-x', '*.DS_Store'], {
-  cwd: resolve(root, 'wp-plugin'),
-});
+/* Windows has no `zip` CLI but ships bsdtar, which writes zip archives with -a. */
+if (process.platform === 'win32') {
+  execFileSync('tar', ['-a', '-c', '-f', out, 'videokr'], {
+    cwd: resolve(root, 'wp-plugin'),
+  });
+} else {
+  execFileSync('zip', ['-qr', out, 'videokr', '-x', '*.DS_Store'], {
+    cwd: resolve(root, 'wp-plugin'),
+  });
+}
 
 console.log(`packaged videokr ${version ? version[1] : '?'} -> ${out}`);

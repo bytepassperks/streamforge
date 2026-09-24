@@ -78,6 +78,20 @@
       });
     }
 
+    /* A vertical video only shows its real shape once its metadata has loaded,
+       so the player reports the ratio the box should adopt instead of the
+       16/9 guess above. */
+    if (videoId && !script.getAttribute('data-ratio')) {
+      window.addEventListener('message', function (event) {
+        if (event.source !== frame.contentWindow) return;
+        var data = event.data;
+        if (!data || data.videokr !== 'ratio' || !data.ratio) return;
+        var ratio = Number(data.ratio);
+        if (!isFinite(ratio) || ratio < 0.2 || ratio > 6) return;
+        wrap.style.aspectRatio = String(Math.round(ratio * 1000) / 1000);
+      });
+    }
+
     var target = script.getAttribute('data-target');
     var host = target ? document.querySelector(target) : null;
     if (host) host.appendChild(wrap);
