@@ -890,6 +890,15 @@
     this.postToParent({ videokr: 'ratio', ratio: Math.round(value * 1000) / 1000 });
   };
 
+  /** The stage's hard-coded 16/9 would leave the lower half of a matched
+     vertical embed empty and overflow a fullscreen screen, so it adopts the
+     video's real shape; fullscreen then overrides it to fill the screen. */
+  Player.prototype._adoptStageRatio = function (ratio) {
+    var value = Number(ratio);
+    if (!isFinite(value) || value <= 0 || !this.stage) return;
+    this.stage.style.aspectRatio = String(Math.round(value * 1000) / 1000);
+  };
+
   Player.prototype.mount = function () {
     var self = this;
     var cfg = this.config;
@@ -995,6 +1004,7 @@
        on the box the embedder chose. */
     this.adapter.on('ratio', function (ratio) {
       self.postEmbedRatio(ratio);
+      self._adoptStageRatio(ratio);
     });
     /* An adaptive stream only knows its renditions once the manifest has parsed,
        which lands after 'ready'. */

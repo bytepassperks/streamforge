@@ -25,6 +25,12 @@
 }
 
 .sf-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+/* Fullscreen shows the screen's own shape, not the video's: the stage fills
+   it and the video letterboxes inside, whatever its intrinsic ratio is. */
+.sf-player:fullscreen .sf-stage,
+.sf-player:-webkit-full-screen .sf-stage {
+  position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto;
+}
 .sf-media, .sf-media iframe, .sf-media video {
   position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block;
 }
