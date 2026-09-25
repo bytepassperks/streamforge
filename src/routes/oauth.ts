@@ -179,10 +179,13 @@ oauth.get('/auth/google/callback', async (c) => {
       userId = existing.id;
     } else {
       userId = newId('usr');
+      /* The password fields are set explicitly: the live schema predates their
+         DEFAULT '' and an omitted NOT NULL column rejects the row. Empty hash
+         and salt mean the account has no usable password until one is set. */
       await c.env.DB.prepare(
-        'INSERT INTO users (id, email, name, google_sub, plan, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO users (id, email, name, password_hash, password_salt, google_sub, plan, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       )
-        .bind(userId, email, (claims.name ?? '').trim().slice(0, 120), claims.sub, 'free', now())
+        .bind(userId, email, (claims.name ?? '').trim().slice(0, 120), '', '', claims.sub, 'free', now())
         .run();
     }
   }

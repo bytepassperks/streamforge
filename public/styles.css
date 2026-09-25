@@ -473,6 +473,17 @@ textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
 .auth-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
 .form-error { color: var(--danger); font-size: 13px; min-height: 18px; font-weight: 600; }
 .auth-aside { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+/* Google sign-in anchor: flex centring so the label never clips the way a
+   line-height-driven button box can, and it carries the four-colour G mark. */
+.auth-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 12px 16px; box-sizing: border-box;
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--surface); color: var(--text);
+  font-weight: 600; font-family: inherit; text-decoration: none;
+}
+.auth-google:hover { border-color: var(--muted-2); background: var(--panel-2); }
+.auth-google svg { width: 18px; height: 18px; flex: none; }
 
 /* -------------------------------------------------------------- dashboard -- */
 .app { display: grid; grid-template-columns: var(--side-w) 1fr; min-height: 100vh; background: var(--bg); }
