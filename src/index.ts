@@ -9,6 +9,7 @@ import { canonicalRedirect } from './lib/util';
 import { landingHtml } from './lib/landing';
 import { api } from './routes/api';
 import { content } from './routes/content';
+import { oauth } from './routes/oauth';
 import { plugin } from './routes/plugin';
 import { pub } from './routes/public';
 import { seo } from './routes/seo';
@@ -66,6 +67,9 @@ app.route('/', pub);
 // Key-authenticated integration API, mounted before the session API so it is
 // never subject to the cookie check.
 app.route('/api/v1', plugin);
+// Google sign-in is mounted before the session API for the same reason: the
+// OAuth endpoints have no session yet and must not hit its 401 gate.
+app.route('/api', oauth);
 app.route('/api', api);
 
 app.get('/healthz', (c) => c.json({ ok: true, service: 'videokr' }));

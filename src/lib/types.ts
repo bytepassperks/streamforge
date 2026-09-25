@@ -20,6 +20,9 @@ export interface Env {
   DODO_WEBHOOK_SECRET?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  /** "Sign in with Google" OAuth client; sign-in is simply unavailable when unset. */
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
   /** GA4 measurement id ("G-…"); analytics is simply absent when unset. */
   GA_MEASUREMENT_ID?: string;
   /** Ownership tokens for engines that verify by meta tag rather than DNS. */
