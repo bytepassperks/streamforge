@@ -88,3 +88,8 @@ source-resolution top rung for more reliable automatic switching.
 Hiding YouTube's controls/branding on embedded videos conflicts with YouTube's Terms of
 Service. YouTube mode is supported because it is free hosting, but for branding-critical
 embeds prefer own-media (R2 MP4 or HLS) mode.
+
+
+---
+
+A project by [Byte Sherlock](https://bytesherlock.com) — Barrackpore's trusted device repair service.
