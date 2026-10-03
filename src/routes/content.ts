@@ -50,7 +50,7 @@ const FOOT = `<footer class="sf-page-foot sf-lib-foot">
      embed it anywhere, and read second-by-second retention. <a href="/#pricing">Plans from $0</a>.</p>
   <nav aria-label="Library sections">${SECTIONS.map(
     (entry) => `<a href="/${entry.id}">${entry.title}</a>`,
-  ).join('')}<a href="/v/videokr-the-product-film">Product film</a><a href="/downloads/videokr-wordpress-plugin.zip">WordPress plugin</a><a href="/contact">Contact</a></nav>
+  ).join('')}<a href="/v/videokr-the-product-film">Product film</a><a href="/downloads/videokr-wordpress-plugin.zip">WordPress plugin</a><a href="/contact">Contact</a><a href="/terms">Terms</a></nav>
 </footer>`;
 
 interface Meta {
@@ -179,6 +179,74 @@ content.get('/contact', (c) => {
         title: `Contact ${SITE.name} — ${SITE.name}`,
         description:
           'Contact details for Videokr: postal address in Byron, Minnesota, phone number, support and general email. Videokr was founded on January 17, 2026 by James Thomas.',
+        canonical,
+        ld,
+      },
+      body,
+    ),
+  );
+});
+
+content.get('/terms', (c) => {
+  const base = baseUrl(c.env);
+  const canonical = `${base}/terms`;
+  const ld = graphLd([
+    organizationLd(base),
+    webSiteLd(base),
+    breadcrumbLd(base, [
+      { name: 'Videokr', url: '/' },
+      { name: 'Terms', url: '/terms' },
+    ]),
+    {
+      '@type': 'WebPage',
+      '@id': `${canonical}#page`,
+      name: `Terms of Service ${SITE.name}`,
+      url: canonical,
+      isPartOf: { '@id': `${base}/#website` },
+    },
+  ]);
+  const body = `<main class="sf-page-main sf-lib-main" id="sf-main">
+  <nav class="sf-crumbs" aria-label="Breadcrumb"><a href="/">Videokr</a> <span aria-hidden="true">/</span> <span>Terms</span></nav>
+  <h1>Terms of Service and Acceptable Use</h1>
+  <p class="sf-answer">Last updated <time datetime="2026-10-03">3 October 2026</time>. Videokr is operated by Videokr, 27 4th St NW, Byron, MN 55920, United States. Questions about these terms go to <a href="mailto:support@videokr.com">support@videokr.com</a>.</p>
+  <h2>1. Agreement</h2>
+  <p>By creating an account or embedding a Videokr player you agree to these terms. If you sign up on behalf of a company, you confirm you may bind it.</p>
+  <h2>2. Accounts</h2>
+  <p>You are responsible for your account, the accuracy of your email address and anything done with your credentials. One person or company per account; keep your password safe. You can sign in with email and password or, where offered, a linked Google account. Tell us immediately at <a href="mailto:support@videokr.com">support@videokr.com</a> if you believe someone else is using your account.</p>
+  <h2>3. Plans, billing and plays</h2>
+  <p>Paid plans are billed through our merchant of record, Dodo Payments, which handles payment, tax invoices and refunds. Current plans: a free plan (500 plays a month, 5 videos), Starter ($29 a year or $5 month to month, 10,000 plays), Agency ($29 a month or $290 a year, unlimited plays and videos) and Lifetime (one payment, 10,000 plays a month). A play is one viewer starting one video, counted once per video per calendar month; rewatches and reloads in the same month do not count again. Bandwidth is never metered on any plan. Overage on Starter and Lifetime is $1 per 10,000 extra plays and accrues visibly in your dashboard. Prices may change; the price shown at checkout is the one that applies to your purchase. Refund requests go to support and are handled per the policy stated at checkout and in your invoice.</p>
+  <h2>4. Your content</h2>
+  <p>You keep ownership of every video, thumbnail, caption and form submission you upload or capture. You grant Videokr the limited licence needed to host, transcode, cache and deliver that content through the player, and to process play analytics for it. You are responsible for having the rights to everything you publish and for complying with the acceptable use policy below.</p>
+  <h2>5. Acceptable use policy</h2>
+  <p>Videokr hosts video for business, education and creator use. The following are prohibited on videos, thumbnails, captions, landing pages and form content you serve through the platform:</p>
+  <ul>
+    <li><strong>Illegal material of any kind</strong> — including any sexual content involving minors, which we report to the authorities without notice.</li>
+    <li><strong>Adult or NSFW content</strong> — explicit or suggestive material, whether filmed or AI-generated. Our payment provider prohibits it, so we cannot host it even where it would otherwise be legal.</li>
+    <li><strong>Infringing content</strong> — video or artwork you do not have the rights to publish. We respond to valid copyright complaints by removing the material and notifying the uploader.</li>
+    <li><strong>Fraud and harm</strong> — malware, phishing, deceptive earnings claims, scams, doxxing, harassment, hateful or violent extremist material.</li>
+    <li><strong>Prohibited categories</strong> — anything our payment provider bars, including gambling and unlicensed financial services.</li>
+    <li><strong>Platform abuse</strong> — spam, automated play inflation, reselling our delivery as your own CDN, or circumventing plan limits.</li>
+  </ul>
+  <p>Report a violation to <a href="mailto:support@videokr.com">support@videokr.com</a> with the video link and what is wrong. We investigate every report.</p>
+  <h2>6. Enforcement</h2>
+  <p>We may warn, suspend playback, or close an account for a breach of these terms. Suspension stops serving your videos; a terminated account loses access after 30 days, during which you can export your data. Illegal content is removed immediately and may be reported to law enforcement.</p>
+  <h2>7. Privacy</h2>
+  <p>What we collect and why is described in our <a href="/docs/privacy">privacy notice</a>. You can delete your account and its data at any time, and captured leads belong to you.</p>
+  <h2>8. Availability and liability</h2>
+  <p>We work hard to keep the platform available but provide it as is, without warranties to the extent the law allows. To the maximum extent permitted by law our total liability to you is limited to the fees you paid us in the twelve months before the claim. Nothing here limits liability that cannot be limited by law.</p>
+  <h2>9. Changes and governing law</h2>
+  <p>We may update these terms; the current version always lives on this page, and material changes are announced by email to account holders. These terms are governed by the laws of the State of Minnesota, United States.</p>
+  <aside class="sf-lib-cta">
+    <h2>Questions?</h2>
+    <p>Write to <a href="mailto:support@videokr.com">support@videokr.com</a> about these terms, your account or a video.</p>
+  </aside>
+</main>`;
+  return c.html(
+    shell(
+      {
+        title: `Terms of Service — ${SITE.name}`,
+        description:
+          'Videokr terms of service and acceptable use policy: accounts, plans and plays, your content, prohibited content including adult material, enforcement, privacy and governing law.',
         canonical,
         ld,
       },

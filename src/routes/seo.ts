@@ -237,6 +237,7 @@ seo.get('/sitemap-pages.xml', (c) => {
     urlSet([
       { loc: `${base}/`, changefreq: 'weekly', priority: '1.0', lastmod: new Date().toISOString() },
       { loc: `${base}/contact`, changefreq: 'monthly', priority: '0.5', lastmod: new Date().toISOString() },
+      { loc: `${base}/terms`, changefreq: 'monthly', priority: '0.3', lastmod: '2026-10-03' },
     ]),
   );
 });

@@ -759,6 +759,7 @@ const PAGE_HEAD =
 const PAGE_FOOT = `<footer class="sf-page-foot">
   <p>Hosted on <a href="/">Videokr</a> — brandable video hosting with lead capture and retention analytics.
      <a href="/#pricing">See plans</a>.</p>
+  <p class="sf-foot-legal"><a href="/terms">Terms of Service</a></p>
 </footer>`;
 
 function metaDescription(video: Video): string {
