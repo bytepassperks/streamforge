@@ -94,6 +94,8 @@ export interface PlayerConfig {
   sticky: boolean;
   borderRadius: number;
   related: boolean;
+  /** The tap-to-unmute card on muted autoplay; off for silent videos. */
+  unmutePrompt: boolean;
 }
 
 export interface Playlist {

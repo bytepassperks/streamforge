@@ -1566,6 +1566,7 @@
     $('pc-start').value = config.startAt || 0;
     $('pc-autoplay').checked = config.autoplay;
     $('pc-muted').checked = config.muted;
+    $('pc-unmute').checked = config.unmutePrompt !== false;
     $('pc-loop').checked = config.loop;
     $('pc-resume').checked = config.resume;
     $('pc-title').checked = config.title;
@@ -2140,6 +2141,7 @@
       controls: controls,
       autoplay: $('pc-autoplay').checked,
       muted: $('pc-muted').checked,
+      unmutePrompt: $('pc-unmute').checked,
       loop: $('pc-loop').checked,
       startAt: Number($('pc-start').value) || 0,
       resume: $('pc-resume').checked,

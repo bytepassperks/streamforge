@@ -348,6 +348,7 @@ export function defaultPlayerConfig(): PlayerConfig {
     sticky: false,
     borderRadius: 14,
     related: false,
+    unmutePrompt: true,
   };
 }
 
@@ -377,6 +378,7 @@ export function mergePlayerConfig(stored: string | null | undefined): PlayerConf
     skin: normalizeSkin(incoming.skin),
     controls: { ...base.controls, ...(incoming.controls ?? {}) },
     speeds: Array.isArray(incoming.speeds) && incoming.speeds.length ? incoming.speeds : base.speeds,
+    unmutePrompt: incoming.unmutePrompt !== false,
   };
 }
 

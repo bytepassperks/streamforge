@@ -963,7 +963,10 @@
 
     this.ctaLayer = el('div', 'sf-cta-layer');
     this.overlay.appendChild(this.ctaLayer);
-    if (cfg.autoplay || cfg.muted) {
+    /* Muted autoplay is a browser rule, and the card is how a viewer turns the
+       sound on with one tap. A video made without audio has nothing to unmute,
+       so the owner can switch the card off per video. */
+    if ((cfg.autoplay || cfg.muted) && cfg.unmutePrompt !== false) {
       this.unmuteCard = el(
         'button',
         'sf-unmute',
